@@ -26,7 +26,7 @@ ThemeModel.belongsToMany(ImageModel, { through: ThemeImageModel, foreignKey: 'th
 ImageModel.belongsToMany(ThemeModel, { through: ThemeImageModel, foreignKey: 'imageId' });
 
 // 同步数据库
-sequelize.sync({ force: true }).then(() => {
+sequelize.sync({ force: false }).then(() => {
   console.log('Database synchronized');
 });
 

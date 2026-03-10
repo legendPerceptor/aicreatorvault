@@ -81,6 +81,84 @@ function App() {
     }
   };
 
+  // 处理删除图片
+  const handleDeleteImage = (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('=== 删除按钮被点击 ===');
+    console.log('图片ID:', id);
+    console.log('事件类型:', e.type);
+    console.log('当前图片列表长度:', images.length);
+    console.log('图片列表:', images);
+    
+    // 立即显示确认对话框
+    const confirmed = window.confirm('确定要删除这张图片吗？');
+    console.log('用户确认结果:', confirmed);
+    
+    if (confirmed) {
+      console.log('用户确认删除，开始发送请求');
+      // 模拟延迟，确保确认对话框完全关闭
+      setTimeout(() => {
+        fetch(`/api/images/${id}`, {
+          method: 'DELETE'
+        })
+        .then(response => {
+          console.log('删除请求响应:', response);
+          return response.json();
+        })
+        .then(data => {
+          console.log('删除请求成功，响应数据:', data);
+          console.log('更新前图片列表长度:', images.length);
+          const updatedImages = images.filter(image => image.id !== id);
+          console.log('更新后图片列表长度:', updatedImages.length);
+          setImages(updatedImages);
+          // 同时更新提示词中的图片列表
+          const updatedPrompts = prompts.map(prompt => {
+            if (prompt.Images) {
+              return {
+                ...prompt,
+                Images: prompt.Images.filter(image => image.id !== id)
+              };
+            }
+            return prompt;
+          });
+          setPrompts(updatedPrompts);
+          console.log('状态更新完成');
+        })
+        .catch(error => {
+          console.error('删除图片失败:', error);
+        });
+      }, 100);
+    } else {
+      console.log('用户取消删除，不更新状态');
+      console.log('取消删除后图片列表长度:', images.length);
+      // 验证图片列表确实没有变化
+      console.log('取消删除后图片列表:', images);
+    }
+  };
+
+  // 处理删除提示词
+  const handleDeletePrompt = (e, id) => {
+    e.preventDefault();
+    if (window.confirm('确定要删除这个提示词及其关联的所有图片吗？')) {
+      fetch(`/api/prompts/${id}`, {
+        method: 'DELETE'
+      })
+      .then(() => {
+        setPrompts(prompts.filter(prompt => prompt.id !== id));
+        // 同时从图片列表中删除关联的图片
+        const prompt = prompts.find(p => p.id === id);
+        if (prompt && prompt.Images) {
+          const imageIds = prompt.Images.map(image => image.id);
+          setImages(images.filter(image => !imageIds.includes(image.id)));
+        }
+      })
+      .catch(error => {
+        console.error('删除提示词失败:', error);
+      });
+    }
+  };
+
   // 处理主题创建
   const handleThemeSubmit = async (e) => {
     e.preventDefault();
@@ -188,7 +266,10 @@ function App() {
             <h3>历史提示词</h3>
             {prompts.map(prompt => (
               <div key={prompt.id} className="prompt-item">
-                <p>{prompt.content}</p>
+                <div className="prompt-header">
+                  <p>{prompt.content}</p>
+                  <button type="button" className="delete-btn" onClick={(e) => handleDeletePrompt(e, prompt.id)}>×</button>
+                </div>
                 <div className="score">
                   <label>评分：</label>
                   <input
@@ -205,7 +286,10 @@ function App() {
                     <div className="images-grid">
                       {prompt.Images.map(image => (
                         <div key={image.id} className="image-card">
-                          <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                          <div className="image-header">
+                            <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                            <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                          </div>
                           <div className="content">
                             <div className="score">
                               <label>评分：</label>
@@ -253,7 +337,10 @@ function App() {
           <div className="images-grid">
             {images.map(image => (
               <div key={image.id} className="image-card">
-                <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                <div className="image-header">
+                  <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                  <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                </div>
                 <div className="content">
                   {image.Prompt && (
                     <div className="prompt">{image.Prompt.content}</div>
@@ -310,7 +397,10 @@ function App() {
               <div className="images-grid">
                 {selectedTheme.Images && selectedTheme.Images.map(image => (
                   <div key={image.id} className="image-card">
-                    <img src={`/uploads/${image.filename}`} alt="参考图片" />
+                    <div className="image-header">
+                      <img src={`/uploads/${image.filename}`} alt="参考图片" />
+                      <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -318,7 +408,10 @@ function App() {
               <div className="images-grid">
                 {images.map(image => (
                   <div key={image.id} className="image-card">
-                    <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                    <div className="image-header">
+                      <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                      <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                    </div>
                     <button onClick={() => handleAddImageToTheme(image.id)}>添加到主题</button>
                   </div>
                 ))}
@@ -347,7 +440,10 @@ function App() {
             <div className="images-grid">
               {searchResults.map(image => (
                 <div key={image.id} className="image-card">
-                  <img src={`/uploads/${image.filename}`} alt="搜索结果" />
+                  <div className="image-header">
+                    <img src={`/uploads/${image.filename}`} alt="搜索结果" />
+                    <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                  </div>
                   {image.Prompt && (
                     <div className="content">
                       <div className="prompt">{image.Prompt.content}</div>

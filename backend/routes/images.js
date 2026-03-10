@@ -54,4 +54,27 @@ router.put('/:id/score', async (req, res) => {
   }
 });
 
+// 删除图片
+router.delete('/:id', async (req, res) => {
+  try {
+    const image = await Image.findByPk(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // 从文件系统中删除文件
+    const fs = require('fs');
+    const filePath = path.join(__dirname, '..', image.path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // 从数据库中删除记录
+    await image.destroy();
+    res.json({ message: 'Image deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

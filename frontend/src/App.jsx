@@ -135,6 +135,10 @@ function App() {
             return prompt;
           });
           setPrompts(updatedPrompts);
+          // 重新获取未使用的提示词列表
+          fetch('/api/prompts/unused')
+            .then(res => res.json())
+            .then(data => setUnusedPrompts(data));
           console.log('状态更新完成');
         })
         .catch(error => {
@@ -164,6 +168,10 @@ function App() {
           const imageIds = prompt.Images.map(image => image.id);
           setImages(images.filter(image => !imageIds.includes(image.id)));
         }
+        // 重新获取未使用的提示词列表
+        fetch('/api/prompts/unused')
+          .then(res => res.json())
+          .then(data => setUnusedPrompts(data));
       })
       .catch(error => {
         console.error('删除提示词失败:', error);

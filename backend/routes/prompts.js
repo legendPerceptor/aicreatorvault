@@ -44,7 +44,9 @@ router.put('/:id/score', async (req, res) => {
       return res.status(404).json({ error: 'Prompt not found' });
     }
     await prompt.update({ score: req.body.score });
-    res.json(prompt);
+    // 重新查询提示词信息，包含关联的图片
+    const updatedPrompt = await Prompt.findByPk(req.params.id, { include: Image });
+    res.json(updatedPrompt);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

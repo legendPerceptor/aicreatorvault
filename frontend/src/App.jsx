@@ -11,6 +11,9 @@ function App() {
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [draggedImage, setDraggedImage] = useState(null);
+  const [selectedPromptId, setSelectedPromptId] = useState('');
+  const [showPromptSelection, setShowPromptSelection] = useState(false);
 
   // 获取所有提示词
   useEffect(() => {
@@ -241,18 +244,46 @@ function App() {
     e.currentTarget.classList.remove('active');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      // 处理文件上传
-      const formData = new FormData();
-      formData.append('image', files[0]);
-      fetch('/api/images', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => res.json())
-      .then(newImageData => {
-        setImages([...images, newImageData]);
-      });
+      // 存储拖拽的图片到暂存区
+      setDraggedImage(files[0]);
+      setSelectedPromptId('');
+      setShowPromptSelection(true);
     }
+  };
+
+  // 处理暂存图片的上传
+  const handleStagedImageUpload = async (e) => {
+    e.preventDefault();
+    if (!draggedImage || !selectedPromptId) return;
+    
+    const formData = new FormData();
+    formData.append('image', draggedImage);
+    formData.append('promptId', selectedPromptId);
+    
+    const response = await fetch('/api/images', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const newImageData = await response.json();
+    setImages([...images, newImageData]);
+    setDraggedImage(null);
+    setSelectedPromptId('');
+    setShowPromptSelection(false);
+    // 重新获取提示词列表和未使用的提示词列表
+    fetch('/api/prompts')
+      .then(res => res.json())
+      .then(data => setPrompts(data));
+    fetch('/api/prompts/unused')
+      .then(res => res.json())
+      .then(data => setUnusedPrompts(data));
+  };
+
+  // 取消暂存图片
+  const handleCancelStagedImage = () => {
+    setDraggedImage(null);
+    setSelectedPromptId('');
+    setShowPromptSelection(false);
   };
 
   return (
@@ -354,6 +385,34 @@ function App() {
                onDrop={handleDrop}>
             <p>拖拽图片到这里上传</p>
           </div>
+          
+          {showPromptSelection && draggedImage && (
+            <div className="staged-image-section">
+              <h3>暂存图片</h3>
+              <div className="staged-image-preview">
+                <img src={URL.createObjectURL(draggedImage)} alt="暂存图片" />
+                <p>文件名: {draggedImage.name}</p>
+                <p>大小: {(draggedImage.size / 1024).toFixed(2)} KB</p>
+              </div>
+              <form onSubmit={handleStagedImageUpload} className="form-group">
+                <label htmlFor="stagedPromptId">选择提示词：</label>
+                <select 
+                  id="stagedPromptId" 
+                  value={selectedPromptId} 
+                  onChange={(e) => setSelectedPromptId(e.target.value)}
+                >
+                  <option value="">选择提示词</option>
+                  {unusedPrompts.map(prompt => (
+                    <option key={prompt.id} value={prompt.id}>{prompt.content.substring(0, 50)}...</option>
+                  ))}
+                </select>
+                <div className="staged-image-actions">
+                  <button type="submit">确认上传</button>
+                  <button type="button" onClick={handleCancelStagedImage}>取消</button>
+                </div>
+              </form>
+            </div>
+          )}
           <div className="images-grid">
             {images.map(image => (
               <div key={image.id} className="image-card">

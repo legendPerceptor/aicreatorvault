@@ -246,3 +246,77 @@ body {
 .search-results {
   margin-top: 20px;
 }
+
+.staged-image-section {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+}
+
+.staged-image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+}
+
+.staged-image-preview img {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border-radius: 5px;
+}
+
+.staged-image-preview p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.staged-image-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.staged-image-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.staged-image-actions button[type="submit"] {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.staged-image-actions button[type="submit"]:hover {
+  background-color: #45a049;
+}
+
+.staged-image-actions button[type="button"] {
+  background-color: #f44336;
+  color: white;
+}
+
+.staged-image-actions button[type="button"]:hover {
+  background-color: #da190b;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}

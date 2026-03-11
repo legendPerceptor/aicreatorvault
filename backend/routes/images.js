@@ -24,7 +24,9 @@ router.post('/', upload.single('image'), async (req, res) => {
       path: req.file.path,
       promptId: req.body.promptId
     });
-    res.json(image);
+    // 重新查询图片信息，包含关联的提示词
+    const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
+    res.json(imageWithPrompt);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

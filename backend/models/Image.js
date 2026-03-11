@@ -5,28 +5,28 @@ const Image = (sequelize) => {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
     },
     filename: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     path: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     score: {
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
         min: 0,
-        max: 10
-      }
+        max: 10,
+      },
     },
     createdAt: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    }
+      defaultValue: DataTypes.NOW,
+    },
   });
 };
 

@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -22,7 +22,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     const image = await Image.create({
       filename: req.file.filename,
       path: req.file.path,
-      promptId: req.body.promptId
+      promptId: req.body.promptId,
     });
     // 重新查询图片信息，包含关联的提示词
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
@@ -81,7 +81,7 @@ router.delete('/:id', async (req, res) => {
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
-    
+
     // 从文件系统中删除文件
     const fs = require('fs');
     // 使用绝对路径构建文件路径
@@ -92,7 +92,7 @@ router.delete('/:id', async (req, res) => {
     console.log('图片文件名:', image.filename);
     const filePath = path.join(uploadsDir, image.filename);
     console.log('删除文件的绝对路径:', filePath);
-    
+
     // 检查上传目录是否存在
     if (fs.existsSync(uploadsDir)) {
       console.log('上传目录存在');
@@ -114,7 +114,7 @@ router.delete('/:id', async (req, res) => {
     } else {
       console.log('上传目录不存在:', uploadsDir);
     }
-    
+
     // 从数据库中删除记录
     await image.destroy();
     res.json({ message: 'Image deleted successfully' });

@@ -5,28 +5,28 @@ const ThemeImage = (sequelize) => {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: true,
     },
     themeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'Themes',
-        key: 'id'
-      }
+        key: 'id',
+      },
     },
     imageId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'Images',
-        key: 'id'
-      }
+        key: 'id',
+      },
     },
     createdAt: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    }
+      defaultValue: DataTypes.NOW,
+    },
   });
 };
 

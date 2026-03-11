@@ -27,7 +27,7 @@ router.post('/:id/images', async (req, res) => {
   try {
     const themeImage = await ThemeImage.create({
       themeId: req.params.id,
-      imageId: req.body.imageId
+      imageId: req.body.imageId,
     });
     res.json(themeImage);
   } catch (error) {
@@ -54,8 +54,8 @@ router.delete('/:id/images/:imageId', async (req, res) => {
     const themeImage = await ThemeImage.findOne({
       where: {
         themeId: req.params.id,
-        imageId: req.params.imageId
-      }
+        imageId: req.params.imageId,
+      },
     });
     if (!themeImage) {
       return res.status(404).json({ error: 'ThemeImage not found' });

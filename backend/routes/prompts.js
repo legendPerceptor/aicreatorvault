@@ -19,7 +19,7 @@ router.get('/unused', async (req, res) => {
     // 获取所有提示词，包括关联的图片
     const prompts = await Prompt.findAll({ include: Image });
     // 过滤出没有关联图片的提示词
-    const unusedPrompts = prompts.filter(prompt => !prompt.Images || prompt.Images.length === 0);
+    const unusedPrompts = prompts.filter((prompt) => !prompt.Images || prompt.Images.length === 0);
     res.json(unusedPrompts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -59,15 +59,15 @@ router.delete('/:id', async (req, res) => {
     if (!prompt) {
       return res.status(404).json({ error: 'Prompt not found' });
     }
-    
+
     const deleteImages = req.query.deleteImages === 'true';
-    
+
     if (deleteImages) {
       // 删除关联的图片
       const images = await prompt.getImages();
       const fs = require('fs');
       const path = require('path');
-      
+
       for (const image of images) {
         // 从文件系统中删除文件
         const filePath = path.join(__dirname, '..', image.path);
@@ -84,7 +84,7 @@ router.delete('/:id', async (req, res) => {
         await image.update({ promptId: null });
       }
     }
-    
+
     // 从数据库中删除提示词记录
     await prompt.destroy();
     res.json({ message: 'Prompt deleted successfully' });

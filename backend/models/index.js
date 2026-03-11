@@ -3,7 +3,7 @@ const { Sequelize } = require('sequelize');
 // 创建数据库连接
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: './backend/database.db'
+  storage: './backend/database.db',
 });
 
 // 导入模型函数
@@ -35,5 +35,5 @@ module.exports = {
   Prompt: PromptModel,
   Image: ImageModel,
   Theme: ThemeModel,
-  ThemeImage: ThemeImageModel
+  ThemeImage: ThemeImageModel,
 };

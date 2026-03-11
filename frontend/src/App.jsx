@@ -18,6 +18,10 @@ function App() {
   const [scoreValues, setScoreValues] = useState({});
   const [confirmingScore, setConfirmingScore] = useState(null);
 
+  // 处理图片重新绑定提示词
+  const [editingImagePrompt, setEditingImagePrompt] = useState(null);
+  const [selectedImagePromptId, setSelectedImagePromptId] = useState('');
+
   // 获取所有提示词
   useEffect(() => {
     fetch('/api/prompts')
@@ -293,19 +297,36 @@ function App() {
   };
 
   // 处理删除提示词
-  const handleDeletePrompt = (e, id) => {
+  const handleDeletePrompt = (e, id, deleteImages = true) => {
     e.preventDefault();
-    if (window.confirm('确定要删除这个提示词及其关联的所有图片吗？')) {
-      fetch(`/api/prompts/${id}`, {
+    const confirmMessage = deleteImages 
+      ? '确定要删除这个提示词及其关联的所有图片吗？' 
+      : '确定要仅删除这个提示词，保留关联的图片吗？';
+    
+    if (window.confirm(confirmMessage)) {
+      fetch(`/api/prompts/${id}?deleteImages=${deleteImages}`, {
         method: 'DELETE'
       })
       .then(() => {
         setPrompts(prompts.filter(prompt => prompt.id !== id));
-        // 同时从图片列表中删除关联的图片
-        const prompt = prompts.find(p => p.id === id);
-        if (prompt && prompt.Images) {
-          const imageIds = prompt.Images.map(image => image.id);
-          setImages(images.filter(image => !imageIds.includes(image.id)));
+        // 如果删除图片，同时从图片列表中删除关联的图片
+        if (deleteImages) {
+          const prompt = prompts.find(p => p.id === id);
+          if (prompt && prompt.Images) {
+            const imageIds = prompt.Images.map(image => image.id);
+            setImages(images.filter(image => !imageIds.includes(image.id)));
+          }
+        } else {
+          // 仅删除提示词，更新图片列表中关联图片的Prompt为null
+          const prompt = prompts.find(p => p.id === id);
+          if (prompt && prompt.Images) {
+            setImages(images.map(image => {
+              if (prompt.Images.some(img => img.id === image.id)) {
+                return { ...image, Prompt: null };
+              }
+              return image;
+            }));
+          }
         }
         // 重新获取未使用的提示词列表
         fetch('/api/prompts/unused')
@@ -446,11 +467,61 @@ function App() {
       .then(data => setUnusedPrompts(data));
   };
 
-  // 取消暂存图片
+  // 处理取消暂存图片
   const handleCancelStagedImage = () => {
     setDraggedImage(null);
     setSelectedPromptId('');
     setShowPromptSelection(false);
+  };
+
+  // 处理开始编辑图片提示词
+  const handleStartEditImagePrompt = (imageId, currentPromptId) => {
+    setEditingImagePrompt(imageId);
+    setSelectedImagePromptId(currentPromptId || '');
+  };
+
+  // 处理更新图片提示词
+  const handleUpdateImagePrompt = async (imageId) => {
+    const response = await fetch(`/api/images/${imageId}/prompt`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ promptId: selectedImagePromptId || null })
+    });
+    const updatedImage = await response.json();
+    
+    // 更新图片列表
+    setImages(images.map(image => 
+      image.id === imageId ? updatedImage : image
+    ));
+    
+    // 同时更新提示词中的图片列表
+    setPrompts(prompts.map(prompt => {
+      if (prompt.Images) {
+        return {
+          ...prompt,
+          Images: prompt.Images.map(image => 
+            image.id === imageId ? updatedImage : image
+          )
+        };
+      }
+      return prompt;
+    }));
+    
+    // 重新获取未使用的提示词列表
+    fetch('/api/prompts/unused')
+      .then(res => res.json())
+      .then(data => setUnusedPrompts(data));
+    
+    setEditingImagePrompt(null);
+    setSelectedImagePromptId('');
+  };
+
+  // 处理取消编辑图片提示词
+  const handleCancelEditImagePrompt = () => {
+    setEditingImagePrompt(null);
+    setSelectedImagePromptId('');
   };
 
   return (
@@ -524,7 +595,8 @@ function App() {
                       )}
                     </div>
                     <div className="prompt-actions">
-                      <button type="button" className="delete-prompt-btn" onClick={(e) => handleDeletePrompt(e, prompt.id)}>删除提示词</button>
+                      <button type="button" className="delete-prompt-btn" onClick={(e) => handleDeletePrompt(e, prompt.id, true)}>删除提示词及图片</button>
+                      <button type="button" className="delete-prompt-only-btn" onClick={(e) => handleDeletePrompt(e, prompt.id, false)}>仅删除提示词</button>
                     </div>
                   </div>
                 </div>
@@ -643,8 +715,38 @@ function App() {
                   <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
                 </div>
                 <div className="content">
-                  {image.Prompt && (
-                    <div className="prompt">{image.Prompt.content}</div>
+                  {editingImagePrompt === image.id ? (
+                    <div className="prompt-edit">
+                      <label>选择提示词：</label>
+                      <select 
+                        value={selectedImagePromptId} 
+                        onChange={(e) => setSelectedImagePromptId(e.target.value)}
+                      >
+                        <option value="">无</option>
+                        {prompts.map(prompt => (
+                          <option key={prompt.id} value={prompt.id}>{prompt.content.substring(0, 30)}...</option>
+                        ))}
+                      </select>
+                      <div className="prompt-actions">
+                        <button onClick={() => handleUpdateImagePrompt(image.id)}>确认</button>
+                        <button onClick={handleCancelEditImagePrompt}>取消</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {image.Prompt && (
+                        <div className="prompt">
+                          <span>{image.Prompt.content.substring(0, 30)}{image.Prompt.content.length > 30 ? '...' : ''}</span>
+                          <button className="edit-prompt-btn" onClick={() => handleStartEditImagePrompt(image.id, image.Prompt.id)}>修改</button>
+                        </div>
+                      )}
+                      {!image.Prompt && (
+                        <div className="prompt">
+                          <span>无关联提示词</span>
+                          <button className="edit-prompt-btn" onClick={() => handleStartEditImagePrompt(image.id)}>添加</button>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="score">
                     <label>评分：</label>

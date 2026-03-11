@@ -60,19 +60,29 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Prompt not found' });
     }
     
-    // 删除关联的图片
-    const images = await prompt.getImages();
-    const fs = require('fs');
-    const path = require('path');
+    const deleteImages = req.query.deleteImages === 'true';
     
-    for (const image of images) {
-      // 从文件系统中删除文件
-      const filePath = path.join(__dirname, '..', image.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    if (deleteImages) {
+      // 删除关联的图片
+      const images = await prompt.getImages();
+      const fs = require('fs');
+      const path = require('path');
+      
+      for (const image of images) {
+        // 从文件系统中删除文件
+        const filePath = path.join(__dirname, '..', image.path);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        // 从数据库中删除图片记录
+        await image.destroy();
       }
-      // 从数据库中删除图片记录
-      await image.destroy();
+    } else {
+      // 仅删除提示词，将关联图片的promptId设置为null
+      const images = await prompt.getImages();
+      for (const image of images) {
+        await image.update({ promptId: null });
+      }
     }
     
     // 从数据库中删除提示词记录

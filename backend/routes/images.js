@@ -58,6 +58,22 @@ router.put('/:id/score', async (req, res) => {
   }
 });
 
+// 更新图片的提示词绑定
+router.put('/:id/prompt', async (req, res) => {
+  try {
+    const image = await Image.findByPk(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    await image.update({ promptId: req.body.promptId });
+    // 重新查询图片信息，包含关联的提示词
+    const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
+    res.json(imageWithPrompt);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 删除图片
 router.delete('/:id', async (req, res) => {
   try {

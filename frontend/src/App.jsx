@@ -15,6 +15,8 @@ function App() {
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [showPromptSelection, setShowPromptSelection] = useState(false);
   const [editingScores, setEditingScores] = useState({});
+  const [scoreValues, setScoreValues] = useState({});
+  const [confirmingScore, setConfirmingScore] = useState(null);
 
   // 获取所有提示词
   useEffect(() => {
@@ -77,14 +79,36 @@ function App() {
 
   // 处理开始编辑评分
   const handleStartEditScore = (type, id) => {
+    // 初始化评分值为当前评分
+    const currentScore = type === 'prompts' 
+      ? prompts.find(p => p.id === id)?.score || 0
+      : images.find(i => i.id === id)?.score || 0;
+    
+    setScoreValues(prev => ({
+      ...prev,
+      [`${type}_${id}`]: currentScore
+    }));
+    
     setEditingScores(prev => ({
       ...prev,
       [`${type}_${id}`]: true
     }));
   };
 
-  // 处理评分更新
-  const handleScoreUpdate = async (type, id, score) => {
+  // 处理评分变化
+  const handleScoreChange = (type, id, score) => {
+    console.log(`用户选择了 ${score} 分 (${score/2} 星) for ${type} ${id}`);
+    setScoreValues(prev => ({
+      ...prev,
+      [`${type}_${id}`]: score
+    }));
+  };
+
+  // 处理确认评分
+  const handleConfirmScore = async (type, id) => {
+    const score = scoreValues[`${type}_${id}`];
+    if (score === undefined) return;
+    
     const response = await fetch(`/api/${type}/${id}/score`, {
       method: 'PUT',
       headers: {
@@ -109,6 +133,89 @@ function App() {
       ...prev,
       [`${type}_${id}`]: false
     }));
+    
+    // 清除评分值
+    setScoreValues(prev => {
+      const newValues = { ...prev };
+      delete newValues[`${type}_${id}`];
+      return newValues;
+    });
+  };
+
+  // 处理取消评分
+  const handleCancelScore = (type, id) => {
+    // 结束编辑状态
+    setEditingScores(prev => ({
+      ...prev,
+      [`${type}_${id}`]: false
+    }));
+    
+    // 清除评分值
+    setScoreValues(prev => {
+      const newValues = { ...prev };
+      delete newValues[`${type}_${id}`];
+      return newValues;
+    });
+  };
+
+  // 渲染星星评分组件
+  const StarRating = ({ type, id, score, onScoreChange }) => {
+    const [hoverScore, setHoverScore] = useState(null);
+    const displayScore = hoverScore !== null ? hoverScore : score;
+    const fullStars = Math.floor(displayScore / 2);
+    const hasHalfStar = displayScore % 2 === 1;
+    
+    const handleMouseEnter = (starIndex) => {
+      setHoverScore(starIndex * 2);
+    };
+    
+    const handleMouseLeave = () => {
+      setHoverScore(null);
+    };
+    
+    const handleClick = (starIndex, isHalf = false) => {
+      if (isHalf) {
+        onScoreChange(type, id, (starIndex - 1) * 2 + 1);
+      } else {
+        onScoreChange(type, id, starIndex * 2);
+      }
+    };
+    
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      let starClass = 'star empty';
+      
+      if (i <= fullStars) {
+        starClass = 'star full';
+      } else if (i === fullStars + 1 && hasHalfStar) {
+        starClass = 'star half';
+      }
+      
+      stars.push(
+        <div key={i} className="star-container">
+          <span 
+            className={starClass} 
+            onClick={() => handleClick(i)}
+            onMouseEnter={() => handleMouseEnter(i)}
+            onMouseLeave={handleMouseLeave}
+          >
+            ★
+          </span>
+          <div 
+            className="half-click-area"
+            onClick={() => handleClick(i, true)}
+            onMouseEnter={() => setHoverScore((i - 1) * 2 + 1)}
+            onMouseLeave={handleMouseLeave}
+          ></div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="star-rating" onMouseLeave={handleMouseLeave}>
+        {stars}
+      </div>
+    );
   };
 
   // 处理删除图片
@@ -370,16 +477,34 @@ function App() {
                 <div className="score">
                   <label>评分：</label>
                   {editingScores[`prompts_${prompt.id}`] ? (
-                    <input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={prompt.score || ''}
-                      onChange={(e) => handleScoreUpdate('prompts', prompt.id, parseInt(e.target.value))}
-                    />
+                    <div className="score-edit">
+                      <StarRating 
+                        type="prompts" 
+                        id={prompt.id} 
+                        score={scoreValues[`prompts_${prompt.id}`] || 0} 
+                        onScoreChange={handleScoreChange} 
+                      />
+                      <div className="score-actions">
+                        <button onClick={() => handleConfirmScore('prompts', prompt.id)}>确认</button>
+                        <button onClick={() => handleCancelScore('prompts', prompt.id)}>取消</button>
+                      </div>
+                    </div>
                   ) : (
                     <span className="score-value" onClick={() => handleStartEditScore('prompts', prompt.id)}>
-                      {prompt.score ? prompt.score : '点击评分'}
+                      {prompt.score ? (
+                        <div className="star-rating static">
+                          {Array(5).fill(0).map((_, i) => {
+                            const starValue = (i + 1) * 2;
+                            if (prompt.score >= starValue) {
+                              return <span key={i} className="star full">★</span>;
+                            } else if (prompt.score >= starValue - 1) {
+                              return <span key={i} className="star half">★</span>;
+                            } else {
+                              return <span key={i} className="star empty">★</span>;
+                            }
+                          })}
+                        </div>
+                      ) : '点击评分'}
                     </span>
                   )}
                 </div>
@@ -397,16 +522,34 @@ function App() {
                             <div className="score">
                               <label>评分：</label>
                               {editingScores[`images_${image.id}`] ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="10"
-                                  value={image.score || ''}
-                                  onChange={(e) => handleScoreUpdate('images', image.id, parseInt(e.target.value))}
-                                />
+                                <div className="score-edit">
+                                  <StarRating 
+                                    type="images" 
+                                    id={image.id} 
+                                    score={scoreValues[`images_${image.id}`] || 0} 
+                                    onScoreChange={handleScoreChange} 
+                                  />
+                                  <div className="score-actions">
+                                    <button onClick={() => handleConfirmScore('images', image.id)}>确认</button>
+                                    <button onClick={() => handleCancelScore('images', image.id)}>取消</button>
+                                  </div>
+                                </div>
                               ) : (
                                 <span className="score-value" onClick={() => handleStartEditScore('images', image.id)}>
-                                  {image.score ? image.score : '点击评分'}
+                                  {image.score ? (
+                                    <div className="star-rating static">
+                                      {Array(5).fill(0).map((_, i) => {
+                                        const starValue = (i + 1) * 2;
+                                        if (image.score >= starValue) {
+                                          return <span key={i} className="star full">★</span>;
+                                        } else if (image.score >= starValue - 1) {
+                                          return <span key={i} className="star half">★</span>;
+                                        } else {
+                                          return <span key={i} className="star empty">★</span>;
+                                        }
+                                      })}
+                                    </div>
+                                  ) : '点击评分'}
                                 </span>
                               )}
                             </div>
@@ -485,16 +628,34 @@ function App() {
                   <div className="score">
                     <label>评分：</label>
                     {editingScores[`images_${image.id}`] ? (
-                      <input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={image.score || ''}
-                        onChange={(e) => handleScoreUpdate('images', image.id, parseInt(e.target.value))}
-                      />
+                      <div className="score-edit">
+                        <StarRating 
+                          type="images" 
+                          id={image.id} 
+                          score={scoreValues[`images_${image.id}`] || 0} 
+                          onScoreChange={handleScoreChange} 
+                        />
+                        <div className="score-actions">
+                          <button onClick={() => handleConfirmScore('images', image.id)}>确认</button>
+                          <button onClick={() => handleCancelScore('images', image.id)}>取消</button>
+                        </div>
+                      </div>
                     ) : (
                       <span className="score-value" onClick={() => handleStartEditScore('images', image.id)}>
-                        {image.score ? image.score : '点击评分'}
+                        {image.score ? (
+                          <div className="star-rating static">
+                            {Array(5).fill(0).map((_, i) => {
+                              const starValue = (i + 1) * 2;
+                              if (image.score >= starValue) {
+                                return <span key={i} className="star full">★</span>;
+                              } else if (image.score >= starValue - 1) {
+                                return <span key={i} className="star half">★</span>;
+                              } else {
+                                return <span key={i} className="star empty">★</span>;
+                              }
+                            })}
+                          </div>
+                        ) : '点击评分'}
                       </span>
                     )}
                   </div>

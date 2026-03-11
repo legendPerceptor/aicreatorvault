@@ -399,3 +399,122 @@ body {
   background-color: #e6f7e6;
   border-color: #4CAF50;
 }
+
+/* 星星评分样式 */
+.star-rating {
+  display: flex;
+  gap: 5px;
+  font-size: 24px;
+}
+
+.star-rating.static {
+  cursor: default;
+}
+
+.star-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 30px;
+  height: 30px;
+}
+
+.star-container:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+}
+
+.star {
+  position: relative;
+  z-index: 1;
+  color: #ddd;
+  transition: color 0.2s;
+  display: inline-block;
+}
+
+.star.full {
+  color: #ffc107;
+}
+
+.star.half {
+  color: #ffc107;
+  position: relative;
+}
+
+.star.half::after {
+  content: '★';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: #ddd;
+  z-index: 2;
+}
+
+.star.empty {
+  color: #ddd;
+}
+
+.star:hover {
+  color: #ffc107;
+}
+
+/* 半星点击区域 */
+.half-click-area {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 3;
+  cursor: pointer;
+}
+
+/* 选中状态 */
+.star-container.selected {
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.8);
+  border-radius: 50%;
+  padding: 2px;
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* 评分编辑区域样式 */
+.score-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.score-actions button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.score-actions button:first-child {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.score-actions button:first-child:hover {
+  background-color: #45a049;
+}
+
+.score-actions button:last-child {
+  background-color: #f44336;
+  color: white;
+}
+
+.score-actions button:last-child:hover {
+  background-color: #da190b;
+}

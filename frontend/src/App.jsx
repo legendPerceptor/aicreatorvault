@@ -25,29 +25,29 @@ function App() {
   // 获取所有提示词
   useEffect(() => {
     fetch('/api/prompts')
-      .then(res => res.json())
-      .then(data => setPrompts(data));
+      .then((res) => res.json())
+      .then((data) => setPrompts(data));
   }, []);
 
   // 获取未被使用的提示词
   useEffect(() => {
     fetch('/api/prompts/unused')
-      .then(res => res.json())
-      .then(data => setUnusedPrompts(data));
+      .then((res) => res.json())
+      .then((data) => setUnusedPrompts(data));
   }, [images]);
 
   // 获取所有图片
   useEffect(() => {
     fetch('/api/images')
-      .then(res => res.json())
-      .then(data => setImages(data));
+      .then((res) => res.json())
+      .then((data) => setImages(data));
   }, []);
 
   // 获取所有主题
   useEffect(() => {
     fetch('/api/themes')
-      .then(res => res.json())
-      .then(data => setThemes(data));
+      .then((res) => res.json())
+      .then((data) => setThemes(data));
   }, []);
 
   // 处理提示词提交
@@ -56,17 +56,17 @@ function App() {
     const response = await fetch('/api/prompts', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content: newPrompt })
+      body: JSON.stringify({ content: newPrompt }),
     });
     const newPromptData = await response.json();
     setPrompts([...prompts, newPromptData]);
     setNewPrompt('');
     // 重新获取未使用的提示词列表
     fetch('/api/prompts/unused')
-      .then(res => res.json())
-      .then(data => setUnusedPrompts(data));
+      .then((res) => res.json())
+      .then((data) => setUnusedPrompts(data));
   };
 
   // 处理图片上传
@@ -75,7 +75,7 @@ function App() {
     const formData = new FormData(e.target);
     const response = await fetch('/api/images', {
       method: 'POST',
-      body: formData
+      body: formData,
     });
     const newImageData = await response.json();
     setImages([...images, newImageData]);
@@ -84,27 +84,28 @@ function App() {
   // 处理开始编辑评分
   const handleStartEditScore = (type, id) => {
     // 初始化评分值为当前评分
-    const currentScore = type === 'prompts' 
-      ? prompts.find(p => p.id === id)?.score || 0
-      : images.find(i => i.id === id)?.score || 0;
-    
-    setScoreValues(prev => ({
+    const currentScore =
+      type === 'prompts'
+        ? prompts.find((p) => p.id === id)?.score || 0
+        : images.find((i) => i.id === id)?.score || 0;
+
+    setScoreValues((prev) => ({
       ...prev,
-      [`${type}_${id}`]: currentScore
+      [`${type}_${id}`]: currentScore,
     }));
-    
-    setEditingScores(prev => ({
+
+    setEditingScores((prev) => ({
       ...prev,
-      [`${type}_${id}`]: true
+      [`${type}_${id}`]: true,
     }));
   };
 
   // 处理评分变化
   const handleScoreChange = (type, id, score) => {
-    console.log(`用户选择了 ${score} 分 (${score/2} 星) for ${type} ${id}`);
-    setScoreValues(prev => ({
+    console.log(`用户选择了 ${score} 分 (${score / 2} 星) for ${type} ${id}`);
+    setScoreValues((prev) => ({
       ...prev,
-      [`${type}_${id}`]: score
+      [`${type}_${id}`]: score,
     }));
   };
 
@@ -112,48 +113,44 @@ function App() {
   const handleConfirmScore = async (type, id) => {
     const score = scoreValues[`${type}_${id}`];
     if (score === undefined) return;
-    
+
     const response = await fetch(`/api/${type}/${id}/score`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ score })
+      body: JSON.stringify({ score }),
     });
     const updatedData = await response.json();
-    
+
     if (type === 'prompts') {
-      setPrompts(prompts.map(prompt => 
-        prompt.id === id ? updatedData : prompt
-      ));
+      setPrompts(prompts.map((prompt) => (prompt.id === id ? updatedData : prompt)));
     } else if (type === 'images') {
       // 更新images状态
-      setImages(images.map(image => 
-        image.id === id ? updatedData : image
-      ));
-      
+      setImages(images.map((image) => (image.id === id ? updatedData : image)));
+
       // 同时更新prompts状态中的对应图片数据
-      setPrompts(prompts.map(prompt => {
-        if (prompt.Images) {
-          return {
-            ...prompt,
-            Images: prompt.Images.map(image => 
-              image.id === id ? updatedData : image
-            )
-          };
-        }
-        return prompt;
-      }));
+      setPrompts(
+        prompts.map((prompt) => {
+          if (prompt.Images) {
+            return {
+              ...prompt,
+              Images: prompt.Images.map((image) => (image.id === id ? updatedData : image)),
+            };
+          }
+          return prompt;
+        })
+      );
     }
-    
+
     // 结束编辑状态
-    setEditingScores(prev => ({
+    setEditingScores((prev) => ({
       ...prev,
-      [`${type}_${id}`]: false
+      [`${type}_${id}`]: false,
     }));
-    
+
     // 清除评分值
-    setScoreValues(prev => {
+    setScoreValues((prev) => {
       const newValues = { ...prev };
       delete newValues[`${type}_${id}`];
       return newValues;
@@ -163,13 +160,13 @@ function App() {
   // 处理取消评分
   const handleCancelScore = (type, id) => {
     // 结束编辑状态
-    setEditingScores(prev => ({
+    setEditingScores((prev) => ({
       ...prev,
-      [`${type}_${id}`]: false
+      [`${type}_${id}`]: false,
     }));
-    
+
     // 清除评分值
-    setScoreValues(prev => {
+    setScoreValues((prev) => {
       const newValues = { ...prev };
       delete newValues[`${type}_${id}`];
       return newValues;
@@ -182,15 +179,15 @@ function App() {
     const displayScore = hoverScore !== null ? hoverScore : score;
     const fullStars = Math.floor(displayScore / 2);
     const hasHalfStar = displayScore % 2 === 1;
-    
+
     const handleMouseEnter = (starIndex) => {
       setHoverScore(starIndex * 2);
     };
-    
+
     const handleMouseLeave = () => {
       setHoverScore(null);
     };
-    
+
     const handleClick = (starIndex, isHalf = false) => {
       if (isHalf) {
         onScoreChange(type, id, (starIndex - 1) * 2 + 1);
@@ -198,28 +195,28 @@ function App() {
         onScoreChange(type, id, starIndex * 2);
       }
     };
-    
+
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       let starClass = 'star empty';
-      
+
       if (i <= fullStars) {
         starClass = 'star full';
       } else if (i === fullStars + 1 && hasHalfStar) {
         starClass = 'star half';
       }
-      
+
       stars.push(
         <div key={i} className="star-container">
-          <span 
-            className={starClass} 
+          <span
+            className={starClass}
             onClick={() => handleClick(i)}
             onMouseEnter={() => handleMouseEnter(i)}
             onMouseLeave={handleMouseLeave}
           >
             ★
           </span>
-          <div 
+          <div
             className="half-click-area"
             onClick={() => handleClick(i, true)}
             onMouseEnter={() => setHoverScore((i - 1) * 2 + 1)}
@@ -228,7 +225,7 @@ function App() {
         </div>
       );
     }
-    
+
     return (
       <div className="star-rating" onMouseLeave={handleMouseLeave}>
         {stars}
@@ -245,48 +242,48 @@ function App() {
     console.log('事件类型:', e.type);
     console.log('当前图片列表长度:', images.length);
     console.log('图片列表:', images);
-    
+
     // 立即显示确认对话框
     const confirmed = window.confirm('确定要删除这张图片吗？');
     console.log('用户确认结果:', confirmed);
-    
+
     if (confirmed) {
       console.log('用户确认删除，开始发送请求');
       // 模拟延迟，确保确认对话框完全关闭
       setTimeout(() => {
         fetch(`/api/images/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
         })
-        .then(response => {
-          console.log('删除请求响应:', response);
-          return response.json();
-        })
-        .then(data => {
-          console.log('删除请求成功，响应数据:', data);
-          console.log('更新前图片列表长度:', images.length);
-          const updatedImages = images.filter(image => image.id !== id);
-          console.log('更新后图片列表长度:', updatedImages.length);
-          setImages(updatedImages);
-          // 同时更新提示词中的图片列表
-          const updatedPrompts = prompts.map(prompt => {
-            if (prompt.Images) {
-              return {
-                ...prompt,
-                Images: prompt.Images.filter(image => image.id !== id)
-              };
-            }
-            return prompt;
+          .then((response) => {
+            console.log('删除请求响应:', response);
+            return response.json();
+          })
+          .then((data) => {
+            console.log('删除请求成功，响应数据:', data);
+            console.log('更新前图片列表长度:', images.length);
+            const updatedImages = images.filter((image) => image.id !== id);
+            console.log('更新后图片列表长度:', updatedImages.length);
+            setImages(updatedImages);
+            // 同时更新提示词中的图片列表
+            const updatedPrompts = prompts.map((prompt) => {
+              if (prompt.Images) {
+                return {
+                  ...prompt,
+                  Images: prompt.Images.filter((image) => image.id !== id),
+                };
+              }
+              return prompt;
+            });
+            setPrompts(updatedPrompts);
+            // 重新获取未使用的提示词列表
+            fetch('/api/prompts/unused')
+              .then((res) => res.json())
+              .then((data) => setUnusedPrompts(data));
+            console.log('状态更新完成');
+          })
+          .catch((error) => {
+            console.error('删除图片失败:', error);
           });
-          setPrompts(updatedPrompts);
-          // 重新获取未使用的提示词列表
-          fetch('/api/prompts/unused')
-            .then(res => res.json())
-            .then(data => setUnusedPrompts(data));
-          console.log('状态更新完成');
-        })
-        .catch(error => {
-          console.error('删除图片失败:', error);
-        });
       }, 100);
     } else {
       console.log('用户取消删除，不更新状态');
@@ -299,43 +296,45 @@ function App() {
   // 处理删除提示词
   const handleDeletePrompt = (e, id, deleteImages = true) => {
     e.preventDefault();
-    const confirmMessage = deleteImages 
-      ? '确定要删除这个提示词及其关联的所有图片吗？' 
+    const confirmMessage = deleteImages
+      ? '确定要删除这个提示词及其关联的所有图片吗？'
       : '确定要仅删除这个提示词，保留关联的图片吗？';
-    
+
     if (window.confirm(confirmMessage)) {
       fetch(`/api/prompts/${id}?deleteImages=${deleteImages}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
-      .then(() => {
-        setPrompts(prompts.filter(prompt => prompt.id !== id));
-        // 如果删除图片，同时从图片列表中删除关联的图片
-        if (deleteImages) {
-          const prompt = prompts.find(p => p.id === id);
-          if (prompt && prompt.Images) {
-            const imageIds = prompt.Images.map(image => image.id);
-            setImages(images.filter(image => !imageIds.includes(image.id)));
+        .then(() => {
+          setPrompts(prompts.filter((prompt) => prompt.id !== id));
+          // 如果删除图片，同时从图片列表中删除关联的图片
+          if (deleteImages) {
+            const prompt = prompts.find((p) => p.id === id);
+            if (prompt && prompt.Images) {
+              const imageIds = prompt.Images.map((image) => image.id);
+              setImages(images.filter((image) => !imageIds.includes(image.id)));
+            }
+          } else {
+            // 仅删除提示词，更新图片列表中关联图片的Prompt为null
+            const prompt = prompts.find((p) => p.id === id);
+            if (prompt && prompt.Images) {
+              setImages(
+                images.map((image) => {
+                  if (prompt.Images.some((img) => img.id === image.id)) {
+                    return { ...image, Prompt: null };
+                  }
+                  return image;
+                })
+              );
+            }
           }
-        } else {
-          // 仅删除提示词，更新图片列表中关联图片的Prompt为null
-          const prompt = prompts.find(p => p.id === id);
-          if (prompt && prompt.Images) {
-            setImages(images.map(image => {
-              if (prompt.Images.some(img => img.id === image.id)) {
-                return { ...image, Prompt: null };
-              }
-              return image;
-            }));
-          }
-        }
-        // 重新获取未使用的提示词列表
-        fetch('/api/prompts/unused')
-          .then(res => res.json())
-          .then(data => setUnusedPrompts(data));
-      })
-      .catch(error => {
-        console.error('删除提示词失败:', error);
-      });
+          // 重新获取未使用的提示词列表
+          fetch('/api/prompts/unused')
+            .then((res) => res.json())
+            .then((data) => setUnusedPrompts(data));
+        })
+        .catch((error) => {
+          console.error('删除提示词失败:', error);
+        });
     }
   };
 
@@ -345,9 +344,9 @@ function App() {
     const response = await fetch('/api/themes', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(newTheme)
+      body: JSON.stringify(newTheme),
     });
     const newThemeData = await response.json();
     setThemes([...themes, newThemeData]);
@@ -365,17 +364,17 @@ function App() {
     await fetch(`/api/themes/${selectedTheme.id}/images`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ imageId })
+      body: JSON.stringify({ imageId }),
     });
     // 重新获取主题数据
     fetch('/api/themes')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setThemes(data);
         // 更新selectedTheme状态，确保当前打开的主题详情页面能立即显示新添加的图片
-        const updatedTheme = data.find(theme => theme.id === selectedTheme.id);
+        const updatedTheme = data.find((theme) => theme.id === selectedTheme.id);
         if (updatedTheme) {
           setSelectedTheme(updatedTheme);
         }
@@ -387,14 +386,14 @@ function App() {
     if (!selectedTheme) return;
     try {
       const response = await fetch(`/api/themes/${selectedTheme.id}/images/${imageId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
       if (response.ok) {
         // 重新获取主题数据
-        const themesData = await fetch('/api/themes').then(res => res.json());
+        const themesData = await fetch('/api/themes').then((res) => res.json());
         setThemes(themesData);
         // 更新selectedTheme状态，确保当前打开的主题详情页面能立即显示移除后的图片列表
-        const updatedTheme = themesData.find(theme => theme.id === selectedTheme.id);
+        const updatedTheme = themesData.find((theme) => theme.id === selectedTheme.id);
         if (updatedTheme) {
           setSelectedTheme(updatedTheme);
         }
@@ -410,8 +409,8 @@ function App() {
   const handleSearch = async (e) => {
     e.preventDefault();
     // 这里可以实现更复杂的搜索逻辑，目前简单过滤
-    const results = images.filter(image => 
-      image.Prompt && image.Prompt.content.includes(searchQuery)
+    const results = images.filter(
+      (image) => image.Prompt && image.Prompt.content.includes(searchQuery)
     );
     setSearchResults(results);
   };
@@ -443,18 +442,18 @@ function App() {
   const handleStagedImageUpload = async (e) => {
     e.preventDefault();
     if (!draggedImage) return;
-    
+
     const formData = new FormData();
     formData.append('image', draggedImage);
     if (selectedPromptId) {
       formData.append('promptId', selectedPromptId);
     }
-    
+
     const response = await fetch('/api/images', {
       method: 'POST',
-      body: formData
+      body: formData,
     });
-    
+
     const newImageData = await response.json();
     setImages([...images, newImageData]);
     setDraggedImage(null);
@@ -462,11 +461,11 @@ function App() {
     setShowPromptSelection(false);
     // 重新获取提示词列表和未使用的提示词列表
     fetch('/api/prompts')
-      .then(res => res.json())
-      .then(data => setPrompts(data));
+      .then((res) => res.json())
+      .then((data) => setPrompts(data));
     fetch('/api/prompts/unused')
-      .then(res => res.json())
-      .then(data => setUnusedPrompts(data));
+      .then((res) => res.json())
+      .then((data) => setUnusedPrompts(data));
   };
 
   // 处理取消暂存图片
@@ -487,35 +486,33 @@ function App() {
     const response = await fetch(`/api/images/${imageId}/prompt`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ promptId: selectedImagePromptId || null })
+      body: JSON.stringify({ promptId: selectedImagePromptId || null }),
     });
     const updatedImage = await response.json();
-    
+
     // 更新图片列表
-    setImages(images.map(image => 
-      image.id === imageId ? updatedImage : image
-    ));
-    
+    setImages(images.map((image) => (image.id === imageId ? updatedImage : image)));
+
     // 同时更新提示词中的图片列表
-    setPrompts(prompts.map(prompt => {
-      if (prompt.Images) {
-        return {
-          ...prompt,
-          Images: prompt.Images.map(image => 
-            image.id === imageId ? updatedImage : image
-          )
-        };
-      }
-      return prompt;
-    }));
-    
+    setPrompts(
+      prompts.map((prompt) => {
+        if (prompt.Images) {
+          return {
+            ...prompt,
+            Images: prompt.Images.map((image) => (image.id === imageId ? updatedImage : image)),
+          };
+        }
+        return prompt;
+      })
+    );
+
     // 重新获取未使用的提示词列表
     fetch('/api/prompts/unused')
-      .then(res => res.json())
-      .then(data => setUnusedPrompts(data));
-    
+      .then((res) => res.json())
+      .then((data) => setUnusedPrompts(data));
+
     setEditingImagePrompt(null);
     setSelectedImagePromptId('');
   };
@@ -555,7 +552,7 @@ function App() {
           </form>
           <div className="prompts-list">
             <h3>历史提示词</h3>
-            {prompts.map(prompt => (
+            {prompts.map((prompt) => (
               <div key={prompt.id} className="prompt-container">
                 <div className="prompt-content">
                   <div className="prompt-header">
@@ -566,82 +563,146 @@ function App() {
                       <label>评分：</label>
                       {editingScores[`prompts_${prompt.id}`] ? (
                         <div className="score-edit">
-                          <StarRating 
-                            type="prompts" 
-                            id={prompt.id} 
-                            score={scoreValues[`prompts_${prompt.id}`] || 0} 
-                            onScoreChange={handleScoreChange} 
+                          <StarRating
+                            type="prompts"
+                            id={prompt.id}
+                            score={scoreValues[`prompts_${prompt.id}`] || 0}
+                            onScoreChange={handleScoreChange}
                           />
                           <div className="score-actions">
-                            <button onClick={() => handleConfirmScore('prompts', prompt.id)}>确认</button>
-                            <button onClick={() => handleCancelScore('prompts', prompt.id)}>取消</button>
+                            <button onClick={() => handleConfirmScore('prompts', prompt.id)}>
+                              确认
+                            </button>
+                            <button onClick={() => handleCancelScore('prompts', prompt.id)}>
+                              取消
+                            </button>
                           </div>
                         </div>
                       ) : (
-                        <span className="score-value" onClick={() => handleStartEditScore('prompts', prompt.id)}>
+                        <span
+                          className="score-value"
+                          onClick={() => handleStartEditScore('prompts', prompt.id)}
+                        >
                           {prompt.score ? (
                             <div className="star-rating static">
-                              {Array(5).fill(0).map((_, i) => {
-                                const starValue = (i + 1) * 2;
-                                if (prompt.score >= starValue) {
-                                  return <span key={i} className="star full">★</span>;
-                                } else if (prompt.score >= starValue - 1) {
-                                  return <span key={i} className="star half">★</span>;
-                                } else {
-                                  return <span key={i} className="star empty">★</span>;
-                                }
-                              })}
+                              {Array(5)
+                                .fill(0)
+                                .map((_, i) => {
+                                  const starValue = (i + 1) * 2;
+                                  if (prompt.score >= starValue) {
+                                    return (
+                                      <span key={i} className="star full">
+                                        ★
+                                      </span>
+                                    );
+                                  } else if (prompt.score >= starValue - 1) {
+                                    return (
+                                      <span key={i} className="star half">
+                                        ★
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span key={i} className="star empty">
+                                        ★
+                                      </span>
+                                    );
+                                  }
+                                })}
                             </div>
-                          ) : '点击评分'}
+                          ) : (
+                            '点击评分'
+                          )}
                         </span>
                       )}
                     </div>
                     <div className="prompt-actions">
-                      <button type="button" className="delete-prompt-btn" onClick={(e) => handleDeletePrompt(e, prompt.id, true)}>删除提示词及图片</button>
-                      <button type="button" className="delete-prompt-only-btn" onClick={(e) => handleDeletePrompt(e, prompt.id, false)}>仅删除提示词</button>
+                      <button
+                        type="button"
+                        className="delete-prompt-btn"
+                        onClick={(e) => handleDeletePrompt(e, prompt.id, true)}
+                      >
+                        删除提示词及图片
+                      </button>
+                      <button
+                        type="button"
+                        className="delete-prompt-only-btn"
+                        onClick={(e) => handleDeletePrompt(e, prompt.id, false)}
+                      >
+                        仅删除提示词
+                      </button>
                     </div>
                   </div>
                 </div>
                 <div className="prompt-images">
                   {prompt.Images && prompt.Images.length > 0 ? (
-                    prompt.Images.map(image => (
+                    prompt.Images.map((image) => (
                       <div key={image.id} className="image-card">
                         <div className="image-header">
                           <img src={`/uploads/${image.filename}`} alt="AI生成" />
-                          <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                          <button
+                            type="button"
+                            className="delete-btn"
+                            onClick={(e) => handleDeleteImage(e, image.id)}
+                          >
+                            ×
+                          </button>
                         </div>
                         <div className="content">
                           <div className="score">
                             <label>评分：</label>
                             {editingScores[`images_${image.id}`] ? (
                               <div className="score-edit">
-                                <StarRating 
-                                  type="images" 
-                                  id={image.id} 
-                                  score={scoreValues[`images_${image.id}`] || 0} 
-                                  onScoreChange={handleScoreChange} 
+                                <StarRating
+                                  type="images"
+                                  id={image.id}
+                                  score={scoreValues[`images_${image.id}`] || 0}
+                                  onScoreChange={handleScoreChange}
                                 />
                                 <div className="score-actions">
-                                  <button onClick={() => handleConfirmScore('images', image.id)}>确认</button>
-                                  <button onClick={() => handleCancelScore('images', image.id)}>取消</button>
+                                  <button onClick={() => handleConfirmScore('images', image.id)}>
+                                    确认
+                                  </button>
+                                  <button onClick={() => handleCancelScore('images', image.id)}>
+                                    取消
+                                  </button>
                                 </div>
                               </div>
                             ) : (
-                              <span className="score-value" onClick={() => handleStartEditScore('images', image.id)}>
+                              <span
+                                className="score-value"
+                                onClick={() => handleStartEditScore('images', image.id)}
+                              >
                                 {image.score ? (
                                   <div className="star-rating static">
-                                    {Array(5).fill(0).map((_, i) => {
-                                      const starValue = (i + 1) * 2;
-                                      if (image.score >= starValue) {
-                                        return <span key={i} className="star full">★</span>;
-                                      } else if (image.score >= starValue - 1) {
-                                        return <span key={i} className="star half">★</span>;
-                                      } else {
-                                        return <span key={i} className="star empty">★</span>;
-                                      }
-                                    })}
+                                    {Array(5)
+                                      .fill(0)
+                                      .map((_, i) => {
+                                        const starValue = (i + 1) * 2;
+                                        if (image.score >= starValue) {
+                                          return (
+                                            <span key={i} className="star full">
+                                              ★
+                                            </span>
+                                          );
+                                        } else if (image.score >= starValue - 1) {
+                                          return (
+                                            <span key={i} className="star half">
+                                              ★
+                                            </span>
+                                          );
+                                        } else {
+                                          return (
+                                            <span key={i} className="star empty">
+                                              ★
+                                            </span>
+                                          );
+                                        }
+                                      })}
                                   </div>
-                                ) : '点击评分'}
+                                ) : (
+                                  '点击评分'
+                                )}
                               </span>
                             )}
                           </div>
@@ -669,19 +730,23 @@ function App() {
             <label htmlFor="promptId">关联提示词：</label>
             <select id="promptId" name="promptId">
               <option value="">选择提示词</option>
-              {unusedPrompts.map(prompt => (
-                <option key={prompt.id} value={prompt.id}>{prompt.content.substring(0, 50)}...</option>
+              {unusedPrompts.map((prompt) => (
+                <option key={prompt.id} value={prompt.id}>
+                  {prompt.content.substring(0, 50)}...
+                </option>
               ))}
             </select>
             <button type="submit">上传图片</button>
           </form>
-          <div className="drag-drop-area"
-               onDragOver={handleDragOver}
-               onDragLeave={handleDragLeave}
-               onDrop={handleDrop}>
+          <div
+            className="drag-drop-area"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <p>拖拽图片到这里上传</p>
           </div>
-          
+
           {showPromptSelection && draggedImage && (
             <div className="staged-image-section">
               <h3>暂存图片</h3>
@@ -692,41 +757,53 @@ function App() {
               </div>
               <form onSubmit={handleStagedImageUpload} className="form-group">
                 <label htmlFor="stagedPromptId">选择提示词：</label>
-                <select 
-                  id="stagedPromptId" 
-                  value={selectedPromptId} 
+                <select
+                  id="stagedPromptId"
+                  value={selectedPromptId}
                   onChange={(e) => setSelectedPromptId(e.target.value)}
                 >
-                  <option value="">选择提示词</option>
-                  {unusedPrompts.map(prompt => (
-                    <option key={prompt.id} value={prompt.id}>{prompt.content.substring(0, 50)}...</option>
+                  <option value="">无</option>
+                  {unusedPrompts.map((prompt) => (
+                    <option key={prompt.id} value={prompt.id}>
+                      {prompt.content.substring(0, 50)}...
+                    </option>
                   ))}
                 </select>
                 <div className="staged-image-actions">
                   <button type="submit">确认上传</button>
-                  <button type="button" onClick={handleCancelStagedImage}>取消</button>
+                  <button type="button" onClick={handleCancelStagedImage}>
+                    取消
+                  </button>
                 </div>
               </form>
             </div>
           )}
           <div className="images-grid">
-            {images.map(image => (
+            {images.map((image) => (
               <div key={image.id} className="image-card">
                 <div className="image-header">
                   <img src={`/uploads/${image.filename}`} alt="AI生成" />
-                  <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                  <button
+                    type="button"
+                    className="delete-btn"
+                    onClick={(e) => handleDeleteImage(e, image.id)}
+                  >
+                    ×
+                  </button>
                 </div>
                 <div className="content">
                   {editingImagePrompt === image.id ? (
                     <div className="prompt-edit">
                       <label>选择提示词：</label>
-                      <select 
-                        value={selectedImagePromptId} 
+                      <select
+                        value={selectedImagePromptId}
                         onChange={(e) => setSelectedImagePromptId(e.target.value)}
                       >
                         <option value="">无</option>
-                        {prompts.map(prompt => (
-                          <option key={prompt.id} value={prompt.id}>{prompt.content.substring(0, 30)}...</option>
+                        {prompts.map((prompt) => (
+                          <option key={prompt.id} value={prompt.id}>
+                            {prompt.content.substring(0, 30)}...
+                          </option>
                         ))}
                       </select>
                       <div className="prompt-actions">
@@ -738,14 +815,27 @@ function App() {
                     <>
                       {image.Prompt && (
                         <div className="prompt">
-                          <span>{image.Prompt.content.substring(0, 30)}{image.Prompt.content.length > 30 ? '...' : ''}</span>
-                          <button className="edit-prompt-btn" onClick={() => handleStartEditImagePrompt(image.id, image.Prompt.id)}>修改</button>
+                          <span>
+                            {image.Prompt.content.substring(0, 30)}
+                            {image.Prompt.content.length > 30 ? '...' : ''}
+                          </span>
+                          <button
+                            className="edit-prompt-btn"
+                            onClick={() => handleStartEditImagePrompt(image.id, image.Prompt.id)}
+                          >
+                            修改
+                          </button>
                         </div>
                       )}
                       {!image.Prompt && (
                         <div className="prompt">
                           <span>无关联提示词</span>
-                          <button className="edit-prompt-btn" onClick={() => handleStartEditImagePrompt(image.id)}>添加</button>
+                          <button
+                            className="edit-prompt-btn"
+                            onClick={() => handleStartEditImagePrompt(image.id)}
+                          >
+                            添加
+                          </button>
                         </div>
                       )}
                     </>
@@ -754,33 +844,56 @@ function App() {
                     <label>评分：</label>
                     {editingScores[`images_${image.id}`] ? (
                       <div className="score-edit">
-                        <StarRating 
-                          type="images" 
-                          id={image.id} 
-                          score={scoreValues[`images_${image.id}`] || 0} 
-                          onScoreChange={handleScoreChange} 
+                        <StarRating
+                          type="images"
+                          id={image.id}
+                          score={scoreValues[`images_${image.id}`] || 0}
+                          onScoreChange={handleScoreChange}
                         />
                         <div className="score-actions">
-                          <button onClick={() => handleConfirmScore('images', image.id)}>确认</button>
-                          <button onClick={() => handleCancelScore('images', image.id)}>取消</button>
+                          <button onClick={() => handleConfirmScore('images', image.id)}>
+                            确认
+                          </button>
+                          <button onClick={() => handleCancelScore('images', image.id)}>
+                            取消
+                          </button>
                         </div>
                       </div>
                     ) : (
-                      <span className="score-value" onClick={() => handleStartEditScore('images', image.id)}>
+                      <span
+                        className="score-value"
+                        onClick={() => handleStartEditScore('images', image.id)}
+                      >
                         {image.score ? (
                           <div className="star-rating static">
-                            {Array(5).fill(0).map((_, i) => {
-                              const starValue = (i + 1) * 2;
-                              if (image.score >= starValue) {
-                                return <span key={i} className="star full">★</span>;
-                              } else if (image.score >= starValue - 1) {
-                                return <span key={i} className="star half">★</span>;
-                              } else {
-                                return <span key={i} className="star empty">★</span>;
-                              }
-                            })}
+                            {Array(5)
+                              .fill(0)
+                              .map((_, i) => {
+                                const starValue = (i + 1) * 2;
+                                if (image.score >= starValue) {
+                                  return (
+                                    <span key={i} className="star full">
+                                      ★
+                                    </span>
+                                  );
+                                } else if (image.score >= starValue - 1) {
+                                  return (
+                                    <span key={i} className="star half">
+                                      ★
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span key={i} className="star empty">
+                                      ★
+                                    </span>
+                                  );
+                                }
+                              })}
                           </div>
-                        ) : '点击评分'}
+                        ) : (
+                          '点击评分'
+                        )}
                       </span>
                     )}
                   </div>
@@ -812,7 +925,7 @@ function App() {
             <button type="submit">创建主题</button>
           </form>
           <div className="themes-list">
-            {themes.map(theme => (
+            {themes.map((theme) => (
               <div key={theme.id} className="theme-card">
                 <h3>{theme.name}</h3>
                 <p className="description">{theme.description}</p>
@@ -824,31 +937,50 @@ function App() {
             <div className="theme-images">
               <div className="theme-header">
                 <h3>{selectedTheme.name} - 主题内包含图片</h3>
-                <button className="close-btn" onClick={() => setSelectedTheme(null)}>关闭</button>
+                <button className="close-btn" onClick={() => setSelectedTheme(null)}>
+                  关闭
+                </button>
               </div>
               <div className="images-grid">
-                {selectedTheme.Images && selectedTheme.Images.map(image => (
-                  <div key={image.id} className="image-card">
-                    <div className="image-header">
-                      <img src={`/uploads/${image.filename}`} alt="参考图片" />
-                      <button type="button" className="delete-btn" onClick={() => handleRemoveImageFromTheme(image.id)}>×</button>
+                {selectedTheme.Images &&
+                  selectedTheme.Images.map((image) => (
+                    <div key={image.id} className="image-card">
+                      <div className="image-header">
+                        <img src={`/uploads/${image.filename}`} alt="参考图片" />
+                        <button
+                          type="button"
+                          className="delete-btn"
+                          onClick={() => handleRemoveImageFromTheme(image.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
               <h4>从下方图片选择添加到主题</h4>
               <div className="images-grid">
                 {/* 过滤掉已经在当前主题中的图片 */}
-                {images.filter(image => {
-                  return !selectedTheme.Images || !selectedTheme.Images.some(img => img.id === image.id);
-                }).map(image => (
-                  <div key={image.id} className="image-card">
-                    <div className="image-header">
-                      <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                {images
+                  .filter((image) => {
+                    return (
+                      !selectedTheme.Images ||
+                      !selectedTheme.Images.some((img) => img.id === image.id)
+                    );
+                  })
+                  .map((image) => (
+                    <div key={image.id} className="image-card">
+                      <div className="image-header">
+                        <img src={`/uploads/${image.filename}`} alt="AI生成" />
+                      </div>
+                      <button
+                        className="add-to-theme-btn"
+                        onClick={() => handleAddImageToTheme(image.id)}
+                      >
+                        添加到主题
+                      </button>
                     </div>
-                    <button className="add-to-theme-btn" onClick={() => handleAddImageToTheme(image.id)}>添加到主题</button>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
@@ -872,11 +1004,17 @@ function App() {
           <div className="search-results">
             <h3>搜索结果</h3>
             <div className="images-grid">
-              {searchResults.map(image => (
+              {searchResults.map((image) => (
                 <div key={image.id} className="image-card">
                   <div className="image-header">
                     <img src={`/uploads/${image.filename}`} alt="搜索结果" />
-                    <button type="button" className="delete-btn" onClick={(e) => handleDeleteImage(e, image.id)}>×</button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={(e) => handleDeleteImage(e, image.id)}
+                    >
+                      ×
+                    </button>
                   </div>
                   {image.Prompt && (
                     <div className="content">

@@ -123,9 +123,23 @@ function App() {
         prompt.id === id ? updatedData : prompt
       ));
     } else if (type === 'images') {
+      // 更新images状态
       setImages(images.map(image => 
         image.id === id ? updatedData : image
       ));
+      
+      // 同时更新prompts状态中的对应图片数据
+      setPrompts(prompts.map(prompt => {
+        if (prompt.Images) {
+          return {
+            ...prompt,
+            Images: prompt.Images.map(image => 
+              image.id === id ? updatedData : image
+            )
+          };
+        }
+        return prompt;
+      }));
     }
     
     // 结束编辑状态

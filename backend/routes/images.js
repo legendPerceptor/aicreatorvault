@@ -50,7 +50,9 @@ router.put('/:id/score', async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
     await image.update({ score: req.body.score });
-    res.json(image);
+    // 重新查询图片信息，包含关联的提示词
+    const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
+    res.json(imageWithPrompt);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

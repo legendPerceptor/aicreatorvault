@@ -503,7 +503,10 @@ function App() {
           </div>
           {selectedTheme && (
             <div className="theme-images">
-              <h3>{selectedTheme.name} - 参考图片</h3>
+              <div className="theme-header">
+                <h3>{selectedTheme.name} - 主题内包含图片</h3>
+                <button className="close-btn" onClick={() => setSelectedTheme(null)}>关闭</button>
+              </div>
               <div className="images-grid">
                 {selectedTheme.Images && selectedTheme.Images.map(image => (
                   <div key={image.id} className="image-card">
@@ -514,7 +517,7 @@ function App() {
                   </div>
                 ))}
               </div>
-              <h4>添加图片到主题</h4>
+              <h4>从下方图片选择添加到主题</h4>
               <div className="images-grid">
                 {/* 过滤掉已经在当前主题中的图片 */}
                 {images.filter(image => {

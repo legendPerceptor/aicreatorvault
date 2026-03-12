@@ -41,7 +41,7 @@ function PromptsPage({
       <div className="prompts-list">
         <h3>历史提示词</h3>
         {prompts.map((prompt) => (
-          <div key={prompt.id} className="prompt-container">
+          <div key={prompt.id} className="prompt-container-vertical">
             <div className="prompt-content">
               <div className="prompt-header">
                 <p>{prompt.content}</p>

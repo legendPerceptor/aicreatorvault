@@ -186,6 +186,58 @@ body {
   background-color: white;
 }
 
+.prompt-container-vertical {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0 auto 20px auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  max-width: 800px;
+}
+
+.prompt-container-vertical .prompt-content {
+  border-right: none;
+  border-bottom: 1px solid #ddd;
+}
+
+.prompt-container-vertical .prompt-images {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.prompt-container-vertical .image-card {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 800px;
+}
+
+.prompt-container-vertical .image-card .image-header {
+  width: 60%;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.prompt-container-vertical .image-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.prompt-container-vertical .image-card .content {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
 .prompt-content {
   flex: 1;
   padding: 20px;
@@ -226,7 +278,7 @@ body {
 }
 
 .prompt-images {
-  width: 300px;
+  width: 500px;
   padding: 20px;
   display: flex;
   flex-direction: column;

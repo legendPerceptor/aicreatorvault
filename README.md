@@ -8,75 +8,151 @@
 - **图片管理**：上传和管理 AI 生成的图片，支持打分和关联提示词（支持不关联提示词）
 - **主题管理**：围绕主题组织参考图片，支持拖拽上传
 - **检索参考**：通过提示词搜索相关图片
+- **AI 图片分析**：自动分析图片内容并生成描述和嵌入向量
+- **向量搜索**：支持基于向量相似度的图片搜索
 
 ## 技术栈
 
-- **后端**：Node.js + Express.js + Sequelize + SQLite
+- **后端**：Node.js + Express.js + Sequelize
+- **数据库**：SQLite（默认）/ PostgreSQL（推荐生产环境）
 - **前端**：React + Vite
+- **AI 服务**：Python + FastAPI + OpenAI API
+
+## 数据库支持
+
+项目支持两种数据库：
+
+| 数据库 | 适用场景 | 向量支持 |
+|--------|----------|----------|
+| SQLite | 开发、测试、小型部署 | JSON 存储 |
+| PostgreSQL | 生产环境、大数据量 | pgvector 原生向量类型 |
+
+### 配置方式
+
+在 `backend/.env` 文件中设置：
+
+```env
+# 数据库类型：sqlite 或 postgres
+DB_TYPE=sqlite
+
+# SQLite 配置
+DB_STORAGE=./database.db
+
+# PostgreSQL 配置
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=aigc_assistant
+DB_USER=postgres
+DB_PASSWORD=your_password
+```
 
 ## 安装步骤
 
-1. **克隆项目**：
+### 1. 克隆项目
 
-   ```bash
-   git clone <repository-url>
-   cd aigc-assistant
-   ```
+```bash
+git clone https://github.com/legendPerceptor/aigc-assistant.git
+cd aigc-assistant
+```
 
-2. **安装依赖**：
+### 2. 安装依赖
 
-   ```bash
-   npm install
-   cd frontend
-   npm install
-   ```
+```bash
+npm install
+cd frontend
+npm install
+```
 
-3. **启动服务**：
-   - 启动后端服务：
-     ```bash
-     npm run start:backend
-     ```
-   - 启动前端服务：
-     ```bash
-     cd frontend
-     npm run dev
-     ```
+### 3. 配置环境变量
 
-4. **访问应用**：
-   - 前端：http://localhost:5173/
-   - 后端 API：http://localhost:3001/api
+```bash
+# 复制环境变量模板
+cp backend/.env.example backend/.env
+# 编辑 backend/.env 配置数据库
+
+# 配置 AI 服务
+cp image-service/.env.example image-service/.env
+# 编辑 image-service/.env 配置 OpenAI API Key
+```
+
+### 4. PostgreSQL 设置（可选）
+
+如果使用 PostgreSQL：
+
+```bash
+# 安装 PostgreSQL 和 pgvector
+sudo apt install postgresql postgresql-16-pgvector
+
+# 创建数据库和用户
+sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'your_password';"
+sudo -u postgres psql -c "CREATE DATABASE aigc_assistant OWNER postgres;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aigc_assistant TO postgres;"
+
+# 启用 pgvector 扩展
+PGPASSWORD='your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"
+```
+
+### 5. 启动服务
+
+```bash
+# 启动所有服务
+npm run dev:full
+
+# 或分别启动
+npm run start:backend    # 后端服务 (端口 3001)
+npm run start:frontend   # 前端服务 (端口 5173)
+npm run start:image-service  # AI 服务 (端口 8001)
+```
+
+### 6. 访问应用
+
+- 前端：http://localhost:5173/
+- 后端 API：http://localhost:3001/api
+- AI 服务：http://localhost:8001/
 
 ## 项目结构
 
 ```
 aigc-assistant/
 ├── backend/
-│   ├── models/       # 数据库模型
-│   ├── routes/       # API 路由
-│   ├── uploads/      # 上传的图片
-│   ├── server.js     # 后端服务器
-│   └── database.db   # SQLite 数据库
+│   ├── config/
+│   │   └── database.js      # 数据库配置
+│   ├── models/
+│   │   ├── index.js         # 数据库连接和模型导出
+│   │   ├── Prompt.js        # 提示词模型
+│   │   ├── Image.js         # 图片模型（含向量字段）
+│   │   ├── Theme.js         # 主题模型
+│   │   └── ThemeImage.js    # 主题-图片关联模型
+│   ├── routes/
+│   │   ├── prompts.js       # 提示词 API
+│   │   ├── images.js        # 图片 API
+│   │   └── themes.js        # 主题 API
+│   ├── services/
+│   │   └── imageServiceClient.js  # AI 服务客户端
+│   ├── utils/
+│   │   └── vectorSearch.js  # 向量搜索工具
+│   ├── uploads/             # 上传的图片
+│   ├── .env                 # 环境变量配置
+│   ├── .env.example         # 环境变量模板
+│   ├── server.js            # 后端服务器
+│   └── database.db          # SQLite 数据库（默认）
 ├── frontend/
 │   ├── src/
-│   │   ├── components/   # 可复用组件
-│   │   │   ├── StarRating.jsx   # 星星评分组件
-│   │   │   └── ImageCard.jsx    # 图片卡片组件
-│   │   ├── pages/        # 页面组件
-│   │   │   ├── PromptsPage.jsx  # 提示词管理页面
-│   │   │   ├── ImagesPage.jsx   # 图片管理页面
-│   │   │   ├── ThemesPage.jsx   # 主题管理页面
-│   │   │   └── SearchPage.jsx   # 检索参考页面
-│   │   ├── hooks/        # 自定义 Hooks
-│   │   │   ├── usePrompts.js    # 提示词状态管理
-│   │   │   ├── useImages.js     # 图片状态管理
-│   │   │   └── useThemes.js     # 主题状态管理
-│   │   ├── App.jsx       # 主应用组件
-│   │   ├── main.jsx      # 入口文件
-│   │   └── index.css     # 样式文件
-│   └── public/       # 前端静态文件
-├── .husky/           # Git hooks
-├── package.json      # 项目配置
-└── README.md         # 项目说明
+│   │   ├── components/      # 可复用组件
+│   │   ├── pages/           # 页面组件
+│   │   ├── hooks/           # 自定义 Hooks
+│   │   ├── App.jsx          # 主应用组件
+│   │   ├── main.jsx         # 入口文件
+│   │   └── index.css        # 样式文件
+│   └── public/              # 前端静态文件
+├── image-service/
+│   ├── main.py              # AI 服务入口
+│   ├── requirements.txt     # Python 依赖
+│   ├── .env                 # AI 服务环境变量
+│   └── .env.example         # 环境变量模板
+├── stop.sh                  # 停止服务脚本
+├── package.json             # 项目配置
+└── README.md                # 项目说明
 ```
 
 ## API 端点
@@ -92,10 +168,14 @@ aigc-assistant/
 ### 图片 API
 
 - `GET /api/images` - 获取所有图片
-- `POST /api/images` - 上传图片
+- `POST /api/images` - 上传图片（自动分析）
+- `POST /api/images/:id/analyze` - 分析图片
+- `POST /api/images/batch-analyze` - 批量分析图片
 - `PUT /api/images/:id/score` - 更新图片评分
 - `PUT /api/images/:id/prompt` - 更新图片关联的提示词
 - `DELETE /api/images/:id` - 删除图片
+- `POST /api/images/search` - 文本搜索图片
+- `POST /api/images/search-by-image` - 以图搜图
 
 ### 主题 API
 
@@ -115,12 +195,20 @@ aigc-assistant/
 npx prettier --write "**/*.js"
 ```
 
+### 停止服务
+
+```bash
+./stop.sh
+```
+
 ### 架构说明
 
 - **组件化设计**：将 UI 拆分为可复用的组件（StarRating、ImageCard）
 - **页面分离**：每个功能模块独立为页面组件
 - **状态管理**：使用自定义 Hooks 封装数据获取和状态逻辑
 - **单一职责**：每个文件只负责一个功能，便于维护和测试
+- **数据库抽象**：通过 Sequelize ORM 支持多种数据库
+- **向量搜索**：PostgreSQL 使用 pgvector，SQLite 使用 JSON 回退
 
 ## 开发者指南
 

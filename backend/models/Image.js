@@ -30,6 +30,18 @@ const Image = (sequelize, dbType = 'sqlite') => {
       allowNull: true,
       comment: 'AI生成的图片描述',
     },
+    embedding: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: '图片嵌入向量(JSON格式)',
+      get() {
+        const value = this.getDataValue('embedding');
+        return value ? JSON.parse(value) : null;
+      },
+      set(value) {
+        this.setDataValue('embedding', value ? JSON.stringify(value) : null);
+      },
+    },
     embeddingModel: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -46,51 +58,42 @@ const Image = (sequelize, dbType = 'sqlite') => {
     },
   };
 
-  if (isPostgres) {
-    schema.embedding = {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: '图片嵌入向量(vector类型或JSON格式)',
-    };
-    schema.embeddingVector = {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'PostgreSQL vector类型存储',
-    };
-  } else {
-    schema.embedding = {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: '图片嵌入向量(JSON格式)',
-      get() {
-        const value = this.getDataValue('embedding');
-        return value ? JSON.parse(value) : null;
-      },
-      set(value) {
-        this.setDataValue('embedding', value ? JSON.stringify(value) : null);
-      },
-    };
-  }
-
   const model = sequelize.define('Image', schema);
 
   if (isPostgres) {
-    model.prototype.getEmbedding = function () {
-      const value = this.embedding;
-      return value ? JSON.parse(value) : null;
+    model.addHook('afterSync', async () => {
+      try {
+        await sequelize.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'Images' AND column_name = 'embedding_vector') THEN
+              ALTER TABLE "Images" ADD COLUMN embedding_vector vector(1536);
+            END IF;
+          END $$;
+        `);
+        console.log('[Image Model] embedding_vector column ready (vector type)');
+      } catch (err) {
+        console.warn('[Image Model] Could not add embedding_vector column:', err.message);
+      }
+    });
+
+    model.prototype.getEmbeddingVector = async function () {
+      const result = await sequelize.query(`SELECT embedding_vector FROM "Images" WHERE id = :id`, {
+        replacements: { id: this.id },
+        type: sequelize.QueryTypes.SELECT,
+      });
+      return result[0]?.embedding_vector || null;
     };
 
-    model.prototype.setEmbedding = function (value) {
-      this.embedding = value ? JSON.stringify(value) : null;
-      return this;
-    };
-
-    model.prototype.getEmbeddingVector = function () {
-      return this.embeddingVector;
-    };
-
-    model.prototype.setEmbeddingVector = function (value) {
-      this.embeddingVector = value;
+    model.prototype.setEmbeddingVector = async function (value) {
+      if (value && Array.isArray(value)) {
+        const vectorStr = '[' + value.join(',') + ']';
+        await sequelize.query(
+          `UPDATE "Images" SET embedding_vector = :vector::vector WHERE id = :id`,
+          { replacements: { vector: vectorStr, id: this.id } }
+        );
+      }
       return this;
     };
   }

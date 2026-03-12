@@ -11,7 +11,7 @@ function cosineSimilarity(vecA, vecB) {
   let normB = 0;
 
   for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
+    dotProduct += vecA[i] * vecA[i];
     normA += vecA[i] * vecA[i];
     normB += vecB[i] * vecB[i];
   }
@@ -49,7 +49,9 @@ async function findSimilarImagesByVector(queryEmbedding, limit = 10, threshold =
         }
       );
 
-      return results.filter((r) => r.similarity >= threshold);
+      if (results.length > 0) {
+        return results.filter((r) => r.similarity >= threshold);
+      }
     } catch (err) {
       console.warn('[VectorSearch] pgvector search failed, falling back to JSON:', err.message);
     }
@@ -63,13 +65,7 @@ async function findSimilarImagesByVector(queryEmbedding, limit = 10, threshold =
   });
 
   const similarities = images.map((image) => {
-    let embedding;
-    if (DB_TYPE === 'postgres') {
-      embedding = image.getEmbedding ? image.getEmbedding() : null;
-    } else {
-      embedding = image.embedding;
-    }
-
+    const embedding = image.embedding;
     const similarity = cosineSimilarity(queryEmbedding, embedding);
     return {
       id: image.id,
@@ -88,8 +84,26 @@ async function findSimilarImagesByVector(queryEmbedding, limit = 10, threshold =
     .slice(0, limit);
 }
 
+async function saveEmbeddingVector(imageId, embedding) {
+  if (DB_TYPE !== 'postgres' || !supportsVector() || !embedding) {
+    return false;
+  }
+
+  try {
+    const vectorStr = arrayToVectorString(embedding);
+    await sequelize.query(`UPDATE "Images" SET embedding_vector = :vector::vector WHERE id = :id`, {
+      replacements: { vector: vectorStr, id: imageId },
+    });
+    return true;
+  } catch (err) {
+    console.warn('[VectorSearch] Failed to save embedding_vector:', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   cosineSimilarity,
   arrayToVectorString,
   findSimilarImagesByVector,
+  saveEmbeddingVector,
 };

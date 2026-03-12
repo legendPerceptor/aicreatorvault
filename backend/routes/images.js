@@ -293,10 +293,12 @@ router.post('/batch-analyze', async (req, res) => {
       });
     }
 
-    const imagePaths = imagesToAnalyze.map((img) => {
-      const filePath = path.join(uploadsDir, img.filename);
-      return filePath;
-    }).filter((filePath) => fs.existsSync(filePath));
+    const imagePaths = imagesToAnalyze
+      .map((img) => {
+        const filePath = path.join(uploadsDir, img.filename);
+        return filePath;
+      })
+      .filter((filePath) => fs.existsSync(filePath));
 
     const results = await imageServiceClient.batchProcessPaths(imagePaths);
 

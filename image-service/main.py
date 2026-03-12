@@ -51,6 +51,10 @@ class BatchRequest(BaseModel):
     extensions: Optional[list[str]] = None
 
 
+class BatchPathsRequest(BaseModel):
+    image_paths: list[str]
+
+
 class BatchResponse(BaseModel):
     results: list[dict]
 
@@ -145,6 +149,16 @@ async def batch_process(request: BatchRequest):
     try:
         processor = BatchImageProcessor()
         results = processor.process_directory(request.directory_path, request.extensions or [])
+        return BatchResponse(results=results)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/batch-paths", response_model=BatchResponse)
+async def batch_process_paths(request: BatchPathsRequest):
+    try:
+        processor = BatchImageProcessor()
+        results = processor.process_paths(request.image_paths)
         return BatchResponse(results=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

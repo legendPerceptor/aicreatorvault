@@ -99,6 +99,18 @@ class ImageServiceClient {
     }
   }
 
+  async batchProcessPaths(imagePaths) {
+    try {
+      const response = await this.client.post('/batch-paths', {
+        image_paths: imagePaths,
+      });
+      return response.data.results;
+    } catch (error) {
+      console.error('批量处理路径失败:', error.message);
+      throw error;
+    }
+  }
+
   async healthCheck() {
     try {
       const response = await this.client.get('/health');

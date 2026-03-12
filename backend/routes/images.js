@@ -49,7 +49,19 @@ router.post('/', upload.single('image'), async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const images = await Image.findAll({ include: Prompt });
+    const { analyzed } = req.query;
+    const whereClause = {};
+
+    if (analyzed === 'true') {
+      whereClause.description = { [require('sequelize').Op.ne]: null };
+    } else if (analyzed === 'false') {
+      whereClause.description = null;
+    }
+
+    const images = await Image.findAll({
+      where: whereClause,
+      include: Prompt,
+    });
     res.json(images);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -247,6 +259,82 @@ router.get('/service/status', async (req, res) => {
     res.json({ status: isHealthy ? 'connected' : 'disconnected' });
   } catch (error) {
     res.json({ status: 'error', message: error.message });
+  }
+});
+
+router.post('/batch-analyze', async (req, res) => {
+  try {
+    const { forceAll = false } = req.body;
+    const projectRoot = path.resolve(__dirname, '..', '..');
+    const uploadsDir = path.join(projectRoot, 'backend', 'uploads');
+
+    if (!fs.existsSync(uploadsDir)) {
+      return res.status(404).json({ error: 'Uploads directory not found' });
+    }
+
+    let imagesToAnalyze;
+    if (forceAll) {
+      imagesToAnalyze = await Image.findAll();
+    } else {
+      imagesToAnalyze = await Image.findAll({
+        where: {
+          description: null,
+        },
+      });
+    }
+
+    if (imagesToAnalyze.length === 0) {
+      return res.json({
+        total: 0,
+        updated: 0,
+        failed: 0,
+        skipped: 0,
+        message: '没有需要分析的图片',
+      });
+    }
+
+    const imagePaths = imagesToAnalyze.map((img) => {
+      const filePath = path.join(uploadsDir, img.filename);
+      return filePath;
+    }).filter((filePath) => fs.existsSync(filePath));
+
+    const results = await imageServiceClient.batchProcessPaths(imagePaths);
+
+    let updated = 0;
+    let failed = 0;
+
+    for (const result of results) {
+      if (result.status === 'success') {
+        try {
+          const filename = path.basename(result.image_path);
+          const image = await Image.findOne({ where: { filename } });
+
+          if (image) {
+            await image.update({
+              description: result.description,
+              embedding: result.embedding,
+              embeddingModel: result.model,
+              analyzedAt: new Date(),
+            });
+            updated++;
+          }
+        } catch (updateError) {
+          console.error(`更新图片失败: ${result.image_path}`, updateError.message);
+          failed++;
+        }
+      } else {
+        failed++;
+      }
+    }
+
+    res.json({
+      total: results.length,
+      updated,
+      failed,
+      skipped: imagesToAnalyze.length - imagePaths.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

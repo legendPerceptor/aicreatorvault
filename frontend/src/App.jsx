@@ -23,7 +23,7 @@ function App() {
     fetchUnusedPrompts,
   } = usePrompts();
 
-  const { images, uploadImage, deleteImage, updateImageScore, updateImagePrompt } = useImages(
+  const { images, uploadImage, deleteImage, updateImageScore, updateImagePrompt, batchAnalyze, batchAnalyzing, analyzedFilter, setAnalyzedFilter } = useImages(
     prompts,
     {
       updatePromptImages,
@@ -173,6 +173,10 @@ function App() {
           onScoreChange={handleScoreChange}
           onScoreConfirm={handleScoreConfirm}
           onScoreCancel={handleScoreCancel}
+          onBatchAnalyze={batchAnalyze}
+          batchAnalyzing={batchAnalyzing}
+          analyzedFilter={analyzedFilter}
+          onAnalyzedFilterChange={setAnalyzedFilter}
         />
       )}
 

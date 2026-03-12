@@ -1,15 +1,56 @@
 import daft
 import base64
 from pathlib import Path
-from typing import Optional, Iterator
+from typing import Optional
 from openai import OpenAI
 from config import get_settings
-import concurrent.futures
 import numpy as np
 from numpy.typing import NDArray
 
+_ray_initialized = False
+
+def _ensure_ray_initialized():
+    global _ray_initialized
+    if not _ray_initialized:
+        daft.set_runner_ray()
+        _ray_initialized = True
+
 settings = get_settings()
 client = OpenAI(api_key=settings.openai_api_key)
+
+
+@daft.udf(return_dtype=daft.DataType.python())
+def analyze_image_udf(image_bytes: bytes) -> dict:
+    base64_image = base64.b64encode(image_bytes).decode("utf-8")
+    response = client.chat.completions.create(
+        model=settings.openai_vision_model,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "请详细描述这张图片的内容，包括：主体对象、场景、色彩、风格、情感氛围等。用中文回答，简洁明了。",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    },
+                ],
+            }
+        ],
+        max_tokens=500,
+    )
+    return {
+        "description": response.choices[0].message.content,
+        "model": settings.openai_vision_model,
+    }
+
+
+@daft.udf(return_dtype=daft.DataType.python())
+def generate_embedding_udf(text: str) -> list:
+    response = client.embeddings.create(model=settings.openai_embedding_model, input=text)
+    return response.data[0].embedding
 
 
 class ImageProcessor:
@@ -23,7 +64,6 @@ class ImageProcessor:
 
     def analyze_image(self, image_path: str) -> dict:
         base64_image = self.encode_image_to_base64(image_path)
-
         response = client.chat.completions.create(
             model=self.vision_model,
             messages=[
@@ -43,7 +83,6 @@ class ImageProcessor:
             ],
             max_tokens=500,
         )
-
         description = response.choices[0].message.content
         return {
             "description": description,
@@ -61,7 +100,6 @@ class ImageProcessor:
     def process_single_image(self, image_path: str) -> dict:
         analysis = self.analyze_image(image_path)
         embedding = self.generate_embedding(analysis["description"])
-
         return {
             "description": analysis["description"],
             "embedding": embedding,
@@ -74,9 +112,40 @@ class BatchImageProcessor:
         self.image_processor = ImageProcessor()
         self.max_workers = max_workers
 
-    def create_image_dataframe(self, image_paths: list[str]) -> daft.DataFrame:
-        df = daft.from_pydict({"image_path": image_paths})
-        return df
+    def process_directory_daft(
+        self, directory_path: str, extensions: Optional[list[str]] = None
+    ) -> list[dict]:
+        _ensure_ray_initialized()
+
+        if extensions is None:
+            extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+
+        directory = Path(directory_path)
+        glob_patterns = []
+        for ext in extensions:
+            glob_patterns.append(f"{directory}/*{ext}")
+            glob_patterns.append(f"{directory}/*{ext.upper()}")
+
+        df = daft.from_glob_path(glob_patterns)
+
+        df = df.with_column("image", df["path"].url.download())
+        df = df.with_column("analysis", analyze_image_udf(df["image"]))
+        df = df.with_column("description", df["analysis"].apply(lambda x: x["description"], return_dtype=str))
+        df = df.with_column("embedding", generate_embedding_udf(df["description"]))
+        df = df.with_column("model", df["analysis"].apply(lambda x: x["model"], return_dtype=str))
+
+        df = df.select("path", "description", "embedding", "model")
+
+        results = []
+        for row in df.to_pydict().rows():
+            results.append({
+                "image_path": row["path"],
+                "description": row["description"],
+                "embedding": row["embedding"],
+                "model": row["model"],
+                "status": "success",
+            })
+        return results
 
     def process_single_with_path(self, image_path: str) -> dict:
         try:
@@ -93,11 +162,9 @@ class BatchImageProcessor:
             }
         return result
 
-    def process_batch_with_daft(self, image_paths: list[str]) -> Iterator[dict]:
-        for path in image_paths:
-            yield self.process_single_with_path(path)
-
     def process_batch_parallel(self, image_paths: list[str]) -> list[dict]:
+        import concurrent.futures
+
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_path = {
@@ -120,8 +187,11 @@ class BatchImageProcessor:
         return results
 
     def process_directory(
-        self, directory_path: str, extensions: Optional[list[str]] = None, parallel: bool = True
+        self, directory_path: str, extensions: Optional[list[str]] = None, use_daft: bool = True
     ) -> list[dict]:
+        if use_daft:
+            return self.process_directory_daft(directory_path, extensions)
+
         if extensions is None:
             extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
 
@@ -132,25 +202,11 @@ class BatchImageProcessor:
             image_paths.extend(directory.glob(f"*{ext.upper()}"))
 
         image_paths = [str(p) for p in image_paths]
+        return self.process_batch_parallel(image_paths)
 
-        if parallel:
-            return self.process_batch_parallel(image_paths)
-        return list(self.process_batch_with_daft(image_paths))
-
-    def create_analysis_dataframe(self, results: list[dict]) -> daft.DataFrame:
-        data = {
-            "image_path": [],
-            "description": [],
-            "embedding": [],
-            "status": [],
-        }
-        for r in results:
-            data["image_path"].append(r.get("image_path"))
-            data["description"].append(r.get("description"))
-            data["embedding"].append(r.get("embedding"))
-            data["status"].append(r.get("status"))
-
-        return daft.from_pydict(data)
+    def process_paths(self, image_paths: list[str]) -> list[dict]:
+        valid_paths = [p for p in image_paths if Path(p).exists()]
+        return self.process_batch_parallel(valid_paths)
 
 
 class SemanticSearch:
@@ -219,7 +275,7 @@ class SemanticSearch:
         results.sort(key=lambda x: x["similarity"], reverse=True)
         return results[:top_k]
 
-    def create_search_index(self, images_with_embeddings: list[dict]) -> daft.DataFrame:
+    def create_search_index_daft(self, images_with_embeddings: list[dict]) -> daft.DataFrame:
         data = {
             "id": [],
             "image_path": [],

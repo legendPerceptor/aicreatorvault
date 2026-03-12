@@ -15,12 +15,17 @@ function ImagesPage({
   onScoreChange,
   onScoreConfirm,
   onScoreCancel,
+  onBatchAnalyze,
+  batchAnalyzing,
+  analyzedFilter,
+  onAnalyzedFilterChange,
 }) {
   const [draggedImage, setDraggedImage] = useState(null);
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [showPromptSelection, setShowPromptSelection] = useState(false);
   const [editingImagePrompt, setEditingImagePrompt] = useState(null);
   const [selectedImagePromptId, setSelectedImagePromptId] = useState('');
+  const [batchResult, setBatchResult] = useState(null);
 
   const handleImageUpload = async (e) => {
     e.preventDefault();
@@ -88,6 +93,20 @@ function ImagesPage({
     setSelectedImagePromptId('');
   };
 
+  const handleBatchAnalyze = async (forceAll = false) => {
+    const message = forceAll
+      ? '确定要重新分析所有图片吗？这可能需要一些时间。'
+      : '确定要批量分析未分析的图片吗？这可能需要一些时间。';
+    if (!window.confirm(message)) {
+      return;
+    }
+    setBatchResult(null);
+    const result = await onBatchAnalyze(forceAll);
+    setBatchResult(result);
+  };
+
+  const unanalyzedCount = images.filter((img) => !img.description).length;
+
   return (
     <div className="section">
       <h2>图片管理</h2>
@@ -112,6 +131,52 @@ function ImagesPage({
         onDrop={handleDrop}
       >
         <p>拖拽图片到这里上传</p>
+      </div>
+
+      <div className="batch-analyze-section">
+        <button
+          onClick={() => handleBatchAnalyze(false)}
+          disabled={batchAnalyzing}
+          className="batch-analyze-btn"
+        >
+          {batchAnalyzing ? '分析中...' : '分析未分析图片'}
+        </button>
+        <button
+          onClick={() => handleBatchAnalyze(true)}
+          disabled={batchAnalyzing}
+          className="batch-analyze-btn batch-analyze-btn-secondary"
+        >
+          {batchAnalyzing ? '分析中...' : '重新分析全部'}
+        </button>
+        {unanalyzedCount > 0 && !batchAnalyzing && (
+          <span className="unanalyzed-count">（{unanalyzedCount} 张图片待分析）</span>
+        )}
+        {batchResult && (
+          <div className="batch-result">
+            <p>
+              批量分析完成：共 {batchResult.total} 张，成功 {batchResult.updated} 张，失败{' '}
+              {batchResult.failed} 张
+              {batchResult.skipped > 0 && `，跳过 ${batchResult.skipped} 张`}
+              {batchResult.message && ` - ${batchResult.message}`}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="filter-section">
+        <label>筛选：</label>
+        <select
+          value={analyzedFilter}
+          onChange={(e) => onAnalyzedFilterChange(e.target.value)}
+          className="filter-select"
+        >
+          <option value="all">全部图片</option>
+          <option value="analyzed">已分析</option>
+          <option value="unanalyzed">未分析</option>
+        </select>
+        <span className="image-count">
+          共 {images.length} 张图片
+        </span>
       </div>
 
       {showPromptSelection && draggedImage && (

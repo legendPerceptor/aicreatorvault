@@ -30,6 +30,9 @@
   },
   "devDependencies": {
     "concurrently": "^7.6.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
     "prettier": "^3.8.1"
   }
 }

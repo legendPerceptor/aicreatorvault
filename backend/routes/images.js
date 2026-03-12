@@ -3,8 +3,9 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { Image, Prompt } = require('../models');
+const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
 const imageServiceClient = require('../services/imageServiceClient');
+const { saveEmbeddingVector } = require('../utils/vectorSearch');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -43,6 +44,9 @@ router.post('/', upload.single('image'), async (req, res) => {
           embeddingModel: analysis.model,
           analyzedAt: new Date(),
         });
+        if (DB_TYPE === 'postgres' && supportsVector()) {
+          await saveEmbeddingVector(image.id, analysis.embedding);
+        }
       } catch (analyzeError) {
         console.error('AI分析失败，但图片已保存:', analyzeError.message);
       }
@@ -148,6 +152,10 @@ router.post('/:id/analyze', async (req, res) => {
       embeddingModel: analysis.model,
       analyzedAt: new Date(),
     });
+
+    if (DB_TYPE === 'postgres' && supportsVector()) {
+      await saveEmbeddingVector(image.id, analysis.embedding);
+    }
 
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
     res.json(imageWithPrompt);
@@ -329,6 +337,9 @@ router.post('/batch-analyze', async (req, res) => {
               embeddingModel: result.model,
               analyzedAt: new Date(),
             });
+            if (DB_TYPE === 'postgres' && supportsVector()) {
+              await saveEmbeddingVector(image.id, result.embedding);
+            }
             updated++;
           }
         } catch (updateError) {

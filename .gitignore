@@ -9,6 +9,7 @@ backend/uploads/
 
 # 环境变量文件
 .env
+backend/.env
 image-service/.env
 
 # 日志文件

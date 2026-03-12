@@ -1,7 +1,9 @@
 const { DataTypes } = require('sequelize');
 
-const Image = (sequelize) => {
-  return sequelize.define('Image', {
+const Image = (sequelize, dbType = 'sqlite') => {
+  const isPostgres = dbType === 'postgres';
+
+  const schema = {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -54,7 +56,49 @@ const Image = (sequelize) => {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-  });
+  };
+
+  const model = sequelize.define('Image', schema);
+
+  if (isPostgres) {
+    model.addHook('afterSync', async () => {
+      try {
+        await sequelize.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'Images' AND column_name = 'embedding_vector') THEN
+              ALTER TABLE "Images" ADD COLUMN embedding_vector vector(1536);
+            END IF;
+          END $$;
+        `);
+        console.log('[Image Model] embedding_vector column ready (vector type)');
+      } catch (err) {
+        console.warn('[Image Model] Could not add embedding_vector column:', err.message);
+      }
+    });
+
+    model.prototype.getEmbeddingVector = async function () {
+      const result = await sequelize.query(`SELECT embedding_vector FROM "Images" WHERE id = :id`, {
+        replacements: { id: this.id },
+        type: sequelize.QueryTypes.SELECT,
+      });
+      return result[0]?.embedding_vector || null;
+    };
+
+    model.prototype.setEmbeddingVector = async function (value) {
+      if (value && Array.isArray(value)) {
+        const vectorStr = '[' + value.join(',') + ']';
+        await sequelize.query(
+          `UPDATE "Images" SET embedding_vector = :vector::vector WHERE id = :id`,
+          { replacements: { vector: vectorStr, id: this.id } }
+        );
+      }
+      return this;
+    };
+  }
+
+  return model;
 };
 
 module.exports = Image;

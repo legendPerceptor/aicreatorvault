@@ -133,6 +133,7 @@ router.post('/:id/analyze', async (req, res) => {
     }
 
     const analysis = await imageServiceClient.analyzeImage(absolutePath);
+    
     await image.update({
       description: analysis.description,
       embedding: analysis.embedding,
@@ -300,7 +301,9 @@ router.post('/batch-analyze', async (req, res) => {
       })
       .filter((filePath) => fs.existsSync(filePath));
 
-    const results = await imageServiceClient.batchProcessPaths(imagePaths);
+    // 转换为绝对路径
+    const absolutePaths = imagePaths.map(filePath => path.resolve(filePath));
+    const results = await imageServiceClient.batchProcessPaths(absolutePaths);
 
     let updated = 0;
     let failed = 0;

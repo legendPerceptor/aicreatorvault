@@ -4,6 +4,8 @@ import StarRating, { StaticStarRating } from './StarRating';
 function ImageCard({
   image,
   onDelete,
+  onAnalyzeSingle,
+  analyzingImageId,
   onScoreEdit,
   onScoreChange,
   onScoreConfirm,
@@ -27,8 +29,10 @@ function ImageCard({
     return `${(sim * 100).toFixed(1)}%`;
   };
 
+  const isAnalyzed = !!image.description;
+  
   return (
-    <div className="image-card">
+    <div className={`image-card ${isAnalyzed ? 'analyzed' : ''}`}>
       <div className="image-header">
         <img src={`/uploads/${image.filename}`} alt="AI生成" />
         {onDelete && (
@@ -38,6 +42,9 @@ function ImageCard({
         )}
         {showSimilarity && similarity !== null && (
           <div className="similarity-badge">相似度: {formatSimilarity(similarity)}</div>
+        )}
+        {isAnalyzed && (
+          <div className="analyzed-badge">已分析</div>
         )}
       </div>
       <div className="content">
@@ -106,6 +113,19 @@ function ImageCard({
               )}
             </>
           ))}
+
+        {onAnalyzeSingle && !isAnalyzed && (
+          <div className="analyze-action">
+            <button 
+              type="button" 
+              className="analyze-single-btn" 
+              onClick={() => onAnalyzeSingle(image.id)}
+              disabled={analyzingImageId === image.id}
+            >
+              {analyzingImageId === image.id ? '分析中...' : '分析图片'}
+            </button>
+          </div>
+        )}
 
         {showScore && (
           <div className="score">

@@ -100,6 +100,12 @@ body {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.image-card.analyzed {
+  border: 2px solid #4caf50;
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
 }
 
 .image-header {
@@ -112,10 +118,33 @@ body {
   object-fit: cover;
 }
 
+.analyze-action {
+  margin: 10px 0;
+  text-align: center;
+}
+
+.analyze-single-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  background-color: #2196F3;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.analyze-single-btn:hover {
+  background-color: #1976D2;
+}
+
+.analyze-single-btn:disabled {
+  background-color: #bbb;
+  cursor: not-allowed;
+}
+
 .delete-btn {
-  position: absolute;
-  top: 5px;
-  right: 5px;
   width: 24px;
   height: 24px;
   border: none;
@@ -128,11 +157,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  transition: background-color 0.2s;
 }
 
 .delete-btn:hover {
   background-color: rgba(255, 0, 0, 0.9);
+}
+
+.analyzed-badge {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
 }
 
 .prompt-container {
@@ -949,10 +990,28 @@ body {
 
 .batch-result {
   padding: 10px 15px;
-  background-color: #e6f7e6;
   border-radius: 5px;
-  color: #2e7d32;
   font-size: 14px;
+  margin-top: 10px;
+  border-left: 4px solid #4caf50;
+}
+
+.batch-result.success {
+  background-color: #e6f7e6;
+  color: #2e7d32;
+  border-left-color: #4caf50;
+}
+
+.batch-result.warning {
+  background-color: #fff8e1;
+  color: #ff8f00;
+  border-left-color: #ff9800;
+}
+
+.batch-result.error {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-left-color: #f44336;
 }
 
 .batch-analyze-btn-secondary {
@@ -985,6 +1044,34 @@ body {
   font-size: 14px;
   background-color: white;
   cursor: pointer;
+}
+
+/* 进度条样式 */
+.batch-progress {
+  flex: 1;
+  max-width: 300px;
+  margin-left: 20px;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #666;
+  display: block;
+  text-align: center;
 }
 
 .filter-select:hover {

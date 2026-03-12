@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchUnusedPrompts }) {
   const [images, setImages] = useState([]);
   const [batchAnalyzing, setBatchAnalyzing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [analyzingImageId, setAnalyzingImageId] = useState(null);
   const [analyzedFilter, setAnalyzedFilter] = useState('all');
 
   const fetchImages = useCallback(() => {
@@ -74,9 +76,38 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     setImages((prev) => prev.map((image) => (image.id === imageId ? updatedImage : image)));
   };
 
+  const analyzeSingleImage = async (imageId) => {
+    setAnalyzingImageId(imageId);
+    try {
+      const response = await fetch(`/api/images/${imageId}/analyze`, {
+        method: 'POST',
+      });
+      const updatedImage = await response.json();
+      setImages((prev) => prev.map((image) => (image.id === imageId ? updatedImage : image)));
+      return { success: true, image: updatedImage };
+    } catch (error) {
+      console.error('分析单张图片失败:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setAnalyzingImageId(null);
+    }
+  };
+
   const batchAnalyze = async (forceAll = false) => {
     setBatchAnalyzing(true);
+    setBatchProgress({ current: 0, total: 0 });
+    
     try {
+      // 先获取需要分析的图片数量
+      let imagesToAnalyze;
+      if (forceAll) {
+        imagesToAnalyze = images;
+      } else {
+        imagesToAnalyze = images.filter((img) => !img.description);
+      }
+      
+      setBatchProgress({ current: 0, total: imagesToAnalyze.length });
+      
       const response = await fetch('/api/images/batch-analyze', {
         method: 'POST',
         headers: {
@@ -84,11 +115,30 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
         },
         body: JSON.stringify({ forceAll }),
       });
+      
       const result = await response.json();
+      
+      // 模拟进度更新
+      if (result.total > 0) {
+        const progressInterval = setInterval(() => {
+          setBatchProgress((prev) => {
+            if (prev.current >= result.total) {
+              clearInterval(progressInterval);
+              return { current: result.total, total: result.total };
+            }
+            return { ...prev, current: prev.current + 1 };
+          });
+        }, 300);
+        
+        // 等待进度完成
+        await new Promise(resolve => setTimeout(resolve, result.total * 300 + 500));
+      }
+      
       fetchImages();
       return result;
     } finally {
       setBatchAnalyzing(false);
+      setBatchProgress({ current: 0, total: 0 });
     }
   };
 
@@ -101,8 +151,11 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     updateImageScore,
     updateImagePrompt,
     updateImageInList,
+    analyzeSingleImage,
+    analyzingImageId,
     batchAnalyze,
     batchAnalyzing,
+    batchProgress,
     analyzedFilter,
     setAnalyzedFilter,
   };

@@ -9,6 +9,8 @@ function ImagesPage({
   onDeleteImage,
   onUpdateImagePrompt,
   onUpdateImageScore,
+  onAnalyzeSingleImage,
+  analyzingImageId,
   editingScores,
   scoreValues,
   onScoreEdit,
@@ -17,6 +19,7 @@ function ImagesPage({
   onScoreCancel,
   onBatchAnalyze,
   batchAnalyzing,
+  batchProgress,
   analyzedFilter,
   onAnalyzedFilterChange,
 }) {
@@ -151,8 +154,23 @@ function ImagesPage({
         {unanalyzedCount > 0 && !batchAnalyzing && (
           <span className="unanalyzed-count">（{unanalyzedCount} 张图片待分析）</span>
         )}
+        
+        {batchAnalyzing && batchProgress.total > 0 && (
+          <div className="batch-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+              ></div>
+            </div>
+            <span className="progress-text">
+              {batchProgress.current} / {batchProgress.total} ({Math.round((batchProgress.current / batchProgress.total) * 100)}%)
+            </span>
+          </div>
+        )}
+        
         {batchResult && (
-          <div className="batch-result">
+          <div className={`batch-result ${batchResult.updated > 0 ? 'success' : batchResult.failed > 0 ? 'error' : 'warning'}`}>
             <p>
               批量分析完成：共 {batchResult.total} 张，成功 {batchResult.updated} 张，失败{' '}
               {batchResult.failed} 张
@@ -217,6 +235,8 @@ function ImagesPage({
             key={image.id}
             image={image}
             onDelete={onDeleteImage}
+            onAnalyzeSingle={onAnalyzeSingleImage}
+            analyzingImageId={analyzingImageId}
             editingScores={editingScores}
             scoreValues={scoreValues}
             onScoreEdit={onScoreEdit}

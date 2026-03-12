@@ -181,9 +181,7 @@ function SearchPage({
             {isSearching ? '搜索中...' : 'AI 搜索'}
           </button>
           {serviceStatus !== 'connected' && (
-            <p className="hint">
-              提示：AI 语义搜索需要图像分析服务运行中
-            </p>
+            <p className="hint">提示：AI 语义搜索需要图像分析服务运行中</p>
           )}
         </form>
       )}
@@ -201,9 +199,7 @@ function SearchPage({
           <button type="submit" disabled={isSearching || !searchImageFile}>
             {isSearching ? '搜索中...' : '搜索相似图片'}
           </button>
-          {searchImageFile && (
-            <p className="hint">已选择: {searchImageFile.name}</p>
-          )}
+          {searchImageFile && <p className="hint">已选择: {searchImageFile.name}</p>}
         </form>
       )}
 
@@ -235,9 +231,7 @@ function SearchPage({
             />
           ))}
         </div>
-        {searchResults.length === 0 && (
-          <p className="no-results">暂无搜索结果</p>
-        )}
+        {searchResults.length === 0 && <p className="no-results">暂无搜索结果</p>}
       </div>
     </div>
   );

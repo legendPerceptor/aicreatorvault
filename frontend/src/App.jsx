@@ -23,14 +23,24 @@ function App() {
     fetchUnusedPrompts,
   } = usePrompts();
 
-  const { images, uploadImage, deleteImage, updateImageScore, updateImagePrompt, analyzeSingleImage, analyzingImageId, batchAnalyze, batchAnalyzing, batchProgress, analyzedFilter, setAnalyzedFilter } = useImages(
-    prompts,
-    {
-      updatePromptImages,
-      removeImageFromPrompts,
-      fetchUnusedPrompts,
-    }
-  );
+  const {
+    images,
+    uploadImage,
+    deleteImage,
+    updateImageScore,
+    updateImagePrompt,
+    analyzeSingleImage,
+    analyzingImageId,
+    batchAnalyze,
+    batchAnalyzing,
+    batchProgress,
+    analyzedFilter,
+    setAnalyzedFilter,
+  } = useImages(prompts, {
+    updatePromptImages,
+    removeImageFromPrompts,
+    fetchUnusedPrompts,
+  });
 
   const {
     themes,

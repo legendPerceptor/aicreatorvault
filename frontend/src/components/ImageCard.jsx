@@ -30,7 +30,7 @@ function ImageCard({
   };
 
   const isAnalyzed = !!image.description;
-  
+
   return (
     <div className={`image-card ${isAnalyzed ? 'analyzed' : ''}`}>
       <div className="image-header">
@@ -43,9 +43,7 @@ function ImageCard({
         {showSimilarity && similarity !== null && (
           <div className="similarity-badge">相似度: {formatSimilarity(similarity)}</div>
         )}
-        {isAnalyzed && (
-          <div className="analyzed-badge">已分析</div>
-        )}
+        {isAnalyzed && <div className="analyzed-badge">已分析</div>}
       </div>
       <div className="content">
         {image.description && (
@@ -116,9 +114,9 @@ function ImageCard({
 
         {onAnalyzeSingle && !isAnalyzed && (
           <div className="analyze-action">
-            <button 
-              type="button" 
-              className="analyze-single-btn" 
+            <button
+              type="button"
+              className="analyze-single-btn"
               onClick={() => onAnalyzeSingle(image.id)}
               disabled={analyzingImageId === image.id}
             >

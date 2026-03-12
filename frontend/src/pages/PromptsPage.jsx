@@ -58,24 +58,13 @@ function PromptsPage({
                         onScoreChange={onScoreChange}
                       />
                       <div className="score-actions">
-                        <button onClick={() => onScoreConfirm('prompts', prompt.id)}>
-                          确认
-                        </button>
-                        <button onClick={() => onScoreCancel('prompts', prompt.id)}>
-                          取消
-                        </button>
+                        <button onClick={() => onScoreConfirm('prompts', prompt.id)}>确认</button>
+                        <button onClick={() => onScoreCancel('prompts', prompt.id)}>取消</button>
                       </div>
                     </div>
                   ) : (
-                    <span
-                      className="score-value"
-                      onClick={() => onScoreEdit('prompts', prompt.id)}
-                    >
-                      {prompt.score ? (
-                        <StaticStarRating score={prompt.score} />
-                      ) : (
-                        '点击评分'
-                      )}
+                    <span className="score-value" onClick={() => onScoreEdit('prompts', prompt.id)}>
+                      {prompt.score ? <StaticStarRating score={prompt.score} /> : '点击评分'}
                     </span>
                   )}
                 </div>

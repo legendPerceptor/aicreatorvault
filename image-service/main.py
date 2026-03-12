@@ -118,7 +118,9 @@ async def search_by_text(request: SearchRequest):
 
 
 @app.post("/search/image", response_model=SearchResponse)
-async def search_by_image(file: UploadFile = File(...), images: str = Form(...), top_k: int = Form(10)):
+async def search_by_image(
+    file: UploadFile = File(...), images: str = Form(...), top_k: int = Form(10)
+):
     import json
 
     tmp_path = None
@@ -148,7 +150,9 @@ async def batch_process(request: BatchRequest):
 
     try:
         processor = BatchImageProcessor()
-        results = processor.process_directory(request.directory_path, request.extensions or [])
+        results = processor.process_directory(
+            request.directory_path, request.extensions or []
+        )
         return BatchResponse(results=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -176,6 +180,7 @@ async def generate_embedding(text: str):
 
 def run_server():
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=settings.service_port)
 
 

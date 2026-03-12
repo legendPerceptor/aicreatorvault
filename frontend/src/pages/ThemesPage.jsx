@@ -75,8 +75,7 @@ function ThemesPage({
             {images
               .filter((image) => {
                 return (
-                  !selectedTheme.Images ||
-                  !selectedTheme.Images.some((img) => img.id === image.id)
+                  !selectedTheme.Images || !selectedTheme.Images.some((img) => img.id === image.id)
                 );
               })
               .map((image) => (

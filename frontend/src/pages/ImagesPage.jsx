@@ -34,12 +34,12 @@ function ImagesPage({
   const handleImageUpload = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
+
     // 使用状态中的autoAnalyze值
     if (!autoAnalyze) {
       formData.set('autoAnalyze', 'false');
     }
-    
+
     await onUploadImage(formData);
     e.target.reset();
     // 重置checkbox状态为默认值
@@ -125,7 +125,7 @@ function ImagesPage({
   return (
     <div className="section">
       <h2>图片管理</h2>
-      
+
       {/* 当没有暂存图片时，显示普通上传表单和拖拽区域 */}
       {!draggedImage && (
         <>
@@ -142,10 +142,10 @@ function ImagesPage({
               ))}
             </select>
             <div className="checkbox-group">
-              <input 
-                type="checkbox" 
-                id="autoAnalyze" 
-                name="autoAnalyze" 
+              <input
+                type="checkbox"
+                id="autoAnalyze"
+                name="autoAnalyze"
                 checked={autoAnalyze}
                 onChange={(e) => setAutoAnalyze(e.target.checked)}
               />
@@ -163,8 +163,6 @@ function ImagesPage({
           </div>
         </>
       )}
-
-
 
       {/* 当有暂存图片时，显示暂存图片部分 */}
       {draggedImage && (
@@ -190,10 +188,10 @@ function ImagesPage({
               ))}
             </select>
             <div className="checkbox-group">
-              <input 
-                type="checkbox" 
-                id="stagedAutoAnalyze" 
-                name="stagedAutoAnalyze" 
+              <input
+                type="checkbox"
+                id="stagedAutoAnalyze"
+                name="stagedAutoAnalyze"
                 checked={autoAnalyze}
                 onChange={(e) => setAutoAnalyze(e.target.checked)}
               />
@@ -221,7 +219,7 @@ function ImagesPage({
           <option value="analyzed">已分析</option>
           <option value="unanalyzed">未分析</option>
         </select>
-        
+
         <div className="batch-analyze-buttons">
           <button
             onClick={() => handleBatchAnalyze(false)}
@@ -238,34 +236,36 @@ function ImagesPage({
             {batchAnalyzing ? '分析中...' : '重新分析全部'}
           </button>
         </div>
-        
+
         <span className="image-count">
           共 {images.length} 张图片
           {unanalyzedCount > 0 && !batchAnalyzing && (
             <span className="unanalyzed-count">（{unanalyzedCount} 张图片待分析）</span>
           )}
         </span>
-        
+
         {batchAnalyzing && batchProgress.total > 0 && (
           <div className="batch-progress">
             <div className="progress-bar">
-              <div 
-                className="progress-fill" 
+              <div
+                className="progress-fill"
                 style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
               ></div>
             </div>
             <span className="progress-text">
-              {batchProgress.current} / {batchProgress.total} ({Math.round((batchProgress.current / batchProgress.total) * 100)}%)
+              {batchProgress.current} / {batchProgress.total} (
+              {Math.round((batchProgress.current / batchProgress.total) * 100)}%)
             </span>
           </div>
         )}
-        
+
         {batchResult && (
-          <div className={`batch-result ${batchResult.updated > 0 ? 'success' : batchResult.failed > 0 ? 'error' : 'warning'}`}>
+          <div
+            className={`batch-result ${batchResult.updated > 0 ? 'success' : batchResult.failed > 0 ? 'error' : 'warning'}`}
+          >
             <p>
               批量分析完成：共 {batchResult.total} 张，成功 {batchResult.updated} 张，失败{' '}
-              {batchResult.failed} 张
-              {batchResult.skipped > 0 && `，跳过 ${batchResult.skipped} 张`}
+              {batchResult.failed} 张{batchResult.skipped > 0 && `，跳过 ${batchResult.skipped} 张`}
               {batchResult.message && ` - ${batchResult.message}`}
             </p>
           </div>

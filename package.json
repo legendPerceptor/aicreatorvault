@@ -9,7 +9,9 @@
     "start:image-service": "cd image-service && uv run uvicorn main:app --host 0.0.0.0 --port 8001 --reload",
     "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "dev:full": "concurrently \"npm run start:backend\" \"npm run start:frontend\" \"npm run start:image-service\"",
-    "prepare": "husky"
+    "prepare": "pre-commit install",
+    "pre-commit:run": "pre-commit run --all-files",
+    "pre-commit:install": "pre-commit install --install-hooks"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +30,6 @@
   },
   "devDependencies": {
     "concurrently": "^7.6.0",
-    "husky": "^9.1.7",
     "prettier": "^3.8.1"
   }
 }

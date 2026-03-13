@@ -210,6 +210,8 @@ function App() {
       {activeTab === 'search' && (
         <SearchPage
           images={images}
+          prompts={prompts}
+          themes={themes}
           onDeleteImage={handleDeleteImage}
           editingScores={editingScores}
           scoreValues={scoreValues}

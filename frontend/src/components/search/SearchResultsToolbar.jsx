@@ -24,6 +24,12 @@ function SearchResultsToolbar({
       { value: 'score', label: '评分' },
       { value: 'date', label: '日期' },
     ],
+    hybrid: [
+      { value: 'rerankScore', label: '综合评分' },
+      { value: 'similarity', label: '相似度' },
+      { value: 'score', label: '评分' },
+      { value: 'date', label: '日期' },
+    ],
   };
 
   const currentSortOptions = sortOptions[searchMode] || sortOptions.keyword;
@@ -36,7 +42,13 @@ function SearchResultsToolbar({
         <span className="count-label">{resultCount === 1 ? '个结果' : '个结果'}</span>
         {searchMode !== 'keyword' && (
           <span className="search-mode-indicator">
-            ({searchMode === 'semantic' ? 'AI 语义' : '以图搜图'})
+            {searchMode === 'semantic'
+              ? '(AI 语义)'
+              : searchMode === 'hybrid'
+                ? '(混合检索)'
+                : searchMode === 'image'
+                  ? '(以图搜图)'
+                  : ''}
           </span>
         )}
       </div>

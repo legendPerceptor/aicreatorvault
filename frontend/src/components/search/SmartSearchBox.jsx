@@ -36,10 +36,15 @@ function SmartSearchBox({
     const hasDescriptive = descriptiveWords.some((word) => text.includes(word));
 
     if (text.length > 20 || hasDescriptive) {
-      return 'semantic';
+      return 'semantic'; // 描述性内容使用语义搜索
     }
 
-    // 默认为关键词搜索
+    // 短查询使用混合检索以获得最佳结果
+    if (text.length > 2 && text.length <= 20) {
+      return 'hybrid';
+    }
+
+    // 极短查询使用关键词搜索
     return 'keyword';
   };
 
@@ -130,12 +135,13 @@ function SmartSearchBox({
 
   const getIntentBadge = () => {
     const intent = searchMode === 'auto' ? detectIntent(value) : searchMode;
-    if (intent === 'empty' || !uploadedImage) return null;
+    if (intent === 'empty' && !uploadedImage) return null;
 
     const badges = {
       keyword: { text: '关键词', icon: '🔍', color: '#3b82f6' },
       semantic: { text: 'AI 语义', icon: '🧠', color: '#8b5cf6' },
       image: { text: '以图搜图', icon: '🖼️', color: '#ec4899' },
+      hybrid: { text: '混合检索', icon: '🔗', color: '#f59e0b' },
     };
 
     const badge = badges[intent];
@@ -246,6 +252,13 @@ function SmartSearchBox({
               onClick={() => setSearchMode('semantic')}
             >
               🧠 AI 语义
+            </button>
+            <button
+              type="button"
+              className={`mode-option ${searchMode === 'hybrid' ? 'active' : ''}`}
+              onClick={() => setSearchMode('hybrid')}
+            >
+              🔗 混合检索
             </button>
             <button
               type="button"

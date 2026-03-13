@@ -27,7 +27,9 @@ function SearchPage({
   const [sortBy, setSortBy] = useState('similarity');
   const [viewMode, setViewMode] = useState('grid');
   const [filters, setFilters] = useState({});
-  const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image
+  const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image | hybrid
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // 检查服务状态
   const checkServiceStatus = async () => {
@@ -97,6 +99,8 @@ function SearchPage({
     const sorted = [...results];
 
     switch (sortType) {
+      case 'rerankScore':
+        return sorted.sort((a, b) => (b.rerankScore || 0) - (a.rerankScore || 0));
       case 'similarity':
         return sorted.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
       case 'score':
@@ -136,8 +140,27 @@ function SearchPage({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query, topK: 50 }),
         });
-        results = await response.json();
+        const data = await response.json();
+        results = data.results || data;
         setActiveSearchType('semantic');
+      } else if (mode === 'hybrid') {
+        // 混合检索（关键词 + 语义）
+        const response = await fetch(`${API_BASE}/images/search/hybrid`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            topK: 50,
+            alpha: 0.7, // 语义搜索权重
+            minScore: filters.minScore,
+            maxScore: filters.maxScore,
+            minSimilarity: filters.minSimilarity,
+            themeIds: filters.themeIds,
+          }),
+        });
+        const data = await response.json();
+        results = data.results || [];
+        setActiveSearchType('hybrid');
       }
 
       // 应用过滤器和排序

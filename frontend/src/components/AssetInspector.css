@@ -1,0 +1,271 @@
+.asset-inspector {
+  width: 350px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.inspector-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asset-icon {
+  font-size: 20px;
+}
+
+.asset-type {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.asset-id {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.inspector-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.inspector-close:hover {
+  background: #e5e7eb;
+}
+
+.inspector-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.inspector-loading,
+.inspector-error,
+.inspector-empty {
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.inspector-section {
+  margin-bottom: 20px;
+}
+
+.inspector-section:last-child {
+  margin-bottom: 0;
+}
+
+.inspector-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #1f2937;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: 13px;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.save-button,
+.cancel-button {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.save-button {
+  background: #3b82f6;
+  color: white;
+}
+
+.save-button:hover {
+  background: #2563eb;
+}
+
+.cancel-button {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.cancel-button:hover {
+  background: #d1d5db;
+}
+
+.relationships-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relationship-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.relationship-icon {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.relationship-icon.generated {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.relationship-icon.derived_from {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.relationship-icon.version_of {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.relationship-icon.inspired_by {
+  background: #fce7f3;
+  color: #db2777;
+}
+
+.relationship-details {
+  flex: 1;
+  color: #374151;
+}
+
+.delete-relationship-button {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.delete-relationship-button:hover {
+  background: #fef2f2;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-button {
+  padding: 10px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.action-button:hover {
+  background: #2563eb;
+}

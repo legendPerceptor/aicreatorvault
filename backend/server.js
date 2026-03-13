@@ -6,6 +6,9 @@ const path = require('path');
 const promptsRouter = require('./routes/prompts');
 const imagesRouter = require('./routes/images');
 const themesRouter = require('./routes/themes');
+const assetsRouter = require('./routes/assets');
+const graphRouter = require('./routes/graph');
+const relationshipsRouter = require('./routes/relationships');
 
 const app = express();
 
@@ -21,6 +24,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/prompts', promptsRouter);
 app.use('/api/images', imagesRouter);
 app.use('/api/themes', themesRouter);
+app.use('/api/assets', assetsRouter);
+app.use('/api/graph', graphRouter);
+app.use('/api/relationships', relationshipsRouter);
 
 // 启动服务器
 const PORT = process.env.PORT || 3001;

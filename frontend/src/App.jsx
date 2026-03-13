@@ -3,6 +3,7 @@ import PromptsPage from './pages/PromptsPage';
 import ImagesPage from './pages/ImagesPage';
 import ThemesPage from './pages/ThemesPage';
 import SearchPage from './pages/SearchPage';
+import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
 import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
@@ -149,6 +150,7 @@ function App() {
         <button onClick={() => setActiveTab('images')}>图片管理</button>
         <button onClick={() => setActiveTab('themes')}>主题管理</button>
         <button onClick={() => setActiveTab('search')}>检索参考</button>
+        <button onClick={() => setActiveTab('graph')}>知识图谱</button>
       </div>
 
       {activeTab === 'prompts' && (
@@ -217,6 +219,8 @@ function App() {
           onScoreCancel={handleScoreCancel}
         />
       )}
+
+      {activeTab === 'graph' && <KnowledgeGraphPage />}
     </div>
   );
 }

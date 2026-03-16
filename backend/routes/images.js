@@ -6,6 +6,7 @@ const fs = require('fs');
 const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
 const imageServiceClient = require('../services/imageServiceClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
+const retrievalService = require('../services/retrievalService');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -358,6 +359,148 @@ router.post('/batch-analyze', async (req, res) => {
       skipped: imagesToAnalyze.length - imagePaths.length,
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 混合检索 API
+ * 结合关键词和语义搜索，返回重排序后的结果
+ */
+router.post('/search/hybrid', async (req, res) => {
+  try {
+    const {
+      query,
+      topK = 20,
+      alpha = 0.7,
+      minScore,
+      maxScore,
+      minSimilarity,
+      themeIds,
+      includeUnanalyzed = true,
+    } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Query is required' });
+    }
+
+    // 优化查询
+    const optimizedQuery = retrievalService.optimizeQuery(query);
+
+    // 执行混合检索
+    const results = await retrievalService.hybridSearch(optimizedQuery, {
+      topK,
+      alpha,
+      minScore,
+      maxScore,
+      minSimilarity,
+      themeIds,
+      includeUnanalyzed,
+    });
+
+    res.json({
+      query: optimizedQuery,
+      originalQuery: query,
+      totalResults: results.length,
+      results,
+    });
+  } catch (error) {
+    console.error('混合检索失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 查询扩展 API
+ * 返回查询的扩展版本，用于提高召回率
+ */
+router.post('/search/expand', async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Query is required' });
+    }
+
+    const optimizedQuery = retrievalService.optimizeQuery(query);
+    const expandedQueries = await retrievalService.expandQuery(optimizedQuery);
+
+    res.json({
+      originalQuery: query,
+      optimizedQuery,
+      expandedQueries,
+    });
+  } catch (error) {
+    console.error('查询扩展失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 搜索建议 API
+ * 基于部分输入提供搜索建议
+ */
+router.get('/search/suggestions', async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.json({ suggestions: [] });
+    }
+
+    const { Op } = require('sequelize');
+
+    // 从描述中提取匹配的词作为建议
+    const images = await Image.findAll({
+      where: {
+        description: {
+          [Op.iLike]: `%${q}%`,
+        },
+      },
+      attributes: ['description'],
+      limit: 50,
+    });
+
+    // 提取匹配的短语
+    const suggestions = new Set();
+    images.forEach((img) => {
+      if (img.description) {
+        const words = img.description.split(/[，。、,.\s]+/);
+        words.forEach((word) => {
+          if (word.length >= 2 && word.toLowerCase().includes(q.toLowerCase())) {
+            suggestions.add(word);
+          }
+        });
+      }
+    });
+
+    // 从提示词中提取建议
+    const prompts = await Prompt.findAll({
+      where: {
+        content: {
+          [Op.iLike]: `%${q}%`,
+        },
+      },
+      attributes: ['content'],
+      limit: 20,
+    });
+
+    prompts.forEach((prompt) => {
+      if (prompt.content) {
+        const words = prompt.content.split(/\s+/);
+        words.forEach((word) => {
+          if (word.length >= 2 && word.toLowerCase().includes(q.toLowerCase())) {
+            suggestions.add(word);
+          }
+        });
+      }
+    });
+
+    res.json({
+      suggestions: Array.from(suggestions).slice(0, 10),
+    });
+  } catch (error) {
+    console.error('搜索建议失败:', error);
     res.status(500).json({ error: error.message });
   }
 });

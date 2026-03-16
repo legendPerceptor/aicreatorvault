@@ -1,10 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ImageCard from '../components/ImageCard';
+import SmartSearchBox from '../components/search/SmartSearchBox';
+import SearchFilters from '../components/search/SearchFilters';
+import SearchResultsToolbar from '../components/search/SearchResultsToolbar';
+import './SearchPage.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
 
 function SearchPage({
-  images,
+  images = [],
   onDeleteImage,
   editingScores,
   scoreValues,
@@ -12,15 +16,22 @@ function SearchPage({
   onScoreChange,
   onScoreConfirm,
   onScoreCancel,
+  prompts = [],
+  themes = [],
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searchMode, setSearchMode] = useState('keyword');
   const [isSearching, setIsSearching] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState(null);
-  const [searchImageFile, setSearchImageFile] = useState(null);
-  const fileInputRef = useRef(null);
+  const [serviceStatus, setServiceStatus] = useState('unknown');
+  const [searchMode, setSearchMode] = useState('auto');
+  const [sortBy, setSortBy] = useState('similarity');
+  const [viewMode, setViewMode] = useState('grid');
+  const [filters, setFilters] = useState({});
+  const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image | hybrid
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // 检查服务状态
   const checkServiceStatus = async () => {
     try {
       const response = await fetch(`${API_BASE}/images/service/status`);
@@ -31,52 +42,162 @@ function SearchPage({
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     checkServiceStatus();
   }, []);
 
-  const handleKeywordSearch = (results) => {
-    const filtered = images.filter(
-      (image) => image.Prompt && image.Prompt.content.includes(searchQuery)
-    );
-    setSearchResults(filtered);
+  // 应用过滤器
+  const applyFilters = (results, currentFilters) => {
+    let filtered = [...results];
+
+    // 评分过滤
+    if (currentFilters.minScore !== undefined || currentFilters.maxScore !== undefined) {
+      const minScore = currentFilters.minScore ?? 0;
+      const maxScore = currentFilters.maxScore ?? 10;
+      filtered = filtered.filter((img) => {
+        const score = img.score || 0;
+        return score >= minScore && score <= maxScore;
+      });
+    }
+
+    // 相似度过滤
+    if (currentFilters.minSimilarity !== undefined && currentFilters.minSimilarity > 0) {
+      filtered = filtered.filter((img) => {
+        const similarity = img.similarity || 0;
+        return similarity >= currentFilters.minSimilarity;
+      });
+    }
+
+    // 日期过滤
+    if (currentFilters.dateFrom) {
+      filtered = filtered.filter((img) => {
+        const imgDate = new Date(img.createdAt);
+        return imgDate >= new Date(currentFilters.dateFrom);
+      });
+    }
+
+    if (currentFilters.dateTo) {
+      filtered = filtered.filter((img) => {
+        const imgDate = new Date(img.createdAt);
+        return imgDate <= new Date(currentFilters.dateTo);
+      });
+    }
+
+    // 主题过滤
+    if (currentFilters.themeIds && currentFilters.themeIds.length > 0) {
+      filtered = filtered.filter((img) => {
+        // 假设图片有主题关联，这里需要根据实际数据结构调整
+        return true; // 暂时跳过，需要实际的图片-主题关联数据
+      });
+    }
+
+    return filtered;
   };
 
-  const handleSemanticSearch = async () => {
-    if (!searchQuery.trim()) return;
+  // 排序结果
+  const sortResults = (results, sortType) => {
+    const sorted = [...results];
+
+    switch (sortType) {
+      case 'rerankScore':
+        return sorted.sort((a, b) => (b.rerankScore || 0) - (a.rerankScore || 0));
+      case 'similarity':
+        return sorted.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+      case 'score':
+        return sorted.sort((a, b) => (b.score || 0) - (a.score || 0));
+      case 'date':
+        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      case 'name':
+        return sorted.sort((a, b) => a.filename.localeCompare(b.filename));
+      default:
+        return sorted;
+    }
+  };
+
+  // 处理搜索
+  const handleSearch = async (query, mode) => {
+    if (!query && mode !== 'image') return;
 
     setIsSearching(true);
+    setActiveSearchType(mode);
+
     try {
-      const response = await fetch(`${API_BASE}/images/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery, topK: 20 }),
-      });
-      const results = await response.json();
-      setSearchResults(results);
+      let results = [];
+
+      if (mode === 'keyword') {
+        // 关键词搜索
+        const filtered = images.filter((image) => {
+          const matchesDescription = image.description?.toLowerCase().includes(query.toLowerCase());
+          const matchesPrompt = image.Prompt?.content?.toLowerCase().includes(query.toLowerCase());
+          return matchesDescription || matchesPrompt;
+        });
+        results = filtered;
+        setActiveSearchType('keyword');
+      } else if (mode === 'semantic') {
+        // AI 语义搜索
+        const response = await fetch(`${API_BASE}/images/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, topK: 50 }),
+        });
+        const data = await response.json();
+        results = data.results || data;
+        setActiveSearchType('semantic');
+      } else if (mode === 'hybrid') {
+        // 混合检索（关键词 + 语义）
+        const response = await fetch(`${API_BASE}/images/search/hybrid`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            topK: 50,
+            alpha: 0.7, // 语义搜索权重
+            minScore: filters.minScore,
+            maxScore: filters.maxScore,
+            minSimilarity: filters.minSimilarity,
+            themeIds: filters.themeIds,
+          }),
+        });
+        const data = await response.json();
+        results = data.results || [];
+        setActiveSearchType('hybrid');
+      }
+
+      // 应用过滤器和排序
+      let processedResults = applyFilters(results, filters);
+      processedResults = sortResults(processedResults, sortBy);
+
+      setSearchResults(processedResults);
     } catch (error) {
-      console.error('语义搜索失败:', error);
-      alert('语义搜索失败，请确保图像分析服务正在运行');
+      console.error('搜索失败:', error);
+      alert(`搜索失败: ${error.message}`);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleImageSearch = async () => {
-    if (!searchImageFile) return;
-
+  // 处理图片搜索
+  const handleImageSearch = async (file) => {
     setIsSearching(true);
+    setActiveSearchType('image');
+
     try {
       const formData = new FormData();
-      formData.append('image', searchImageFile);
-      formData.append('topK', '20');
+      formData.append('image', file);
+      formData.append('topK', '50');
 
       const response = await fetch(`${API_BASE}/images/search-by-image`, {
         method: 'POST',
         body: formData,
       });
+
       const results = await response.json();
-      setSearchResults(results);
+
+      // 应用过滤器和排序
+      let processedResults = applyFilters(results, filters);
+      processedResults = sortResults(processedResults, sortBy);
+
+      setSearchResults(processedResults);
     } catch (error) {
       console.error('以图搜图失败:', error);
       alert('以图搜图失败，请确保图像分析服务正在运行');
@@ -85,154 +206,147 @@ function SearchPage({
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchMode === 'keyword') {
-      handleKeywordSearch();
-    } else if (searchMode === 'semantic') {
-      handleSemanticSearch();
+  // 处理过滤器变化
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+
+    // 如果有搜索结果，重新应用过滤器
+    if (searchResults.length > 0) {
+      let processed = applyFilters(searchResults, newFilters);
+      processed = sortResults(processed, sortBy);
+      setSearchResults(processed);
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSearchImageFile(file);
+  // 处理排序变化
+  const handleSortChange = (newSortBy) => {
+    setSortBy(newSortBy);
+
+    if (searchResults.length > 0) {
+      const processed = sortResults(searchResults, newSortBy);
+      setSearchResults(processed);
     }
   };
 
-  const handleImageSearchSubmit = (e) => {
-    e.preventDefault();
-    handleImageSearch();
+  // 清空搜索
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setActiveSearchType('none');
+    setFilters({});
   };
 
   return (
-    <div className="section">
-      <h2>检索参考</h2>
-
-      <div className="service-status">
-        <span>AI 服务状态: </span>
-        <span
-          className={`status-indicator ${
-            serviceStatus === 'connected'
-              ? 'status-connected'
-              : serviceStatus === 'disconnected'
-                ? 'status-disconnected'
-                : 'status-unknown'
-          }`}
-        >
-          {serviceStatus === 'connected'
-            ? '已连接'
-            : serviceStatus === 'disconnected'
-              ? '未连接'
-              : '检查中...'}
-        </span>
-        <button onClick={checkServiceStatus} className="btn-small">
-          刷新
-        </button>
+    <div className="search-page">
+      <div className="search-page-header">
+        <h1>检索参考</h1>
+        <p className="search-page-description">使用关键词、AI 语义或上传图片来搜索相似的创作参考</p>
       </div>
 
-      <div className="search-mode-tabs">
-        <button
-          className={`tab-btn ${searchMode === 'keyword' ? 'active' : ''}`}
-          onClick={() => setSearchMode('keyword')}
-        >
-          关键词搜索
-        </button>
-        <button
-          className={`tab-btn ${searchMode === 'semantic' ? 'active' : ''}`}
-          onClick={() => setSearchMode('semantic')}
-        >
-          AI 语义搜索
-        </button>
-        <button
-          className={`tab-btn ${searchMode === 'image' ? 'active' : ''}`}
-          onClick={() => setSearchMode('image')}
-        >
-          以图搜图
-        </button>
-      </div>
+      {/* 智能搜索框 */}
+      <SmartSearchBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        onSearch={handleSearch}
+        onImageUpload={handleImageSearch}
+        isSearching={isSearching}
+        serviceStatus={serviceStatus}
+        placeholder="描述你想要找的内容，或拖入图片..."
+      />
 
-      {searchMode === 'keyword' && (
-        <form onSubmit={handleSearch} className="form-group">
-          <label htmlFor="search">搜索提示词：</label>
-          <input
-            type="text"
-            id="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="输入搜索关键词..."
-          />
-          <button type="submit">搜索</button>
-        </form>
-      )}
+      {/* 过滤器 */}
+      <SearchFilters themes={themes} initialFilters={filters} onFilterChange={handleFilterChange} />
 
-      {searchMode === 'semantic' && (
-        <form onSubmit={handleSearch} className="form-group">
-          <label htmlFor="semantic-search">AI 语义搜索：</label>
-          <input
-            type="text"
-            id="semantic-search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="描述你想找的图片内容，如：一个穿红衣服的女孩在公园里..."
+      {/* 搜索结果 */}
+      {(searchResults.length > 0 || activeSearchType !== 'none') && (
+        <div className="search-results-section">
+          {/* 工具栏 */}
+          <SearchResultsToolbar
+            resultCount={searchResults.length}
+            searchMode={activeSearchType}
+            sortBy={sortBy}
+            onSortChange={handleSortChange}
+            viewMode={viewMode}
+            onViewChange={setViewMode}
           />
-          <button type="submit" disabled={isSearching}>
-            {isSearching ? '搜索中...' : 'AI 搜索'}
-          </button>
-          {serviceStatus !== 'connected' && (
-            <p className="hint">提示：AI 语义搜索需要图像分析服务运行中</p>
+
+          {/* 结果网格 */}
+          {searchResults.length > 0 ? (
+            <div className={`images-grid view-${viewMode}`}>
+              {searchResults.map((image) => (
+                <ImageCard
+                  key={image.id}
+                  image={image}
+                  onDelete={onDeleteImage}
+                  editingScores={editingScores}
+                  scoreValues={scoreValues}
+                  onScoreEdit={onScoreEdit}
+                  onScoreChange={onScoreChange}
+                  onScoreConfirm={onScoreConfirm}
+                  onScoreCancel={onScoreCancel}
+                  prompts={prompts}
+                  showPromptEdit={false}
+                  showSimilarity={activeSearchType === 'semantic' || activeSearchType === 'image'}
+                  similarity={image.similarity}
+                  matchReasons={image.matchReasons}
+                  viewMode={viewMode}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="no-results">
+              <div className="no-results-icon">🔍</div>
+              <h3>未找到匹配的结果</h3>
+              <p>尝试调整搜索词或降低相似度阈值</p>
+              <button onClick={clearSearch} className="btn-clear-search">
+                清空搜索
+              </button>
+            </div>
           )}
-        </form>
-      )}
-
-      {searchMode === 'image' && (
-        <form onSubmit={handleImageSearchSubmit} className="form-group">
-          <label htmlFor="image-search">以图搜图：</label>
-          <input
-            type="file"
-            id="image-search"
-            ref={fileInputRef}
-            accept="image/*"
-            onChange={handleFileChange}
-          />
-          <button type="submit" disabled={isSearching || !searchImageFile}>
-            {isSearching ? '搜索中...' : '搜索相似图片'}
-          </button>
-          {searchImageFile && <p className="hint">已选择: {searchImageFile.name}</p>}
-        </form>
-      )}
-
-      <div className="search-results">
-        <h3>
-          搜索结果
-          {searchResults.length > 0 && ` (${searchResults.length})`}
-        </h3>
-        {searchMode !== 'keyword' && searchResults.length > 0 && (
-          <div className="results-info">
-            <p>结果按相似度排序</p>
-          </div>
-        )}
-        <div className="images-grid">
-          {searchResults.map((image) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              onDelete={onDeleteImage}
-              editingScores={editingScores}
-              scoreValues={scoreValues}
-              onScoreEdit={onScoreEdit}
-              onScoreChange={onScoreChange}
-              onScoreConfirm={onScoreConfirm}
-              onScoreCancel={onScoreCancel}
-              showPromptEdit={false}
-              showSimilarity={searchMode !== 'keyword'}
-              similarity={image.similarity}
-            />
-          ))}
         </div>
-        {searchResults.length === 0 && <p className="no-results">暂无搜索结果</p>}
-      </div>
+      )}
+
+      {/* 初始状态提示 */}
+      {activeSearchType === 'none' && (
+        <div className="search-welcome">
+          <div className="welcome-card">
+            <div className="welcome-icon">🎨</div>
+            <h2>开始搜索你的创作参考</h2>
+            <div className="welcome-tips">
+              <div className="tip">
+                <span className="tip-icon">🔍</span>
+                <div className="tip-content">
+                  <strong>关键词搜索</strong>
+                  <p>输入简单的关键词快速查找</p>
+                </div>
+              </div>
+              <div className="tip">
+                <span className="tip-icon">🧠</span>
+                <div className="tip-content">
+                  <strong>AI 语义搜索</strong>
+                  <p>用自然语言描述你想要的内容</p>
+                </div>
+              </div>
+              <div className="tip">
+                <span className="tip-icon">🖼️</span>
+                <div className="tip-content">
+                  <strong>以图搜图</strong>
+                  <p>上传图片找到相似的创作参考</p>
+                </div>
+              </div>
+            </div>
+            {serviceStatus !== 'connected' && (
+              <div className="service-warning">
+                <span className="warning-icon">⚠️</span>
+                <span>AI 服务未连接，语义搜索和以图搜图功能不可用</span>
+                <button onClick={checkServiceStatus} className="btn-reconnect">
+                  重新连接
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

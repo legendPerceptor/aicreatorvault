@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StarRating, { StaticStarRating } from './StarRating';
 import ImagePreviewModal from './ImagePreviewModal';
+import { SimilarityBadge, MatchReason } from './search/SimilarityRadar';
 
 function ImageCard({
   image,
@@ -24,6 +25,8 @@ function ImageCard({
   showScore = true,
   showSimilarity = false,
   similarity = null,
+  matchReasons = null,
+  viewMode = 'grid',
 }) {
   const [showPreview, setShowPreview] = useState(false);
 
@@ -36,7 +39,7 @@ function ImageCard({
 
   return (
     <>
-      <div className={`image-card ${isAnalyzed ? 'analyzed' : ''}`}>
+      <div className={`image-card ${isAnalyzed ? 'analyzed' : ''} view-${viewMode}`}>
         <div className="image-header">
           <img
             src={`/uploads/${image.filename}`}
@@ -49,12 +52,14 @@ function ImageCard({
               ×
             </button>
           )}
-          {showSimilarity && similarity !== null && (
-            <div className="similarity-badge">相似度: {formatSimilarity(similarity)}</div>
-          )}
+          {showSimilarity && similarity !== null && <SimilarityBadge similarity={similarity} />}
           {isAnalyzed && <div className="analyzed-badge">已分析</div>}
         </div>
         <div className="content">
+          {showSimilarity && matchReasons && matchReasons.length > 0 && (
+            <MatchReason reasons={matchReasons} />
+          )}
+
           {image.description && (
             <div className="ai-description">
               <div className="description-header">

@@ -6,14 +6,19 @@ const fs = require('fs');
 const { Asset, AssetRelationship, sequelize } = require('../models');
 const graphService = require('../services/graphService');
 
+// 根据环境选择 uploads 目录
+const UPLOADS_DIR =
+  process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV
+    ? '/app/uploads'
+    : path.join(__dirname, '../uploads');
+
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);

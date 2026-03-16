@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.pyo
+.pyd
+
+# Environment files
+.env
+.env.local
+.env.*.local
+**/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose*.yml
+.dockerignore
+# Dockerfile*  # Commented out to allow Dockerfile to be copied
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Tests
+tests/
+test/
+*.test.js
+*.spec.js
+__tests__/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads (will be mounted as volume)
+uploads/
+backend/uploads/

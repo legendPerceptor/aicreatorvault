@@ -24,9 +24,143 @@
 ## 技术栈
 
 - **后端**：Node.js + Express.js + Sequelize
-- **数据库**：SQLite（默认）/ PostgreSQL（推荐生产环境）
-- **前端**：React + Vite
+- **数据库**：PostgreSQL + pgvector（生产环境）/ SQLite（开发环境）
+- **缓存**：Redis
+- **向量数据库**：Qdrant
+- **前端**：React + Vite + Nginx
 - **AI 服务**：Python + FastAPI + OpenAI API
+- **容器化**：Docker + Docker Compose
+
+## 快速开始
+
+### Docker 部署（推荐）
+
+#### 1. 克隆项目
+
+```bash
+git clone git@github.com:legendPerceptor/aicreatorvault.git
+cd aicreatorvault
+git checkout docker-deploy
+```
+
+#### 2. 配置环境变量
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件：
+
+```env
+# 数据库配置
+DB_NAME=aicreatorvault
+DB_USER=aicreator
+DB_PASSWORD=your_secure_password
+
+# 上传文件存储路径
+UPLOADS_PATH=/path/to/uploads
+
+# OpenAI API
+OPENAI_API_KEY=sk-your-api-key
+OPENAI_VISION_MODEL=gpt-4o-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+#### 3. 配置代理（可选）
+
+如果需要代理访问 OpenAI API，编辑 `xray/config.json`：
+
+```json
+{
+  "outbounds": [
+    {
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [{
+          "address": "your-server",
+          "port": 443,
+          "users": [{ "id": "your-uuid", "security": "auto" }]
+        }]
+      },
+      "tag": "proxy"
+    }
+  ]
+}
+```
+
+#### 4. 启动服务
+
+```bash
+docker compose up -d
+```
+
+#### 5. 访问应用
+
+- **前端**：http://localhost:5173
+- **后端 API**：http://localhost:3001/api
+- **AI 服务**：http://localhost:8001
+- **Qdrant 控制台**：http://localhost:6333/dashboard
+
+### Docker 服务说明
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| frontend | 5173 | React 前端（Nginx） |
+| backend | 3001 | Node.js 后端 API |
+| image-service | 8001 | Python AI 图片分析服务 |
+| postgres | 5432 | PostgreSQL + pgvector |
+| redis | 6379 | Redis 缓存 |
+| qdrant | 6333/6334 | Qdrant 向量数据库 |
+| aigc-xray | 8107 | Xray 代理（可选） |
+
+### 常用命令
+
+```bash
+# 查看服务状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f backend
+docker compose logs -f image-service
+
+# 停止服务
+docker compose down
+
+# 重新构建
+docker compose up -d --build
+```
+
+---
+
+## 本地开发（非 Docker）
+
+如果不使用 Docker，可以手动安装：
+
+### 1. 安装依赖
+
+```bash
+npm install
+cd frontend && npm install && cd ..
+cd image-service && pip install -r requirements.txt && cd ..
+```
+
+### 2. 配置环境变量
+
+```bash
+cp backend/.env.example backend/.env
+cp image-service/.env.example image-service/.env
+```
+
+### 3. 启动服务
+
+```bash
+# 分别启动各服务
+npm run start:backend       # 后端 (3001)
+npm run start:frontend      # 前端 (5173)
+cd image-service && python main.py  # AI 服务 (8001)
+```
+
+---
 
 ## 数据库支持
 
@@ -56,74 +190,8 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 ```
 
-## 安装步骤
-
-### 1. 克隆项目
-
-```bash
-git clone git@github.com:legendPerceptor/aicreatorvault.git
-cd aicreatorvault
 ```
-
-### 2. 安装依赖
-
-```bash
-npm install
-cd frontend
-npm install
-```
-
-### 3. 配置环境变量
-
-```bash
-# 复制环境变量模板
-cp backend/.env.example backend/.env
-# 编辑 backend/.env 配置数据库
-
-# 配置 AI 服务
-cp image-service/.env.example image-service/.env
-# 编辑 image-service/.env 配置 OpenAI API Key
-```
-
-### 4. PostgreSQL 设置（可选）
-
-如果使用 PostgreSQL：
-
-```bash
-# 安装 PostgreSQL 和 pgvector
-sudo apt install postgresql postgresql-16-pgvector
-
-# 创建数据库和用户
-sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'your_password';"
-sudo -u postgres psql -c "CREATE DATABASE aigc_assistant OWNER postgres;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aigc_assistant TO postgres;"
-
-# 启用 pgvector 扩展
-PGPASSWORD='your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"
-```
-
-### 5. 启动服务
-
-```bash
-# 启动所有服务
-npm run dev:full
-
-# 或分别启动
-npm run start:backend    # 后端服务 (端口 3001)
-npm run start:frontend   # 前端服务 (端口 5173)
-npm run start:image-service  # AI 服务 (端口 8001)
-```
-
-### 6. 访问应用
-
-- 前端：http://localhost:5173/
-- 后端 API：http://localhost:3001/api
-- AI 服务：http://localhost:8001/
-
-## 项目结构
-
-```
-aigc-assistant/
+aicreatorvault/
 ├── backend/
 │   ├── config/
 │   │   └── database.js          # 数据库配置工厂
@@ -152,6 +220,7 @@ aigc-assistant/
 │   ├── .env                     # 环境变量配置
 │   ├── .env.example             # 环境变量模板
 │   ├── server.js                # 后端服务器
+│   ├── Dockerfile               # 后端容器配置
 │   └── database.db              # SQLite 数据库（默认）
 ├── frontend/
 │   ├── src/
@@ -178,17 +247,33 @@ aigc-assistant/
 │   │   ├── App.jsx              # 主应用组件
 │   │   ├── main.jsx             # 入口文件
 │   │   └── index.css            # 样式文件
-│   └── public/                  # 前端静态文件
+│   ├── public/                  # 前端静态文件
+│   ├── Dockerfile               # 前端容器配置
+│   └── docker/
+│       └── nginx.conf           # Nginx 配置
 ├── image-service/
 │   ├── main.py                  # AI 服务入口
 │   ├── image_processor.py       # 图片处理和嵌入生成
 │   ├── requirements.txt         # Python 依赖
+│   ├── pyproject.toml           # 项目配置
 │   ├── .env                     # AI 服务环境变量
-│   └── .env.example             # 环境变量模板
+│   ├── .env.example             # 环境变量模板
+│   └── Dockerfile               # AI 服务容器配置
+├── docker/
+│   ├── README.md                # Docker 部署详细文档
+│   └── init-pgvector.sql        # PostgreSQL pgvector 初始化
+├── xray/
+│   ├── config.json              # Xray 代理配置（gitignored）
+│   └── config-example.json      # 代理配置示例
+├── docker-compose.yml           # Docker Compose 编排
+├── .dockerignore                # Docker 忽略文件
+├── .env.example                 # 环境变量模板
 ├── stop.sh                      # 停止服务脚本
+├── start.sh                     # 启动服务脚本
 ├── package.json                 # 项目配置
 ├── CLAUDE.md                    # Claude Code 项目指南
 ├── KNOWLEDGE_GRAPH.md           # 知识图谱详细文档
+├── AI_SEARCH_IMPROVEMENT.md     # AI 搜索改进方案
 ├── developers.md                # 开发者指南
 └── README.md                    # 项目说明
 ```

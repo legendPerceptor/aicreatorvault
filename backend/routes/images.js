@@ -8,9 +8,22 @@ const imageServiceClient = require('../services/imageServiceClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
 const retrievalService = require('../services/retrievalService');
 
+// 根据环境选择 uploads 目录
+// Docker 模式: NODE_ENV=production, 使用 /app/uploads
+// 本地开发模式: 使用 ./uploads
+const UPLOADS_DIR =
+  process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV
+    ? '/app/uploads'
+    : path.join(__dirname, '../uploads');
+
+// 确保 uploads 目录存在
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, './backend/uploads');
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -23,12 +36,12 @@ router.post('/', upload.single('image'), async (req, res) => {
   try {
     const image = await Image.create({
       filename: req.file.filename,
-      path: req.file.path,
+      path: req.file.path, // 存储容器内绝对路径
       promptId: req.body.promptId,
     });
 
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const absolutePath = path.join(projectRoot, 'backend', 'uploads', req.file.filename);
+    // 直接使用容器内路径
+    const imagePath = req.file.path;
 
     // 检查是否要自动分析，默认为true以保持向后兼容
     const autoAnalyze =
@@ -38,7 +51,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     if (autoAnalyze) {
       try {
-        const analysis = await imageServiceClient.analyzeImage(absolutePath);
+        const analysis = await imageServiceClient.analyzeImage(imagePath);
         await image.update({
           description: analysis.description,
           embedding: analysis.embedding,
@@ -116,11 +129,10 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const uploadsDir = path.join(projectRoot, 'backend', 'uploads');
-    const filePath = path.join(uploadsDir, image.filename);
+    // 使用数据库中存储的路径
+    const filePath = image.path;
 
-    if (fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
@@ -138,14 +150,14 @@ router.post('/:id/analyze', async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const absolutePath = path.join(projectRoot, 'backend', 'uploads', image.filename);
+    // 使用数据库中存储的路径
+    const imagePath = image.path;
 
-    if (!fs.existsSync(absolutePath)) {
+    if (!imagePath || !fs.existsSync(imagePath)) {
       return res.status(404).json({ error: 'Image file not found' });
     }
 
-    const analysis = await imageServiceClient.analyzeImage(absolutePath);
+    const analysis = await imageServiceClient.analyzeImage(imagePath);
 
     await image.update({
       description: analysis.description,
@@ -283,10 +295,9 @@ router.get('/service/status', async (req, res) => {
 router.post('/batch-analyze', async (req, res) => {
   try {
     const { forceAll = false } = req.body;
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const uploadsDir = path.join(projectRoot, 'backend', 'uploads');
 
-    if (!fs.existsSync(uploadsDir)) {
+    // 检查 uploads 目录
+    if (!fs.existsSync(UPLOADS_DIR)) {
       return res.status(404).json({ error: 'Uploads directory not found' });
     }
 
@@ -311,16 +322,12 @@ router.post('/batch-analyze', async (req, res) => {
       });
     }
 
+    // 使用数据库中存储的路径，过滤出存在的文件
     const imagePaths = imagesToAnalyze
-      .map((img) => {
-        const filePath = path.join(uploadsDir, img.filename);
-        return filePath;
-      })
-      .filter((filePath) => fs.existsSync(filePath));
+      .filter((img) => img.path && fs.existsSync(img.path))
+      .map((img) => img.path);
 
-    // 转换为绝对路径
-    const absolutePaths = imagePaths.map((filePath) => path.resolve(filePath));
-    const results = await imageServiceClient.batchProcessPaths(absolutePaths);
+    const results = await imageServiceClient.batchProcessPaths(imagePaths);
 
     let updated = 0;
     let failed = 0;

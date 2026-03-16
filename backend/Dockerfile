@@ -5,10 +5,10 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev --ignore-scripts
 
-# Copy source code
-COPY . .
+# Copy backend source code
+COPY backend/ ./
 
 # Create uploads directory
 RUN mkdir -p uploads

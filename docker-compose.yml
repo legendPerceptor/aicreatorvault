@@ -24,12 +24,13 @@ services:
   # ==================== 后端 ====================
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
+      - DOCKER_ENV=true
       - PORT=3001
       - DB_TYPE=postgres
       - DB_HOST=postgres
@@ -76,6 +77,9 @@ services:
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       - QDRANT_URL=http://qdrant:6333
       - SERVICE_PORT=8001
+    volumes:
+      # 共享 uploads 目录（只读），用于分析图片
+      - ${UPLOADS_PATH:-./uploads}:/app/uploads:ro
     depends_on:
       - qdrant
     networks:

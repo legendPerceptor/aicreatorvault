@@ -155,7 +155,7 @@ services:
     ports:
       - "8107:1087"   # HTTP 代理 (避免与现有 xray 冲突)
     volumes:
-      - /volume1/shared-shanghai/openclaw-workhome/1panel-claw/workspace/aicreatorvault/xray/config.json:/etc/xray/config.json:ro
+      - ${XRAY_CONFIG_PATH:?XRAY_CONFIG_PATH is required}:/etc/xray/config.json:ro
     networks:
       - aicreatorvault-net
     healthcheck:

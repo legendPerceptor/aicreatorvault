@@ -59,7 +59,7 @@ services:
       - aicreatorvault-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/prompts"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -75,7 +75,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:?OPENAI_API_KEY is required}
       - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o-mini}
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
-      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
       - SERVICE_PORT=8001
       # 通过 aigc-xray 代理访问 OpenAI API
       - HTTP_PROXY=http://aigc-xray:1087
@@ -141,11 +142,6 @@ services:
     networks:
       - aicreatorvault-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # ==================== Xray 代理 ====================
   aigc-xray:

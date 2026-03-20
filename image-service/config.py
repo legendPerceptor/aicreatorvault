@@ -15,6 +15,10 @@ class Settings:
     openai_vision_model: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
     service_port: int = int(os.environ.get("SERVICE_PORT", "8001"))
     node_backend_url: str = os.environ.get("NODE_BACKEND_URL", "http://localhost:3001")
+    
+    # Qdrant 配置
+    qdrant_host: str = os.environ.get("QDRANT_HOST", "localhost")
+    qdrant_port: int = int(os.environ.get("QDRANT_PORT", "6333"))
 
 
 @lru_cache()

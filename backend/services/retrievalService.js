@@ -82,6 +82,69 @@ class RetrievalService {
    * 语义搜索
    */
   async semanticSearch(query, options = {}) {
+    const { topK = 20, minScore, maxScore } = options;
+
+    try {
+      // 1. 生成查询向量
+      const embeddingData = await imageServiceClient.generateEmbedding(query);
+      const queryVector = embeddingData.embedding;
+
+      // 2. 构建 Qdrant 过滤条件
+      const filters = {};
+      if (minScore !== undefined) {
+        filters.min_score = minScore;
+      }
+      if (maxScore !== undefined) {
+        filters.max_score = maxScore;
+      }
+
+      // 3. 使用 Qdrant 进行向量搜索
+      const qdrantResults = await imageServiceClient.qdrantSearch(
+        queryVector,
+        topK * 2, // 多取一些结果用于后续过滤
+        Object.keys(filters).length > 0 ? filters : null
+      );
+
+      if (!qdrantResults || qdrantResults.length === 0) {
+        return [];
+      }
+
+      // 4. 从数据库获取完整图片信息
+      const resultIds = qdrantResults.map((r) => r.id);
+      const fullImages = await Image.findAll({
+        where: { id: resultIds },
+        include: Prompt,
+      });
+
+      const imageMap = new Map(fullImages.map((img) => [img.id, img]));
+
+      // 5. 组合结果
+      return qdrantResults
+        .map((r) => {
+          const img = imageMap.get(r.id);
+          if (img) {
+            return {
+              ...img.toJSON(),
+              similarity: r.score, // Qdrant 返回的相似度分数
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    } catch (error) {
+      console.error('语义搜索失败:', error);
+      
+      // 如果 Qdrant 失败，回退到旧方法（内存搜索）
+      console.log('回退到内存搜索...');
+      return await this.semanticSearchFallback(query, options);
+    }
+  }
+
+  /**
+   * 语义搜索回退方法（内存搜索）
+   * 当 Qdrant 不可用时使用
+   */
+  async semanticSearchFallback(query, options = {}) {
     const { topK = 20 } = options;
 
     const images = await Image.findAll({ include: Prompt });
@@ -124,7 +187,7 @@ class RetrievalService {
         })
         .filter(Boolean);
     } catch (error) {
-      console.error('语义搜索失败:', error);
+      console.error('内存搜索失败:', error);
       return [];
     }
   }
@@ -133,6 +196,68 @@ class RetrievalService {
    * 以图搜图
    */
   async imageSearch(imageBuffer, filename, options = {}) {
+    const { topK = 20, minScore, maxScore } = options;
+
+    try {
+      // 1. 分析上传的图片，获取 embedding
+      const analysisResult = await imageServiceClient.analyzeUploadedImage(imageBuffer, filename);
+      const queryVector = analysisResult.embedding;
+
+      // 2. 构建 Qdrant 过滤条件
+      const filters = {};
+      if (minScore !== undefined) {
+        filters.min_score = minScore;
+      }
+      if (maxScore !== undefined) {
+        filters.max_score = maxScore;
+      }
+
+      // 3. 使用 Qdrant 进行向量搜索
+      const qdrantResults = await imageServiceClient.qdrantSearch(
+        queryVector,
+        topK * 2,
+        Object.keys(filters).length > 0 ? filters : null
+      );
+
+      if (!qdrantResults || qdrantResults.length === 0) {
+        return [];
+      }
+
+      // 4. 从数据库获取完整图片信息
+      const resultIds = qdrantResults.map((r) => r.id);
+      const fullImages = await Image.findAll({
+        where: { id: resultIds },
+        include: Prompt,
+      });
+
+      const imageMap = new Map(fullImages.map((img) => [img.id, img]));
+
+      // 5. 组合结果
+      return qdrantResults
+        .map((r) => {
+          const img = imageMap.get(r.id);
+          if (img) {
+            return {
+              ...img.toJSON(),
+              similarity: r.score,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    } catch (error) {
+      console.error('以图搜图失败:', error);
+      
+      // 回退到内存搜索
+      console.log('回退到内存搜索...');
+      return await this.imageSearchFallback(imageBuffer, filename, options);
+    }
+  }
+
+  /**
+   * 以图搜图回退方法（内存搜索）
+   */
+  async imageSearchFallback(imageBuffer, filename, options = {}) {
     const { topK = 20 } = options;
 
     const images = await Image.findAll({ include: Prompt });
@@ -179,7 +304,7 @@ class RetrievalService {
         })
         .filter(Boolean);
     } catch (error) {
-      console.error('以图搜图失败:', error);
+      console.error('内存搜索失败:', error);
       return [];
     }
   }

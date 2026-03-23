@@ -52,6 +52,37 @@ const Image = (sequelize, dbType = 'sqlite') => {
       allowNull: true,
       comment: 'AI分析时间',
     },
+    // 参考图搜索相关字段
+    isReference: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: '是否为参考图（从网络下载）',
+    },
+    originalUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: '原始图片URL（参考图来源）',
+    },
+    sourceName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: '图片来源网站名称',
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: '图片标题',
+    },
+    width: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: '图片宽度',
+    },
+    height: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: '图片高度',
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

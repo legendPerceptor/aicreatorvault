@@ -4,6 +4,7 @@ import ImagesPage from './pages/ImagesPage';
 import ThemesPage from './pages/ThemesPage';
 import SearchPage from './pages/SearchPage';
 import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
+import ReferenceSearchPage from './pages/ReferenceSearchPage';
 import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
@@ -150,6 +151,7 @@ function App() {
         <button onClick={() => setActiveTab('images')}>图片管理</button>
         <button onClick={() => setActiveTab('themes')}>主题管理</button>
         <button onClick={() => setActiveTab('search')}>检索参考</button>
+        <button onClick={() => setActiveTab('reference-search')}>🌐 参考图搜索</button>
         <button onClick={() => setActiveTab('graph')}>知识图谱</button>
       </div>
 
@@ -219,6 +221,16 @@ function App() {
           onScoreChange={handleScoreChange}
           onScoreConfirm={handleScoreConfirm}
           onScoreCancel={handleScoreCancel}
+        />
+      )}
+
+      {activeTab === 'reference-search' && (
+        <ReferenceSearchPage
+          themes={themes}
+          onImagesAdded={() => {
+            // 刷新图片列表
+            window.location.reload();
+          }}
         />
       )}
 

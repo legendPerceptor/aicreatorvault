@@ -9,6 +9,7 @@ const themesRouter = require('./routes/themes');
 const assetsRouter = require('./routes/assets');
 const graphRouter = require('./routes/graph');
 const relationshipsRouter = require('./routes/relationships');
+const referenceSearchRouter = require('./routes/referenceSearch');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/themes', themesRouter);
 app.use('/api/assets', assetsRouter);
 app.use('/api/graph', graphRouter);
 app.use('/api/relationships', relationshipsRouter);
+app.use('/api/reference-search', referenceSearchRouter);
 
 // 启动服务器
 const PORT = process.env.PORT || 3001;

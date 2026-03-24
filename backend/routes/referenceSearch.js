@@ -82,7 +82,8 @@ router.post('/download', async (req, res) => {
       responseType: 'arraybuffer',
       timeout: REFERENCE_DOWNLOAD_TIMEOUT,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770 Safari/537.36',
       },
     });
 
@@ -105,16 +106,16 @@ router.post('/download', async (req, res) => {
     // 创建图片记录
     const image = await Image.create({
       filename,
-      filepath,
-      original_url: url,
-      source_name: source,
+      path: filepath,
+      originalUrl: url,
+      sourceName: source,
       title: title || '',
-      is_reference: true,
+      isReference: true,
       description: analysis?.description || '',
       embedding: analysis?.embedding || null,
       width: analysis?.width,
       height: analysis?.height,
-      theme_id: themeId || null,
+      themeId: themeId || null,
     });
 
     res.json({
@@ -193,16 +194,16 @@ router.post('/batch-download', async (req, res) => {
         // 创建图片记录
         const image = await Image.create({
           filename,
-          filepath,
-          original_url: img.url,
-          source_name: img.source,
+          path: filepath,
+          originalUrl: img.url,
+          sourceName: img.source,
           title: img.title || '',
-          is_reference: true,
+          isReference: true,
           description: analysis?.description || '',
           embedding: analysis?.embedding || null,
           width: analysis?.width,
           height: analysis?.height,
-          theme_id: themeId || null,
+          themeId: themeId || null,
         });
 
         results.success++;

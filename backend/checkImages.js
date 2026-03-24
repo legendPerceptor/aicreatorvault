@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const { Sequelize, _DataTypes } = require('sequelize');
 const Image = require('./models/Image');
 
 // 直接创建数据库连接，避免触发models/index.js中的force: true操作

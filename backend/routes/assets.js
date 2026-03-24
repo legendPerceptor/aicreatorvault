@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const { Asset, AssetRelationship, sequelize } = require('../models');
 const graphService = require('../services/graphService');
-const crypto = require('crypto');
 
 // 根据环境选择 uploads 目录
 const UPLOADS_DIR =
@@ -29,7 +28,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
 });
 
 // Find asset by type and content (for deduplication)
@@ -211,7 +210,7 @@ router.post('/', async (req, res) => {
             asset: graphService.assetToGraphNode(existing),
           });
         }
-      } catch (findError) {
+      } catch (_findError) {
         // Ignore find error, fall through to original error
       }
     }

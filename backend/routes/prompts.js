@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Prompt, Image, Asset, AssetRelationship, sequelize } = require('../models');
+const { Prompt, Image, Asset, AssetRelationship } = require('../models');
 const { Op } = require('sequelize');
 
 // 获取所有提示词
@@ -79,11 +79,11 @@ router.post('/', async (req, res) => {
     // 自动同步到 Asset 表（知识图谱）
     try {
       const asset = await Asset.create({
-        assetType: 'prompt',
+        asset_type: 'prompt',
         content: prompt.content,
         score: prompt.score,
         metadata: {
-          legacyPromptId: prompt.id,
+          legacy_prompt_id: prompt.id,
           type: prompt.type || 'text2image',
         },
       });
@@ -159,9 +159,9 @@ router.delete('/:id', async (req, res) => {
     try {
       const asset = await Asset.findOne({
         where: {
-          assetType: 'prompt',
+          asset_type: 'prompt',
           metadata: {
-            legacyPromptId: prompt.id,
+            legacy_prompt_id: prompt.id,
           },
         },
       });
@@ -170,7 +170,7 @@ router.delete('/:id', async (req, res) => {
         // 删除关联的关系
         await AssetRelationship.destroy({
           where: {
-            [Op.or]: [{ sourceId: asset.id }, { targetId: asset.id }],
+            [Op.or]: [{ source_id: asset.id }, { target_id: asset.id }],
           },
         });
         // 删除 Asset

@@ -44,14 +44,14 @@ class GraphService {
     const relationships = await AssetRelationship.findAll({
       where: {
         ...relationshipWhere,
-        [Op.or]: [{ sourceId: { [Op.in]: assetIds } }, { targetId: { [Op.in]: assetIds } }],
+        [Op.or]: [{ source_id: { [Op.in]: assetIds } }, { target_id: { [Op.in]: assetIds } }],
       },
     });
 
     // Transform to graph format
     const nodes = assets.map((asset) => this.assetToGraphNode(asset));
     const edges = relationships
-      .filter((rel) => assetMap.has(rel.sourceId) && assetMap.has(rel.targetId))
+      .filter((rel) => assetMap.has(rel.source_id) && assetMap.has(rel.target_id))
       .map((rel) => this.relationshipToGraphEdge(rel));
 
     return { nodes, edges };
@@ -85,7 +85,7 @@ class GraphService {
 
       // Get neighbors
       const whereClause = {
-        [Op.or]: [{ sourceId: nodeId }, { targetId: nodeId }],
+        [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
       };
 
       if (relationship_types && relationship_types.length > 0) {
@@ -101,8 +101,8 @@ class GraphService {
       });
 
       for (const rel of relationships) {
-        const neighborId = rel.sourceId === nodeId ? rel.targetId : rel.sourceId;
-        const neighbor = rel.sourceId === nodeId ? rel.target : rel.source;
+        const neighborId = rel.source_id === nodeId ? rel.target_id : rel.source_id;
+        const neighbor = rel.source_id === nodeId ? rel.target : rel.source;
 
         if (neighbor && !visited.has(neighborId)) {
           visited.add(neighborId);
@@ -111,7 +111,7 @@ class GraphService {
         }
 
         // Add edge if not already added
-        const edgeKey = `${rel.sourceId}-${rel.targetId}`;
+        const edgeKey = `${rel.source_id}-${rel.target_id}`;
         if (!edges.some((e) => e.key === edgeKey)) {
           edges.push(this.relationshipToGraphEdge(rel));
         }
@@ -127,19 +127,19 @@ class GraphService {
 
   /**
    * Find shortest path between two assets using BFS
-   * @param {number} sourceId - Source asset ID
-   * @param {number} targetId - Target asset ID
+   * @param {number} source_id - Source asset ID
+   * @param {number} target_id - Target asset ID
    * @param {Array} relationship_types - Filter by relationship types
    * @returns {Array} - Array of asset IDs representing the path
    */
-  async findShortestPath(sourceId, targetId, relationship_types = null) {
-    if (sourceId === targetId) {
-      return [sourceId];
+  async findShortestPath(source_id, target_id, relationship_types = null) {
+    if (source_id === target_id) {
+      return [source_id];
     }
 
     const visited = new Set();
-    const queue = [[sourceId]];
-    visited.add(sourceId);
+    const queue = [[source_id]];
+    visited.add(source_id);
 
     while (queue.length > 0) {
       const path = queue.shift();
@@ -147,7 +147,7 @@ class GraphService {
 
       // Get neighbors
       const whereClause = {
-        [Op.or]: [{ sourceId: currentNode }, { targetId: currentNode }],
+        [Op.or]: [{ source_id: currentNode }, { target_id: currentNode }],
       };
 
       if (relationship_types && relationship_types.length > 0) {
@@ -159,9 +159,9 @@ class GraphService {
       });
 
       for (const rel of relationships) {
-        const neighborId = rel.sourceId === currentNode ? rel.targetId : rel.sourceId;
+        const neighborId = rel.source_id === currentNode ? rel.target_id : rel.source_id;
 
-        if (neighborId === targetId) {
+        if (neighborId === target_id) {
           return [...path, neighborId];
         }
 
@@ -183,7 +183,7 @@ class GraphService {
    */
   async getNeighbors(nodeId, relationship_types = null) {
     const whereClause = {
-      [Op.or]: [{ sourceId: nodeId }, { targetId: nodeId }],
+      [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
     };
 
     if (relationship_types && relationship_types.length > 0) {
@@ -202,10 +202,10 @@ class GraphService {
     const outgoing = [];
 
     for (const rel of relationships) {
-      const neighbor = rel.sourceId === nodeId ? rel.target : rel.source;
+      const neighbor = rel.source_id === nodeId ? rel.target : rel.source;
       const neighborData = this.assetToGraphNode(neighbor);
 
-      if (rel.targetId === nodeId) {
+      if (rel.target_id === nodeId) {
         incoming.push({
           node: neighborData,
           relationship: this.relationshipToGraphEdge(rel),
@@ -249,12 +249,12 @@ class GraphService {
         // Get neighbors
         const relationships = await AssetRelationship.findAll({
           where: {
-            [Op.or]: [{ sourceId: nodeId }, { targetId: nodeId }],
+            [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
           },
         });
 
         for (const rel of relationships) {
-          const neighborId = rel.sourceId === nodeId ? rel.targetId : rel.sourceId;
+          const neighborId = rel.source_id === nodeId ? rel.target_id : rel.source_id;
           if (!visited.has(neighborId)) {
             visited.add(neighborId);
             queue.push(neighborId);
@@ -281,7 +281,7 @@ class GraphService {
 
     const relationships = await AssetRelationship.findAll({
       where: {
-        [Op.or]: [{ sourceId: nodeId }, { targetId: nodeId }],
+        [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
       },
       include: [
         { model: Asset, as: 'source' },
@@ -340,9 +340,9 @@ class GraphService {
   relationshipToGraphEdge(relationship) {
     return {
       id: relationship.id,
-      key: `${relationship.sourceId}-${relationship.targetId}`,
-      source: relationship.sourceId,
-      target: relationship.targetId,
+      key: `${relationship.source_id}-${relationship.target_id}`,
+      source: relationship.source_id,
+      target: relationship.target_id,
       type: relationship.relationship_type,
       label: this.getEdgeLabel(relationship.relationship_type),
       properties: relationship.properties,
@@ -365,40 +365,40 @@ class GraphService {
 
   /**
    * Create a new relationship between assets
-   * @param {number} sourceId - Source asset ID
-   * @param {number} targetId - Target asset ID
+   * @param {number} source_id - Source asset ID
+   * @param {number} target_id - Target asset ID
    * @param {string} relationship_type - Type of relationship
    * @param {Object} properties - Additional properties
    * @returns {Object} - Created relationship
    */
-  async createRelationship(sourceId, targetId, relationship_type, properties = {}) {
+  async createRelationship(source_id, target_id, relationship_type, properties = {}) {
     // Check if both assets exist
     const [source, target] = await Promise.all([
-      Asset.findByPk(sourceId),
-      Asset.findByPk(targetId),
+      Asset.findByPk(source_id),
+      Asset.findByPk(target_id),
     ]);
 
     if (!source) {
-      throw new Error(`Source asset with ID ${sourceId} not found`);
+      throw new Error(`Source asset with ID ${source_id} not found`);
     }
     if (!target) {
-      throw new Error(`Target asset with ID ${targetId} not found`);
+      throw new Error(`Target asset with ID ${target_id} not found`);
     }
 
     // Check if relationship already exists
     const existing = await AssetRelationship.findOne({
-      where: { sourceId, targetId, relationship_type },
+      where: { source_id, target_id, relationship_type },
     });
 
     if (existing) {
       throw new Error(
-        `Relationship already exists between ${sourceId} and ${targetId} of type ${relationship_type}`
+        `Relationship already exists between ${source_id} and ${target_id} of type ${relationship_type}`
       );
     }
 
     const relationship = await AssetRelationship.create({
-      sourceId,
-      targetId,
+      source_id,
+      target_id,
       relationship_type,
       properties,
     });

@@ -101,7 +101,7 @@ module.exports = {
     console.log('✅ 迁移完成！');
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     console.log('开始回滚迁移...');
 
     // 删除索引

@@ -200,7 +200,7 @@ async function migrateSQLiteToPostgres() {
       if (typeof embeddingValue === 'string') {
         try {
           embeddingValue = JSON.parse(embeddingValue);
-        } catch (e) {
+        } catch (_e) {
           embeddingValue = null;
         }
       }
@@ -250,7 +250,7 @@ async function migrateSQLiteToPostgres() {
               },
             }
           );
-        } catch (e) {
+        } catch (_e) {
           // pgvector might not be available, skip
         }
       }
@@ -298,11 +298,11 @@ async function migrateSQLiteToPostgres() {
           await postgresSequelize.query(
             `SELECT setval('${seq.sequencename}', (SELECT COALESCE(MAX(id), 1) FROM "${tableName}"))`
           );
-        } catch (e) {
+        } catch (_e) {
           console.log(`[Migration] Could not reset sequence ${seq.sequencename}: ${e.message}`);
         }
       }
-    } catch (e) {
+    } catch (_e) {
       console.log(`[Migration] Could not reset sequences: ${e.message}`);
     }
 

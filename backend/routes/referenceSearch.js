@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const FormData = require('form-data');
+// FormData unused
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -14,8 +14,8 @@ const BRAVE_IMAGE_SEARCH_URL = 'https://api.search.brave.com/res/v1/images/searc
 const IMAGE_SERVICE_URL = process.env.IMAGE_SERVICE_URL || '';
 
 // 配置
-const REFERENCE_SEARCH_ENABLED = process.env.REFERENCE_SEARCH_ENABLED !== 'false';
-const REFERENCE_SEARCH_MAX_RESULTS = parseInt(process.env.REFERENCE_SEARCH_MAX_RESULTS) || 50;
+const _REFERENCE_SEARCH_ENABLED = process.env.REFERENCE_SEARCH_ENABLED !== 'false';
+const _REFERENCE_SEARCH_MAX_RESULTS = parseInt(process.env.REFERENCE_SEARCH_MAX_RESULTS) || 50;
 const REFERENCE_DOWNLOAD_TIMEOUT = parseInt(process.env.REFERENCE_DOWNLOAD_TIMEOUT) || 15000;
 
 // 搜索参考图
@@ -44,7 +44,7 @@ router.get('/search', async (req, res) => {
       results,
       total: response.data.total || 0,
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Brave Search error:', error.response?.data || error.message);
     res.status(500).json({
       success: false,
@@ -98,7 +98,7 @@ router.post('/download', async (req, res) => {
           image_path: filepath,
         });
         analysis = analyzeResponse.data;
-      } catch (e) {
+      } catch (_e) {
         console.error('Analysis failed for', filename);
       }
     }
@@ -123,7 +123,7 @@ router.post('/download', async (req, res) => {
       image,
       message: '图片下载并添加成功',
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Download error:', error);
     res.status(500).json({
       success: false,
@@ -186,7 +186,7 @@ router.post('/batch-download', async (req, res) => {
               image_path: filepath,
             });
             analysis = analyzeResponse.data;
-          } catch (e) {
+          } catch (_e) {
             console.error('Analysis failed for', filename);
           }
         }
@@ -208,7 +208,7 @@ router.post('/batch-download', async (req, res) => {
 
         results.success++;
         results.images.push(image);
-      } catch (error) {
+      } catch (_error) {
         console.error('Download failed for', img.url);
         results.failed++;
       }
@@ -220,7 +220,7 @@ router.post('/batch-download', async (req, res) => {
       images: results.images,
       message: `成功下载 ${results.success} 张，失败 ${results.failed} 张`,
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Batch download error:', error);
     res.status(500).json({
       success: false,

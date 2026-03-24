@@ -54,7 +54,7 @@ async function initializeDatabase() {
       try {
         await sequelize.query('CREATE EXTENSION IF NOT EXISTS vector;');
         console.log('[Database] pgvector extension enabled');
-      } catch (err) {
+      } catch (_err) {
         console.warn(
           '[Database] pgvector extension not available. Vector search will use JSON fallback.'
         );
@@ -66,7 +66,7 @@ async function initializeDatabase() {
 
     await sequelize.sync({ force: false });
     console.log('[Database] Models synchronized');
-  } catch (err) {
+  } catch (_err) {
     console.error('[Database] Initialization error:', err.message);
     process.exit(1);
   }

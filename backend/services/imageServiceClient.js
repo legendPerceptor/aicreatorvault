@@ -16,7 +16,7 @@ class ImageServiceClient {
         image_path: imagePath,
       });
       return response.data;
-    } catch (error) {
+    } catch (_error) {
       console.error('分析图片失败:', error.message);
       throw error;
     }
@@ -34,7 +34,7 @@ class ImageServiceClient {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (_error) {
       console.error('分析上传图片失败:', error.message);
       throw error;
     }
@@ -48,7 +48,7 @@ class ImageServiceClient {
         top_k: topK,
       });
       return response.data.results;
-    } catch (error) {
+    } catch (_error) {
       console.error('文本搜索失败:', error.message);
       throw error;
     }
@@ -68,7 +68,7 @@ class ImageServiceClient {
         },
       });
       return response.data.results;
-    } catch (error) {
+    } catch (_error) {
       console.error('图片搜索失败:', error.message);
       throw error;
     }
@@ -80,7 +80,7 @@ class ImageServiceClient {
         params: { text },
       });
       return response.data;
-    } catch (error) {
+    } catch (_error) {
       console.error('生成嵌入失败:', error.message);
       throw error;
     }
@@ -93,7 +93,7 @@ class ImageServiceClient {
         extensions,
       });
       return response.data.results;
-    } catch (error) {
+    } catch (_error) {
       console.error('批量处理失败:', error.message);
       throw error;
     }
@@ -105,7 +105,7 @@ class ImageServiceClient {
         image_paths: imagePaths,
       });
       return response.data.results;
-    } catch (error) {
+    } catch (_error) {
       console.error('批量处理路径失败:', error.message);
       throw error;
     }
@@ -115,7 +115,7 @@ class ImageServiceClient {
     try {
       const response = await this.client.get('/health');
       return response.data.status === 'healthy';
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

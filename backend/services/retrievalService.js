@@ -20,7 +20,7 @@ class RetrievalService {
       maxScore = 10,
       minSimilarity = 0.5,
       themeIds = [],
-      includeUnanalyzed = true,
+      _includeUnanalyzed = true,
     } = options;
 
     // 并行执行关键词和语义搜索

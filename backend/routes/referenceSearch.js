@@ -11,7 +11,6 @@ const router = express.Router();
 // Brave Search API 配置
 const BRAVE_API_KEY = process.env.BRAVE_API_KEY || '';
 const BRAVE_IMAGE_SEARCH_URL = 'https://api.search.brave.com/res/v1/images/search';
-
 const IMAGE_SERVICE_URL = process.env.IMAGE_SERVICE_URL || '';
 
 // 配置
@@ -88,7 +87,7 @@ router.post('/download', async (req, res) => {
     });
 
     const buffer = Buffer.from(response.data, 'binary');
-    fs.writeFileSync(filepath, buffer)
+    fs.writeFileSync(filepath, buffer);
 
     // 自动分析图片（如果启用)
     let analysis = null;
@@ -96,49 +95,44 @@ router.post('/download', async (req, res) => {
       try {
         const analyzeResponse = await axios.post(`${IMAGE_SERVICE_URL}/analyze`, {
           image_path: filepath,
-        })
-        const analysis = analyzeResponse.data
-
-        // 创建图片记录
-        const image = await Image.create({
-          filename,
-          filepath,
-          original_url: url,
-          source_name: source,
-          title: title || '',
-          is_reference: true,
-          description: analysis?.description || '',
-          embedding: analysis?.embedding || null,
-          width: analysis?.width
-          height: analysis?.height
-          theme_id: themeId || null
-        })
-        .catch (e) {
-          console.error('Analysis failed for', filename)
-        }
+        });
+        analysis = analyzeResponse.data;
+      } catch (e) {
+        console.error('Analysis failed for', filename);
       }
     }
 
-    // 创建图片记录（不自动分析)
+    // 创建图片记录
     const image = await Image.create({
       filename,
       filepath,
-      original_url: img.url,
-      source_name: img.source,
-      title: img.title || '',
+      original_url: url,
+      source_name: source,
+      title: title || '',
       is_reference: true,
       description: analysis?.description || '',
       embedding: analysis?.embedding || null,
-      width: analysis?.width
-      height: analysis?.height
-      theme_id: themeId || null
-    })
-    .catch (e) {
-      console.error('Analysis failed for', filename)
-    }
-  }
-}
+      width: analysis?.width,
+      height: analysis?.height,
+      theme_id: themeId || null,
+    });
 
+    res.json({
+      success: true,
+      image,
+      message: '图片下载并添加成功',
+    });
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({
+      success: false,
+      error: '下载图片失败',
+      details: error.message,
+    });
+  }
+});
+
+// 批量下载图片
 router.post('/batch-download', async (req, res) => {
   try {
     const { images, themeId } = req.body;
@@ -147,27 +141,30 @@ router.post('/batch-download', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Images array is required',
-      })
+      });
     }
 
-    const uploadsDir = path.join(__dirname, '../uploads')
+    const uploadsDir = path.join(__dirname, '../uploads');
+
+    // 确保上传目录存在
     if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
+      fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
     const results = {
       success: 0,
       failed: 0,
       images: [],
-    }
+    };
 
     for (const img of images) {
       try {
+        // 下载图片
         const timestamp = Date.now();
         const uuid = uuidv4().split('-')[0];
-        const ext = img.url.split('.').pop() || 'jpg'
-        const filename = `ref_${timestamp}_${uuid}.${ext}`
-        const filepath = path.join(uploadsDir, filename)
+        const ext = img.url.split('.').pop() || 'jpg';
+        const filename = `ref_${timestamp}_${uuid}.${ext}`;
+        const filepath = path.join(uploadsDir, filename);
 
         const response = await axios.get(img.url, {
           responseType: 'arraybuffer',
@@ -175,56 +172,59 @@ router.post('/batch-download', async (req, res) => {
           headers: {
             'User-Agent': 'Mozilla/5.0',
           },
-        })
+        });
 
-        const buffer = Buffer.from(response.data, 'binary')
-        fs.writeFileSync(filepath, buffer)
+        const buffer = Buffer.from(response.data, 'binary');
+        fs.writeFileSync(filepath, buffer);
 
         // 自动分析图片
-        let analysis = null
-        if (autoAnalyze && IMAGE_SERVICE_URL) {
+        let analysis = null;
+        if (IMAGE_SERVICE_URL) {
           try {
             const analyzeResponse = await axios.post(`${IMAGE_SERVICE_URL}/analyze`, {
               image_path: filepath,
-            })
-            const analysis = analyzeResponse.data
-
-            // 创建图片记录
-            const image = await Image.create({
-              filename,
-              filepath,
-              original_url: img.url,
-              source_name: img.source,
-              title: img.title || '',
-              is_reference: true,
-              description: analysis?.description || '',
-              embedding: analysis?.embedding || null,
-              width: analysis?.width
-              height: analysis?.height
-              theme_id: themeId || null
-            })
-          .catch (e) {
-            console.error('Analysis failed for', filename)
+            });
+            analysis = analyzeResponse.data;
+          } catch (e) {
+            console.error('Analysis failed for', filename);
           }
         }
+
+        // 创建图片记录
+        const image = await Image.create({
+          filename,
+          filepath,
+          original_url: img.url,
+          source_name: img.source,
+          title: img.title || '',
+          is_reference: true,
+          description: analysis?.description || '',
+          embedding: analysis?.embedding || null,
+          width: analysis?.width,
+          height: analysis?.height,
+          theme_id: themeId || null,
+        });
+
+        results.success++;
+        results.images.push(image);
       } catch (error) {
-        console.error('Download failed for', img.url)
+        console.error('Download failed for', img.url);
         results.failed++;
       }
     }
 
     res.json({
       success: results.success,
-      failed: results.failed
+      failed: results.failed,
       images: results.images,
-      message: `成功下载 ${results.success} 张， 失败 ${results.failed} 张`,
+      message: `成功下载 ${results.success} 张，失败 ${results.failed} 张`,
     });
   } catch (error) {
-    console.error('Batch download error:', error)
+    console.error('Batch download error:', error);
     res.status(500).json({
       success: false,
-      error: '批量下载失败'
-    })
+      error: '批量下载失败',
+    });
   }
 });
 

@@ -27,12 +27,18 @@ const Prompt = (sequelize) => {
           max: 10,
         },
       },
-      createdAt: {
+      created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
+        field: 'created_at',
       },
     },
     {
+      tableName: 'Prompts',
+      underscored: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
       indexes: [
         {
           unique: true,

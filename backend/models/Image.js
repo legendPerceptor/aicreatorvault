@@ -42,31 +42,36 @@ const Image = (sequelize, dbType = 'sqlite') => {
         this.setDataValue('embedding', value ? JSON.stringify(value) : null);
       },
     },
-    embeddingModel: {
+    embedding_model: {
       type: DataTypes.STRING,
       allowNull: true,
       comment: '生成嵌入的模型名称',
+      field: 'embedding_model', // 明确指定数据库列名
     },
-    analyzedAt: {
+    analyzed_at: {
       type: DataTypes.DATE,
       allowNull: true,
       comment: 'AI分析时间',
+      field: 'analyzed_at', // 明确指定数据库列名
     },
     // 参考图搜索相关字段
-    isReference: {
+    is_reference: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       comment: '是否为参考图（从网络下载）',
+      field: 'is_reference', // 明确指定数据库列名
     },
-    originalUrl: {
+    original_url: {
       type: DataTypes.STRING,
       allowNull: true,
       comment: '原始图片URL（参考图来源）',
+      field: 'original_url', // 明确指定数据库列名
     },
-    sourceName: {
+    source_name: {
       type: DataTypes.STRING,
       allowNull: true,
       comment: '图片来源网站名称',
+      field: 'source_name', // 明确指定数据库列名
     },
     title: {
       type: DataTypes.STRING,
@@ -83,13 +88,24 @@ const Image = (sequelize, dbType = 'sqlite') => {
       allowNull: true,
       comment: '图片高度',
     },
-    createdAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
+    prompt_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Prompts',
+        key: 'id',
+      },
+      field: 'prompt_id', // 明确指定数据库列名
     },
   };
 
-  const model = sequelize.define('Image', schema);
+  const model = sequelize.define('Image', schema, {
+    tableName: 'Images',
+    underscored: true, // 确保使用 snake_case
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
 
   if (isPostgres) {
     model.addHook('afterSync', async () => {

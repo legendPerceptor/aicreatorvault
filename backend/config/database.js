@@ -4,8 +4,19 @@ const path = require('path');
 const DB_TYPE = process.env.DB_TYPE || 'sqlite';
 
 function getDatabaseConfig() {
+  const baseConfig = {
+    define: {
+      underscored: true, // 自动转换 camelCase → snake_case
+      freezeTableName: true, // 不自动复数化表名
+      timestamps: true, // 自动添加 createdAt, updatedAt
+      createdAt: 'created_at', // 使用 snake_case
+      updatedAt: 'updated_at', // 使用 snake_case
+    },
+  };
+
   if (DB_TYPE === 'postgres') {
     return {
+      ...baseConfig,
       dialect: 'postgres',
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -37,6 +48,7 @@ function getDatabaseConfig() {
     : path.resolve(__dirname, '..', storagePath);
 
   return {
+    ...baseConfig,
     dialect: 'sqlite',
     storage: absoluteStorage,
     logging: process.env.DB_LOGGING === 'true' ? console.log : false,

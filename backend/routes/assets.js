@@ -52,10 +52,7 @@ router.get('/find', async (req, res) => {
     }
 
     const asset = await Asset.findOne({
-      where: {
-        assetType,
-        content,
-      },
+      where: { asset_type: assetType, content },
     });
 
     if (asset) {
@@ -75,13 +72,13 @@ router.get('/', async (req, res) => {
 
     const where = {};
     if (type) {
-      where.assetType = type;
+      where.asset_type = type;
     }
     if (parentId) {
-      where.parentId = parentId;
+      where.parent_id = parentId;
     }
     if (derivedType) {
-      where.derivedType = derivedType;
+      where.derived_type = derivedType;
     }
 
     const options = { where };
@@ -94,7 +91,7 @@ router.get('/', async (req, res) => {
 
     const assets = await Asset.findAll({
       ...options,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
     });
 
     res.json(assets.map((asset) => graphService.assetToGraphNode(asset)));
@@ -161,10 +158,7 @@ router.post('/', async (req, res) => {
     // Check for duplicate (assetType + content should be unique)
     if (content) {
       const existing = await Asset.findOne({
-        where: {
-          assetType,
-          content,
-        },
+        where: { asset_type: assetType, content },
       });
 
       if (existing) {
@@ -175,17 +169,18 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const asset = await Asset.create({
-      assetType,
+    const assetData = {
+      asset_type: assetType,
       content,
       filename,
       path: filePath,
       score,
       description,
       metadata,
-      parentId,
-      derivedType,
-    });
+      parent_id: parentId,
+      derived_type: derivedType,
+    };
+    const asset = await Asset.create(assetData);
 
     // Auto-create relationship for derived images
     if (assetType === 'derived_image' && parentId) {
@@ -194,7 +189,7 @@ router.post('/', async (req, res) => {
 
       await graphService.createRelationship(parseInt(parentId, 10), asset.id, relationshipType, {
         derivedType,
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
     }
 
@@ -206,7 +201,7 @@ router.post('/', async (req, res) => {
       try {
         const existing = await Asset.findOne({
           where: {
-            assetType: body.assetType,
+            assetType: body.asset_type,
             content: body.content,
           },
         });
@@ -260,14 +255,14 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 
       await graphService.createRelationship(parseInt(parentId, 10), asset.id, relationshipType, {
         derivedType,
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
     }
 
     // Create relationship from prompt if provided
     if (promptId) {
       await graphService.createRelationship(parseInt(promptId, 10), asset.id, 'generated', {
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
     }
 
@@ -329,7 +324,7 @@ router.post('/:id/derive', upload.single('image'), async (req, res) => {
       parseInt(id, 10),
       asset.id,
       relationshipType,
-      { derivedType, createdAt: new Date().toISOString() }
+      { derivedType, created_at: new Date().toISOString() }
     );
 
     res.status(201).json({
@@ -375,7 +370,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Delete file if it's an image
-    if (asset.assetType === 'image' || asset.assetType === 'derived_image') {
+    if (asset.asset_type === 'image' || asset.asset_type === 'derived_image') {
       if (asset.path && fs.existsSync(asset.path)) {
         fs.unlinkSync(asset.path);
       }

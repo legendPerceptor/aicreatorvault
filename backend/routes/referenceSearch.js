@@ -57,7 +57,7 @@ router.get('/search', async (req, res) => {
 // 下载单张图片到本地
 router.post('/download', async (req, res) => {
   try {
-    const { url, title, source, themeId, autoAnalyze = true } = req.body;
+    const { url, title, source, theme_id, autoAnalyze = true } = req.body;
 
     if (!url) {
       return res.status(400).json({
@@ -107,15 +107,15 @@ router.post('/download', async (req, res) => {
     const image = await Image.create({
       filename,
       path: filepath,
-      originalUrl: url,
-      sourceName: source,
+      original_url: url,
+      source_name: source,
       title: title || '',
-      isReference: true,
+      is_reference: true,
       description: analysis?.description || '',
       embedding: analysis?.embedding || null,
       width: analysis?.width,
       height: analysis?.height,
-      themeId: themeId || null,
+      theme_id: theme_id || null,
     });
 
     res.json({
@@ -136,7 +136,7 @@ router.post('/download', async (req, res) => {
 // 批量下载图片
 router.post('/batch-download', async (req, res) => {
   try {
-    const { images, themeId } = req.body;
+    const { images, theme_id } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({
@@ -195,15 +195,15 @@ router.post('/batch-download', async (req, res) => {
         const image = await Image.create({
           filename,
           path: filepath,
-          originalUrl: img.url,
-          sourceName: img.source,
+          original_url: img.url,
+          source_name: img.source,
           title: img.title || '',
-          isReference: true,
+          is_reference: true,
           description: analysis?.description || '',
           embedding: analysis?.embedding || null,
           width: analysis?.width,
           height: analysis?.height,
-          themeId: themeId || null,
+          theme_id: theme_id || null,
         });
 
         results.success++;

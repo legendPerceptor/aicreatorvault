@@ -253,14 +253,14 @@ class RetrievalService {
     // 日期过滤
     if (filters.dateFrom) {
       filtered = filtered.filter((img) => {
-        const imgDate = new Date(img.createdAt);
+        const imgDate = new Date(img.created_at);
         return imgDate >= new Date(filters.dateFrom);
       });
     }
 
     if (filters.dateTo) {
       filtered = filtered.filter((img) => {
-        const imgDate = new Date(img.createdAt);
+        const imgDate = new Date(img.created_at);
         return imgDate <= new Date(filters.dateTo);
       });
     }
@@ -295,9 +295,9 @@ class RetrievalService {
       }
 
       // 日期分数（越新越好，归一化到0-1）
-      if (item.createdAt) {
+      if (item.created_at) {
         const daysSinceCreation =
-          (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+          (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60 * 24);
         const dateScore = Math.max(0, 1 - daysSinceCreation / 365); // 一年内的图片有分数
         totalScore += dateScore * dateWeight;
       }

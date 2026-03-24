@@ -1,7 +1,7 @@
 {
   "name": "aigc-assistant",
   "version": "1.0.0",
-  "description": "AIGC 辅助工具",
+  "description": "AI Creator Vault - Manage Your AI Assets",
   "main": "index.js",
   "scripts": {
     "start:backend": "node backend/server.js",

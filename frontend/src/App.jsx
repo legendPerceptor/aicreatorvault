@@ -142,7 +142,7 @@ function App() {
   return (
     <div className="app">
       <div className="header">
-        <h1>AIGC 辅助工具</h1>
+        <h1>AI Creator Vault</h1>
         <p>管理你的 AI 创作资产</p>
       </div>
 

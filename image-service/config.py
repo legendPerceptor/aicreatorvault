@@ -3,7 +3,8 @@ from functools import lru_cache
 from pathlib import Path
 from dotenv import load_dotenv
 
-_ENV_FILE = Path(__file__).parent / ".env"
+# Load from project root .env (two levels up from this file)
+_ENV_FILE = Path(__file__).parent.parent / ".env"
 load_dotenv(_ENV_FILE)
 
 

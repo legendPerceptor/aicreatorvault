@@ -114,7 +114,8 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       { fields: ['createdAt'] },
       // 添加唯一索引，防止重复内容
       {
-        unique: true,
+        // Temporarily disabled due to existing duplicate data
+        // unique: true,
         fields: ['assetType', 'content'],
         name: 'unique_asset_content',
       },

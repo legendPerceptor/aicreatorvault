@@ -1,13 +1,15 @@
+const express = require('express');
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { Image } = require('../models');
 
 const router = express.Router();
 
 // Brave Search API 配
-const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSA9ot2veeDRw_ZLx68Ky8wUahZulU9';
+const BRAVE_API_KEY = process.env.BRAVE_API_KEY;
 const BRAVE_IMAGE_SEARCH_URL = 'https://api.search.brave.com/res/v1/images/search';
 
 // 配置

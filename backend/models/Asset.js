@@ -9,10 +9,11 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       primaryKey: true,
       autoIncrement: true,
     },
-    assetType: {
+    asset_type: {
       type: DataTypes.ENUM('prompt', 'image', 'derived_image'),
       allowNull: false,
       comment: 'Type of asset: prompt, original image, or derived image',
+      field: 'asset_type',
     },
     content: {
       type: DataTypes.TEXT,
@@ -57,7 +58,7 @@ const Asset = (sequelize, dbType = 'sqlite') => {
         if (value) {
           try {
             return JSON.parse(value);
-          } catch (e) {
+          } catch (_e) {
             return null;
           }
         }
@@ -67,56 +68,68 @@ const Asset = (sequelize, dbType = 'sqlite') => {
         this.setDataValue('embedding', value ? JSON.stringify(value) : null);
       },
     },
-    embeddingVector: {
+    embedding_vector: {
       type: isPostgres ? DataTypes.TEXT : DataTypes.TEXT,
       allowNull: true,
       comment: 'Vector type for PostgreSQL with pgvector',
+      field: 'embedding_vector',
     },
-    embeddingModel: {
+    embedding_model: {
       type: DataTypes.STRING,
       allowNull: true,
       comment: 'Model used to generate embedding',
+      field: 'embedding_model',
     },
-    parentId: {
+    parent_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       comment: 'Parent asset for derived versions',
+      field: 'parent_id',
       references: {
         model: 'Assets',
         key: 'id',
       },
     },
-    derivedType: {
+    derived_type: {
       type: DataTypes.ENUM('edit', 'variant', 'upscale', 'crop'),
       allowNull: true,
       comment: 'Type of derivation for derived_image assets',
+      field: 'derived_type',
     },
-    analyzedAt: {
+    analyzed_at: {
       type: DataTypes.DATE,
       allowNull: true,
       comment: 'AI analysis timestamp',
+      field: 'analyzed_at',
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
+      field: 'created_at',
     },
-    updatedAt: {
+    updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
+      field: 'updated_at',
     },
   };
 
   const model = sequelize.define('Asset', schema, {
+    tableName: 'Assets',
+    underscored: true,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     indexes: [
-      { fields: ['assetType'] },
-      { fields: ['parentId'] },
-      { fields: ['derivedType'] },
-      { fields: ['createdAt'] },
+      { fields: ['asset_type'] },
+      { fields: ['parent_id'] },
+      { fields: ['derived_type'] },
+      { fields: ['created_at'] },
       // 添加唯一索引，防止重复内容
       {
         // Temporarily disabled due to existing duplicate data
         // unique: true,
-        fields: ['assetType', 'content'],
+        fields: ['asset_type', 'content'],
         name: 'unique_asset_content',
       },
     ],

@@ -30,14 +30,19 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB 限制
+  },
+});
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
     const image = await Image.create({
       filename: req.file.filename,
       path: req.file.path, // 存储容器内绝对路径
-      promptId: req.body.promptId,
+      promptId: req.body.promptId || req.body.prompt_id,
     });
 
     // 直接使用容器内路径
@@ -69,16 +74,16 @@ router.post('/', upload.single('image'), async (req, res) => {
     // 自动同步到 Asset 表（知识图谱）
     try {
       const { Asset, AssetRelationship } = require('../models');
-      const { Op } = require('sequelize');
+      // Op unused
 
       const asset = await Asset.create({
-        assetType: 'image',
+        asset_type: 'image',
         filename: image.filename,
         path: image.path,
         score: image.score,
         description: image.description,
         metadata: {
-          legacyImageId: image.id,
+          legacy_image_id: image.id,
           originalName: req.file.originalname,
           size: req.file.size,
           mimetype: req.file.mimetype,
@@ -86,22 +91,22 @@ router.post('/', upload.single('image'), async (req, res) => {
       });
 
       // 如果有关联的 promptId，创建 GENERATED 关系
-      if (req.body.promptId) {
+      if (req.body.promptId || req.body.prompt_id) {
         // 查找 prompt 对应的 Asset
         const promptAsset = await Asset.findOne({
           where: {
-            assetType: 'prompt',
+            asset_type: 'prompt',
             metadata: {
-              legacyPromptId: parseInt(req.body.promptId),
+              legacy_prompt_id: parseInt(req.body.promptId || req.body.prompt_id),
             },
           },
         });
 
         if (promptAsset) {
           await AssetRelationship.create({
-            sourceId: promptAsset.id,
-            targetId: asset.id,
-            relationshipType: 'generated',
+            source_id: promptAsset.id,
+            target_id: asset.id,
+            relationship_type: 'generated',
             properties: {
               createdAt: new Date().toISOString(),
             },
@@ -166,7 +171,7 @@ router.put('/:id/prompt', async (req, res) => {
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
-    await image.update({ promptId: req.body.promptId });
+    await image.update({ prompt_id: req.body.promptId || req.body.prompt_id });
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
     res.json(imageWithPrompt);
   } catch (error) {
@@ -191,13 +196,13 @@ router.delete('/:id', async (req, res) => {
     // 删除关联的 Asset（知识图谱）
     try {
       const { Asset, AssetRelationship } = require('../models');
-      const { Op } = require('sequelize');
+      // Op unused
 
       const asset = await Asset.findOne({
         where: {
-          assetType: 'image',
+          asset_type: 'image',
           metadata: {
-            legacyImageId: image.id,
+            legacy_image_id: image.id,
           },
         },
       });
@@ -206,7 +211,7 @@ router.delete('/:id', async (req, res) => {
         // 删除关联的关系
         await AssetRelationship.destroy({
           where: {
-            [Op.or]: [{ sourceId: asset.id }, { targetId: asset.id }],
+            [Op.or]: [{ source_id: asset.id }, { target_id: asset.id }],
           },
         });
         // 删除 Asset
@@ -537,7 +542,7 @@ router.get('/search/suggestions', async (req, res) => {
       return res.json({ suggestions: [] });
     }
 
-    const { Op } = require('sequelize');
+    // Op unused
 
     // 从描述中提取匹配的词作为建议
     const images = await Image.findAll({

@@ -1,33 +1,46 @@
 const { DataTypes } = require('sequelize');
 
 const ThemeImage = (sequelize) => {
-  return sequelize.define('ThemeImage', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    themeId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Themes',
-        key: 'id',
+  return sequelize.define(
+    'ThemeImage',
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      theme_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'theme_id',
+        references: {
+          model: 'Themes',
+          key: 'id',
+        },
+      },
+      image_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'image_id',
+        references: {
+          model: 'Images',
+          key: 'id',
+        },
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+        field: 'created_at',
       },
     },
-    imageId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Images',
-        key: 'id',
-      },
-    },
-    createdAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-  });
+    {
+      tableName: 'ThemeImages',
+      underscored: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    }
+  );
 };
 
 module.exports = ThemeImage;

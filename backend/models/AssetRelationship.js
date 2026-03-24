@@ -9,28 +9,31 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
       primaryKey: true,
       autoIncrement: true,
     },
-    sourceId: {
+    source_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       comment: 'Source asset ID',
+      field: 'source_id',
       references: {
         model: 'Assets',
         key: 'id',
       },
     },
-    targetId: {
+    target_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       comment: 'Target asset ID',
+      field: 'target_id',
       references: {
         model: 'Assets',
         key: 'id',
       },
     },
-    relationshipType: {
+    relationship_type: {
       type: DataTypes.ENUM('generated', 'derived_from', 'version_of', 'inspired_by'),
       allowNull: false,
       comment: 'Type of relationship between assets',
+      field: 'relationship_type',
     },
     properties: {
       type: isPostgres ? DataTypes.JSONB : DataTypes.JSON,
@@ -38,24 +41,29 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
       comment: 'Relationship metadata (edit timestamp, similarity score, etc.)',
       defaultValue: {},
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
+      field: 'created_at',
     },
   };
 
   const model = sequelize.define('AssetRelationship', schema, {
+    tableName: 'AssetRelationships',
+    underscored: true,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     indexes: [
-      { fields: ['sourceId'] },
-      { fields: ['targetId'] },
-      { fields: ['relationshipType'] },
+      { fields: ['source_id'] },
+      { fields: ['target_id'] },
+      { fields: ['relationship_type'] },
       {
         unique: true,
-        fields: ['sourceId', 'targetId', 'relationshipType'],
+        fields: ['source_id', 'target_id', 'relationship_type'],
         name: 'unique_relationship',
       },
     ],
-    tableName: 'AssetRelationships',
   });
 
   return model;

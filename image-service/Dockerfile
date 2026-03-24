@@ -24,7 +24,8 @@ RUN pip install --no-cache-dir \
     pydantic-settings>=2.1.0 \
     numpy>=1.24.0 \
     pillow>=10.0.0 \
-    python-dotenv>=1.0.0
+    python-dotenv>=1.0.0 \
+    qdrant-client>=1.7.0
 
 # Copy source code
 COPY . .

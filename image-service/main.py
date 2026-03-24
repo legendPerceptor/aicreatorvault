@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from image_processor import ImageProcessor, BatchImageProcessor, SemanticSearch
-from qdrant_client import get_qdrant_manager
+from qdrant_utils import get_qdrant_manager
 from config import get_settings
 
 settings = get_settings()
@@ -208,19 +208,15 @@ async def qdrant_health_check():
     try:
         qdrant = get_qdrant_manager()
         is_healthy = qdrant.health_check()
-        
+
         if is_healthy:
             info = qdrant.get_collection_info()
-            return {
-                "status": "healthy",
-                "connected": True,
-                "collection": info
-            }
+            return {"status": "healthy", "connected": True, "collection": info}
         else:
             return {
                 "status": "unhealthy",
                 "connected": False,
-                "error": "无法连接到 Qdrant"
+                "error": "无法连接到 Qdrant",
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -232,7 +228,7 @@ async def qdrant_init_collection():
     try:
         qdrant = get_qdrant_manager()
         success = qdrant.init_collection()
-        
+
         if success:
             return {"status": "success", "message": "集合初始化完成"}
         else:
@@ -249,9 +245,9 @@ async def qdrant_upsert_vector(request: QdrantUpsertRequest):
         success = qdrant.upsert_image(
             image_id=request.image_id,
             embedding=request.embedding,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
-        
+
         if success:
             return {"status": "success", "image_id": request.image_id}
         else:
@@ -266,12 +262,9 @@ async def qdrant_batch_upsert(request: QdrantBatchUpsertRequest):
     try:
         qdrant = get_qdrant_manager()
         success = qdrant.batch_upsert(request.points)
-        
+
         if success:
-            return {
-                "status": "success",
-                "count": len(request.points)
-            }
+            return {"status": "success", "count": len(request.points)}
         else:
             raise HTTPException(status_code=500, detail="批量插入失败")
     except Exception as e:
@@ -286,14 +279,10 @@ async def qdrant_search_vectors(request: QdrantSearchRequest):
         results = qdrant.search(
             query_vector=request.query_vector,
             top_k=request.top_k,
-            filters=request.filters
+            filters=request.filters,
         )
-        
-        return {
-            "status": "success",
-            "results": results,
-            "count": len(results)
-        }
+
+        return {"status": "success", "results": results, "count": len(results)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -304,7 +293,7 @@ async def qdrant_delete_vector(image_id: int):
     try:
         qdrant = get_qdrant_manager()
         success = qdrant.delete_image(image_id)
-        
+
         if success:
             return {"status": "success", "image_id": image_id}
         else:
@@ -319,12 +308,9 @@ async def qdrant_batch_delete(request: QdrantBatchDeleteRequest):
     try:
         qdrant = get_qdrant_manager()
         success = qdrant.batch_delete(request.image_ids)
-        
+
         if success:
-            return {
-                "status": "success",
-                "count": len(request.image_ids)
-            }
+            return {"status": "success", "count": len(request.image_ids)}
         else:
             raise HTTPException(status_code=500, detail="批量删除失败")
     except Exception as e:
@@ -337,7 +323,7 @@ async def qdrant_get_info():
     try:
         qdrant = get_qdrant_manager()
         info = qdrant.get_collection_info()
-        
+
         if info:
             return {"status": "success", "info": info}
         else:

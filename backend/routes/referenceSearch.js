@@ -18,7 +18,7 @@ const _REFERENCE_SEARCH_ENABLED = process.env.REFERENCE_SEARCH_ENABLED !== 'fals
 const _REFERENCE_SEARCH_MAX_RESULTS = parseInt(process.env.REFERENCE_SEARCH_MAX_RESULTS) || 50;
 const REFERENCE_DOWNLOAD_TIMEOUT = parseInt(process.env.REFERENCE_DOWNLOAD_TIMEOUT) || 15000;
 
-// 搜索参考图
+// 搜索参考图 (GET)
 router.get('/search', async (req, res) => {
   try {
     if (!BRAVE_API_KEY) {
@@ -29,7 +29,42 @@ router.get('/search', async (req, res) => {
     }
 
     const { query, count = 20 } = req.query;
+    await performSearch(query, count, res);
+  } catch (error) {
+    console.error('Brave Search error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Brave Search API 调用失败',
+      details: error.response?.data || error.message,
+    });
+  }
+});
 
+// 搜索参考图 (POST)
+router.post('/search', async (req, res) => {
+  try {
+    if (!BRAVE_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'BRAVE_API_KEY 未配置',
+      });
+    }
+
+    const { query, count = 20 } = req.body;
+    await performSearch(query, count, res);
+  } catch (error) {
+    console.error('Brave Search error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Brave Search API 调用失败',
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+// 实际搜索逻辑
+async function performSearch(query, count, res) {
+  try {
     const response = await axios.get(BRAVE_IMAGE_SEARCH_URL, {
       headers: {
         Accept: 'application/json',
@@ -52,7 +87,7 @@ router.get('/search', async (req, res) => {
       details: error.response?.data || error.message,
     });
   }
-});
+}
 
 // 下载单张图片到本地
 router.post('/download', async (req, res) => {

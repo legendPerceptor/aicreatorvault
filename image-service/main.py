@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from image_processor import ImageProcessor, BatchImageProcessor, SemanticSearch
+from qdrant_utils import get_qdrant_manager
 from config import get_settings
 
 settings = get_settings()
@@ -174,6 +175,159 @@ async def generate_embedding(text: str):
         processor = ImageProcessor()
         embedding = processor.generate_embedding(text)
         return {"embedding": embedding, "model": settings.openai_embedding_model}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============= Qdrant 向量搜索 API =============
+
+
+class QdrantUpsertRequest(BaseModel):
+    image_id: int
+    embedding: list[float]
+    metadata: Optional[dict] = None
+
+
+class QdrantSearchRequest(BaseModel):
+    query_vector: list[float]
+    top_k: int = 20
+    filters: Optional[dict] = None
+
+
+class QdrantBatchUpsertRequest(BaseModel):
+    points: list[dict]  # [{id, embedding, metadata}]
+
+
+class QdrantBatchDeleteRequest(BaseModel):
+    image_ids: list[int]
+
+
+@app.get("/qdrant/health")
+async def qdrant_health_check():
+    """检查 Qdrant 连接状态"""
+    try:
+        qdrant = get_qdrant_manager()
+        is_healthy = qdrant.health_check()
+
+        if is_healthy:
+            info = qdrant.get_collection_info()
+            return {"status": "healthy", "connected": True, "collection": info}
+        else:
+            return {
+                "status": "unhealthy",
+                "connected": False,
+                "error": "无法连接到 Qdrant",
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/qdrant/init")
+async def qdrant_init_collection():
+    """初始化 Qdrant 集合"""
+    try:
+        qdrant = get_qdrant_manager()
+        success = qdrant.init_collection()
+
+        if success:
+            return {"status": "success", "message": "集合初始化完成"}
+        else:
+            raise HTTPException(status_code=500, detail="集合初始化失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/qdrant/upsert")
+async def qdrant_upsert_vector(request: QdrantUpsertRequest):
+    """插入或更新单个图片向量"""
+    try:
+        qdrant = get_qdrant_manager()
+        success = qdrant.upsert_image(
+            image_id=request.image_id,
+            embedding=request.embedding,
+            metadata=request.metadata,
+        )
+
+        if success:
+            return {"status": "success", "image_id": request.image_id}
+        else:
+            raise HTTPException(status_code=500, detail="向量插入失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/qdrant/batch-upsert")
+async def qdrant_batch_upsert(request: QdrantBatchUpsertRequest):
+    """批量插入向量"""
+    try:
+        qdrant = get_qdrant_manager()
+        success = qdrant.batch_upsert(request.points)
+
+        if success:
+            return {"status": "success", "count": len(request.points)}
+        else:
+            raise HTTPException(status_code=500, detail="批量插入失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/qdrant/search")
+async def qdrant_search_vectors(request: QdrantSearchRequest):
+    """使用 Qdrant 进行向量搜索"""
+    try:
+        qdrant = get_qdrant_manager()
+        results = qdrant.search(
+            query_vector=request.query_vector,
+            top_k=request.top_k,
+            filters=request.filters,
+        )
+
+        return {"status": "success", "results": results, "count": len(results)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/qdrant/delete/{image_id}")
+async def qdrant_delete_vector(image_id: int):
+    """删除单个图片向量"""
+    try:
+        qdrant = get_qdrant_manager()
+        success = qdrant.delete_image(image_id)
+
+        if success:
+            return {"status": "success", "image_id": image_id}
+        else:
+            raise HTTPException(status_code=500, detail="向量删除失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/qdrant/batch-delete")
+async def qdrant_batch_delete(request: QdrantBatchDeleteRequest):
+    """批量删除向量"""
+    try:
+        qdrant = get_qdrant_manager()
+        success = qdrant.batch_delete(request.image_ids)
+
+        if success:
+            return {"status": "success", "count": len(request.image_ids)}
+        else:
+            raise HTTPException(status_code=500, detail="批量删除失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/qdrant/info")
+async def qdrant_get_info():
+    """获取 Qdrant 集合信息"""
+    try:
+        qdrant = get_qdrant_manager()
+        info = qdrant.get_collection_info()
+
+        if info:
+            return {"status": "success", "info": info}
+        else:
+            raise HTTPException(status_code=500, detail="获取集合信息失败")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

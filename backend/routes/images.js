@@ -66,6 +66,19 @@ router.post('/', upload.single('image'), async (req, res) => {
         if (DB_TYPE === 'postgres' && supportsVector()) {
           await saveEmbeddingVector(image.id, analysis.embedding);
         }
+
+        // 同步写入 Qdrant 向量数据库
+        try {
+          await imageServiceClient.qdrantUpsert(image.id, analysis.embedding, {
+            prompt_id: image.prompt_id,
+            filename: image.filename,
+            description: analysis.description,
+          });
+          console.log(`[Image] 已写入 Qdrant: Image #${image.id}`);
+        } catch (qdrantError) {
+          console.error('[Image] Qdrant 写入失败:', qdrantError.message);
+          // 不影响主流程
+        }
       } catch (analyzeError) {
         console.error('AI分析失败，但图片已保存:', analyzeError.message);
       }
@@ -223,6 +236,14 @@ router.delete('/:id', async (req, res) => {
       // 不影响主流程
     }
 
+    // 删除 Qdrant 向量
+    try {
+      await imageServiceClient.qdrantDelete(image.id);
+      console.log(`[Image] Deleted from Qdrant: Image #${image.id}`);
+    } catch (qdrantError) {
+      console.error('[Image] Failed to delete from Qdrant:', qdrantError.message);
+    }
+
     await image.destroy();
     res.json({ message: 'Image deleted successfully' });
   } catch (error) {
@@ -255,6 +276,18 @@ router.post('/:id/analyze', async (req, res) => {
 
     if (DB_TYPE === 'postgres' && supportsVector()) {
       await saveEmbeddingVector(image.id, analysis.embedding);
+    }
+
+    // 同步写入 Qdrant 向量数据库
+    try {
+      await imageServiceClient.qdrantUpsert(image.id, analysis.embedding, {
+        prompt_id: image.prompt_id,
+        filename: image.filename,
+        description: analysis.description,
+      });
+      console.log(`[Image] 已写入 Qdrant: Image #${image.id}`);
+    } catch (qdrantError) {
+      console.error('[Image] Qdrant 写入失败:', qdrantError.message);
     }
 
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
@@ -434,6 +467,16 @@ router.post('/batch-analyze', async (req, res) => {
             });
             if (DB_TYPE === 'postgres' && supportsVector()) {
               await saveEmbeddingVector(image.id, result.embedding);
+            }
+            // 同步写入 Qdrant 向量数据库
+            try {
+              await imageServiceClient.qdrantUpsert(image.id, result.embedding, {
+                prompt_id: image.prompt_id,
+                filename: image.filename,
+                description: result.description,
+              });
+            } catch (qdrantError) {
+              console.error('[Image] Qdrant 写入失败:', qdrantError.message);
             }
             updated++;
           }

@@ -44,7 +44,7 @@ router.get('/search', async (req, res) => {
       results,
       total: response.data.total || 0,
     });
-  } catch (_error) {
+  } catch (error) {
     console.error('Brave Search error:', error.response?.data || error.message);
     res.status(500).json({
       success: false,

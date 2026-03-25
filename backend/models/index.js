@@ -66,7 +66,7 @@ async function initializeDatabase() {
 
     await sequelize.sync({ force: false });
     console.log('[Database] Models synchronized');
-  } catch (_err) {
+  } catch (err) {
     console.error('[Database] Initialization error:', err.message);
     process.exit(1);
   }

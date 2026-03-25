@@ -83,7 +83,7 @@ services:
       # 通过 aigc-xray 代理访问 OpenAI API
       - HTTP_PROXY=http://aigc-xray:1087
       - HTTPS_PROXY=http://aigc-xray:1087
-      - NO_PROXY=localhost,127.0.0.1,qdrant,backend,redis,postgres
+      - NO_PROXY=localhost,127.0.0.1,qdrant,backend,redis,postgres,api.search.brave.com
     volumes:
       # 共享 uploads 目录（只读），用于分析图片
       - ${UPLOADS_PATH:-./uploads}:/app/uploads:ro

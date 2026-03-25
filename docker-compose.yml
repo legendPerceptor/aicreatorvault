@@ -46,6 +46,8 @@ services:
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - BRAVE_IMAGE_SEARCH_URL=https://api.search.brave.com/res/v1/images/search
+      - SOCKS_PROXY_HOST=${SOCKS_PROXY_HOST:-aigc-xray}
+      - SOCKS_PROXY_PORT=${SOCKS_PROXY_PORT:-1080}
     volumes:
       # 使用 bind mount，数据存储在宿主机
       # 修改为你 NAS 上的实际路径
@@ -59,6 +61,7 @@ services:
         condition: service_started
     networks:
       - aicreatorvault-net
+      - proxy-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/prompts"]

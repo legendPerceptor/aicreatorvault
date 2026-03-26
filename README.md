@@ -8,11 +8,13 @@
 - **提示词管理**：存储和管理 AI 创作提示词，支持评分和关联图片
 - **图片管理**：上传和管理 AI 生成的图片，支持评分和关联提示词
 - **主题管理**：围绕主题组织参考图片，支持拖拽上传和灵活分类
+- **参考图搜索**：搜索网络参考图，一键下载添加到本地库
 
 ### 智能搜索
 - **AI 图片分析**：自动分析图片内容并生成描述和嵌入向量
-- **向量搜索**：支持基于语义相似度的文本搜图和以图搜图
-- **语义检索**：通过自然语言描述找到最相关的图片
+- **向量搜索**：基于 Qdrant 的高性能语义搜索
+- **混合检索**：结合关键词和语义搜索，使用 RRF 算法智能排序
+- **以图搜图**：上传图片搜索视觉相似的内容
 
 ### 知识图谱 🌟
 - **可视化图谱**：交互式图形界面展示资产及其关系
@@ -38,9 +40,8 @@
 #### 1. 克隆项目
 
 ```bash
-git clone git@github.com:legendPerceptor/aicreatorvault.git
+git clone https://github.com/legendPerceptor/aicreatorvault.git
 cd aicreatorvault
-git checkout docker-deploy
 ```
 
 #### 2. 配置环境变量
@@ -57,18 +58,27 @@ DB_NAME=aicreatorvault
 DB_USER=aicreator
 DB_PASSWORD=your_secure_password
 
-# 上传文件存储路径
-UPLOADS_PATH=/path/to/uploads
+# 上传文件存储路径（宿主机目录）
+# NAS 部署建议使用绝对路径，例如：
+# Synology: /volume1/docker/aicreatorvault/uploads
+# 本地开发: ./uploads
+UPLOADS_PATH=./uploads
 
 # OpenAI API
 OPENAI_API_KEY=sk-your-api-key
 OPENAI_VISION_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+# Xray 代理配置（必填，用于访问 OpenAI API）
+XRAY_CONFIG_PATH=./xray/config.json
+
+# Brave Search API（可选，用于参考图搜索）
+BRAVE_API_KEY=your_brave_api_key
 ```
 
-#### 3. 配置代理（可选）
+#### 3. 配置代理
 
-如果需要代理访问 OpenAI API，编辑 `xray/config.json`：
+编辑 `xray/config.json` 配置代理（用于访问 OpenAI API）：
 
 ```json
 {
@@ -88,13 +98,20 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 }
 ```
 
-#### 4. 启动服务
+#### 4. 创建上传目录
+
+```bash
+# 根据你的 UPLOADS_PATH 创建目录
+mkdir -p ./uploads
+```
+
+#### 5. 启动服务
 
 ```bash
 docker compose up -d
 ```
 
-#### 5. 访问应用
+#### 6. 访问应用
 
 - **前端**：http://localhost:5173
 - **后端 API**：http://localhost:3001/api
@@ -111,7 +128,7 @@ docker compose up -d
 | postgres | 5432 | PostgreSQL + pgvector |
 | redis | 6379 | Redis 缓存 |
 | qdrant | 6333/6334 | Qdrant 向量数据库 |
-| aigc-xray | 8107 | Xray 代理（可选） |
+| aigc-xray | 8107 | Xray 代理服务 |
 
 ### 常用命令
 
@@ -128,13 +145,17 @@ docker compose down
 
 # 重新构建
 docker compose up -d --build
+
+# 进入容器
+docker compose exec backend sh
+docker compose exec image-service bash
 ```
 
 ---
 
 ## 本地开发（非 Docker）
 
-如果不使用 Docker，可以手动安装：
+如果不使用 Docker，可以手动安装各服务：
 
 ### 1. 安装依赖
 
@@ -147,14 +168,24 @@ cd image-service && pip install -r requirements.txt && cd ..
 ### 2. 配置环境变量
 
 ```bash
+cp .env.example .env
 cp backend/.env.example backend/.env
 cp image-service/.env.example image-service/.env
 ```
 
-### 3. 启动服务
+### 3. 启动依赖服务
+
+需要手动启动 PostgreSQL、Redis、Qdrant：
 
 ```bash
-# 分别启动各服务
+# PostgreSQL (需要安装 pgvector 扩展)
+# Redis
+# Qdrant: docker run -p 6333:6333 qdrant/qdrant
+```
+
+### 4. 启动服务
+
+```bash
 npm run start:backend       # 后端 (3001)
 npm run start:frontend      # 前端 (5173)
 cd image-service && python main.py  # AI 服务 (8001)
@@ -171,24 +202,27 @@ cd image-service && python main.py  # AI 服务 (8001)
 | SQLite | 开发、测试、小型部署 | JSON 存储 |
 | PostgreSQL | 生产环境、大数据量 | pgvector 原生向量类型 |
 
+Docker 部署默认使用 PostgreSQL + pgvector。
+
 ### 配置方式
 
 在 `backend/.env` 文件中设置：
 
 ```env
 # 数据库类型：sqlite 或 postgres
-DB_TYPE=sqlite
-
-# SQLite 配置
-DB_STORAGE=./database.db
+DB_TYPE=postgres
 
 # PostgreSQL 配置
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=aigc_assistant
-DB_USER=postgres
+DB_NAME=aicreatorvault
+DB_USER=aicreator
 DB_PASSWORD=your_password
 ```
+
+---
+
+## 项目结构
 
 ```
 aicreatorvault/
@@ -208,10 +242,12 @@ aicreatorvault/
 │   │   ├── images.js            # 图片 API
 │   │   ├── themes.js            # 主题 API
 │   │   ├── assets.js            # 资产管理 API（含衍生版本）
-│   │   └── graph.js             # 知识图谱 API
+│   │   ├── graph.js             # 知识图谱 API
+│   │   └── referenceSearch.js   # 参考图搜索 API
 │   ├── services/
 │   │   ├── imageServiceClient.js # AI 服务客户端
-│   │   └── graphService.js      # 图谱遍历服务
+│   │   ├── graphService.js      # 图谱遍历服务
+│   │   └── retrievalService.js  # 检索服务（混合检索）
 │   ├── utils/
 │   │   └── vectorSearch.js      # 向量搜索工具
 │   ├── migrations/              # 数据库迁移脚本
@@ -220,8 +256,7 @@ aicreatorvault/
 │   ├── .env                     # 环境变量配置
 │   ├── .env.example             # 环境变量模板
 │   ├── server.js                # 后端服务器
-│   ├── Dockerfile               # 后端容器配置
-│   └── database.db              # SQLite 数据库（默认）
+│   └── Dockerfile               # 后端容器配置
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -237,6 +272,7 @@ aicreatorvault/
 │   │   │   ├── ImagesPage.jsx        # 图片管理
 │   │   │   ├── SearchPage.jsx        # 搜索页面
 │   │   │   ├── ThemesPage.jsx        # 主题管理
+│   │   │   ├── ReferenceSearchPage.jsx # 参考图搜索
 │   │   │   └── KnowledgeGraphPage.jsx # 知识图谱
 │   │   ├── hooks/
 │   │   │   ├── usePrompts.js         # 提示词数据钩子
@@ -273,7 +309,9 @@ aicreatorvault/
 ├── package.json                 # 项目配置
 ├── CLAUDE.md                    # Claude Code 项目指南
 ├── KNOWLEDGE_GRAPH.md           # 知识图谱详细文档
-├── AI_SEARCH_IMPROVEMENT.md     # AI 搜索改进方案
+├── RETRIEVAL_GUIDE.md           # 检索系统设计文档
+├── REFERENCE_SEARCH_DESIGN.md   # 参考图搜索设计文档
+├── QDRANT_INTEGRATION.md        # Qdrant 集成文档
 ├── developers.md                # 开发者指南
 └── README.md                    # 项目说明
 ```
@@ -299,6 +337,7 @@ aicreatorvault/
 - `DELETE /api/images/:id` - 删除图片
 - `POST /api/images/search` - 文本搜索图片
 - `POST /api/images/search-by-image` - 以图搜图
+- `POST /api/images/search/hybrid` - 混合检索（关键词 + 语义）
 
 ### 主题 API
 
@@ -306,6 +345,12 @@ aicreatorvault/
 - `POST /api/themes` - 创建新主题
 - `POST /api/themes/:id/images` - 为主题添加图片
 - `DELETE /api/themes/:id/images/:imageId` - 从主题中移除图片
+
+### 参考图搜索 API
+
+- `POST /api/reference-search/search` - 搜索网络参考图
+- `POST /api/reference-search/download` - 下载并添加参考图
+- `POST /api/reference-search/batch-download` - 批量下载参考图
 
 ### 资产管理 API（知识图谱）
 
@@ -332,17 +377,11 @@ aicreatorvault/
 
 ### 代码规范
 
-项目使用 Prettier 进行代码格式化，并通过 Husky 在提交前自动格式化代码。
+项目使用 Prettier 进行代码格式化，并通过 pre-commit 在提交前自动格式化代码。
 
 ```bash
 # 手动格式化代码
 npx prettier --write "**/*.js"
-```
-
-### 停止服务
-
-```bash
-./stop.sh
 ```
 
 ### 架构说明
@@ -352,7 +391,8 @@ npx prettier --write "**/*.js"
 - **状态管理**：使用自定义 Hooks 封装数据获取和状态逻辑
 - **单一职责**：每个文件只负责一个功能，便于维护和测试
 - **数据库抽象**：通过 Sequelize ORM 支持多种数据库
-- **向量搜索**：PostgreSQL 使用 pgvector，SQLite 使用 JSON 回退
+- **向量搜索**：Qdrant 向量数据库 + pgvector 双重支持
+- **混合检索**：RRF 算法融合关键词和语义搜索结果
 - **统一资产模型**：提示词、图片、衍生图片统一为 Asset，便于关系管理
 - **图谱服务**：独立的图遍历服务，支持 BFS、最短路径等算法
 - **关系追踪**：记录资产间的生成、衍生、版本、灵感等关系类型
@@ -388,10 +428,11 @@ AI Creator Vault 引入了知识图谱功能，将所有创作资产（提示词
 node backend/migrations/migrateToAssets.js
 ```
 
-### 详细文档
+## 更多文档
 
-查看 [KNOWLEDGE_GRAPH.md](KNOWLEDGE_GRAPH.md) 了解知识图谱的详细使用方法和 API 示例。
-
-## 开发者指南
-
-更多开发相关的信息，包括测试方法和数据库查询命令，请查看 [开发者指南](developers.md)。
+- [Docker 部署指南](docker/README.md) - 详细的 Docker 部署说明
+- [知识图谱文档](KNOWLEDGE_GRAPH.md) - 知识图谱的详细使用方法和 API 示例
+- [检索系统设计](RETRIEVAL_GUIDE.md) - 混合检索和 RRF 算法说明
+- [参考图搜索设计](REFERENCE_SEARCH_DESIGN.md) - 参考图搜索功能设计文档
+- [Qdrant 集成文档](QDRANT_INTEGRATION.md) - Qdrant 向量数据库集成指南
+- [开发者指南](developers.md) - 测试方法和数据库查询命令

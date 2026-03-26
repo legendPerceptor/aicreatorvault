@@ -1,7 +1,9 @@
 const { DataTypes } = require('sequelize');
 
+const POSTGRES_LIKE_DIALECTS = ['postgres', 'opengauss'];
+
 const Image = (sequelize, dbType = 'sqlite') => {
-  const isPostgres = dbType === 'postgres';
+  const isPostgresLike = POSTGRES_LIKE_DIALECTS.includes(dbType);
 
   const schema = {
     id: {
@@ -107,7 +109,7 @@ const Image = (sequelize, dbType = 'sqlite') => {
     updatedAt: 'updated_at',
   });
 
-  if (isPostgres) {
+  if (isPostgresLike) {
     model.addHook('afterSync', async () => {
       try {
         await sequelize.query(`

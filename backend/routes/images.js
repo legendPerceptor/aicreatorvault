@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
+const { Image, Prompt, DB_TYPE, supportsVector, isPostgresLike } = require('../models');
 const imageServiceClient = require('../services/imageServiceClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
 const retrievalService = require('../services/retrievalService');
@@ -63,7 +63,7 @@ router.post('/', upload.single('image'), async (req, res) => {
           embeddingModel: analysis.model,
           analyzedAt: new Date(),
         });
-        if (DB_TYPE === 'postgres' && supportsVector()) {
+        if (isPostgresLike() && supportsVector()) {
           await saveEmbeddingVector(image.id, analysis.embedding);
         }
 
@@ -274,7 +274,7 @@ router.post('/:id/analyze', async (req, res) => {
       analyzedAt: new Date(),
     });
 
-    if (DB_TYPE === 'postgres' && supportsVector()) {
+    if (isPostgresLike() && supportsVector()) {
       await saveEmbeddingVector(image.id, analysis.embedding);
     }
 
@@ -465,7 +465,7 @@ router.post('/batch-analyze', async (req, res) => {
               embeddingModel: result.model,
               analyzedAt: new Date(),
             });
-            if (DB_TYPE === 'postgres' && supportsVector()) {
+            if (isPostgresLike() && supportsVector()) {
               await saveEmbeddingVector(image.id, result.embedding);
             }
             // 同步写入 Qdrant 向量数据库

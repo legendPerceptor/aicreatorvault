@@ -1,28 +1,43 @@
-require('dotenv').config({ path: __dirname + '/../.env' });
+require('dotenv').config({ path: __dirname + '/../../.env' });
 
 const path = require('path');
 const DB_TYPE = process.env.DB_TYPE || 'sqlite';
 
+const POSTGRES_LIKE_DIALECTS = ['postgres', 'opengauss'];
+
+function isPostgresLike() {
+  return POSTGRES_LIKE_DIALECTS.includes(DB_TYPE);
+}
+
 function getDatabaseConfig() {
   const baseConfig = {
     define: {
-      underscored: true, // 自动转换 camelCase → snake_case
-      freezeTableName: true, // 不自动复数化表名
-      timestamps: true, // 自动添加 createdAt, updatedAt
-      createdAt: 'created_at', // 使用 snake_case
-      updatedAt: 'updated_at', // 使用 snake_case
+      underscored: true,
+      freezeTableName: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   };
 
-  if (DB_TYPE === 'postgres') {
+  if (isPostgresLike()) {
+    const defaultPorts = {
+      postgres: 5432,
+      opengauss: 5433,
+    };
+    const defaultUsers = {
+      postgres: 'postgres',
+      opengauss: 'gaussdb',
+    };
+
     return {
       ...baseConfig,
       dialect: 'postgres',
       host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      database: process.env.DB_NAME || 'aigc_assistant',
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
+      port: parseInt(process.env.DB_PORT || defaultPorts[DB_TYPE] || '5432', 10),
+      database: process.env.DB_NAME || 'aicreatorvault',
+      username: process.env.DB_USER || defaultUsers[DB_TYPE] || 'postgres',
+      password: process.env.DB_PASSWORD || '',
       logging: process.env.DB_LOGGING === 'true' ? console.log : false,
       dialectOptions: {
         ssl:
@@ -56,11 +71,13 @@ function getDatabaseConfig() {
 }
 
 function supportsVector() {
-  return DB_TYPE === 'postgres';
+  return isPostgresLike();
 }
 
 module.exports = {
   DB_TYPE,
   getDatabaseConfig,
   supportsVector,
+  isPostgresLike,
+  POSTGRES_LIKE_DIALECTS,
 };

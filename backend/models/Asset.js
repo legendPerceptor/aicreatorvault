@@ -1,7 +1,9 @@
 const { DataTypes } = require('sequelize');
 
+const POSTGRES_LIKE_DIALECTS = ['postgres', 'opengauss'];
+
 const Asset = (sequelize, dbType = 'sqlite') => {
-  const isPostgres = dbType === 'postgres';
+  const isPostgresLike = POSTGRES_LIKE_DIALECTS.includes(dbType);
 
   const schema = {
     id: {
@@ -44,7 +46,7 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       comment: 'AI-generated description or user notes',
     },
     metadata: {
-      type: isPostgres ? DataTypes.JSONB : DataTypes.JSON,
+      type: isPostgresLike ? DataTypes.JSONB : DataTypes.JSON,
       allowNull: true,
       comment: 'Type-specific metadata (dimensions, edit type, etc.)',
       defaultValue: {},
@@ -69,9 +71,9 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       },
     },
     embedding_vector: {
-      type: isPostgres ? DataTypes.TEXT : DataTypes.TEXT,
+      type: isPostgresLike ? DataTypes.TEXT : DataTypes.TEXT,
       allowNull: true,
-      comment: 'Vector type for PostgreSQL with pgvector',
+      comment: 'Vector type for PostgreSQL/openGauss with pgvector',
       field: 'embedding_vector',
     },
     embedding_model: {
@@ -125,21 +127,16 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       { fields: ['parent_id'] },
       { fields: ['derived_type'] },
       { fields: ['created_at'] },
-      // 添加唯一索引，防止重复内容
       {
-        // Temporarily disabled due to existing duplicate data
-        // unique: true,
         fields: ['asset_type', 'content'],
         name: 'unique_asset_content',
       },
     ],
   });
 
-  // PostgreSQL-specific: Add vector column support
-  if (isPostgres) {
+  if (isPostgresLike) {
     model.addHook('afterSync', async () => {
       try {
-        // Check if pgvector is available
         const vectorCheck = await sequelize.query(
           `
           SELECT 1 FROM pg_extension WHERE extname = 'vector';

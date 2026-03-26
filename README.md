@@ -195,30 +195,44 @@ cd image-service && python main.py  # AI 服务 (8001)
 
 ## 数据库支持
 
-项目支持两种数据库：
+项目支持三种数据库：
 
 | 数据库 | 适用场景 | 向量支持 |
 |--------|----------|----------|
 | SQLite | 开发、测试、小型部署 | JSON 存储 |
 | PostgreSQL | 生产环境、大数据量 | pgvector 原生向量类型 |
+| openGauss | 生产环境、国产化需求 | pgvector 原生向量类型 |
 
 Docker 部署默认使用 PostgreSQL + pgvector。
 
 ### 配置方式
 
-在 `backend/.env` 文件中设置：
+在 `.env` 文件中设置：
 
 ```env
-# 数据库类型：sqlite 或 postgres
+# 数据库类型：sqlite、postgres 或 opengauss
 DB_TYPE=postgres
 
-# PostgreSQL 配置
+# PostgreSQL / openGauss 配置
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=aicreatorvault
 DB_USER=aicreator
 DB_PASSWORD=your_password
 ```
+
+### openGauss 配置示例
+
+```env
+DB_TYPE=opengauss
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=aicreatorvault
+DB_USER=gaussdb
+DB_PASSWORD=your_password
+```
+
+> **注意**：openGauss 与 PostgreSQL 高度兼容，使用相同的 `postgres` dialect。如需使用向量搜索功能，需在 openGauss 中安装 pgvector 扩展。
 
 ---
 

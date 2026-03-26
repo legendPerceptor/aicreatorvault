@@ -1,4 +1,4 @@
-const { sequelize, DB_TYPE, supportsVector } = require('../models');
+const { sequelize, DB_TYPE, supportsVector, isPostgresLike } = require('../models');
 const { Op } = require('sequelize');
 
 function cosineSimilarity(vecA, vecB) {
@@ -33,7 +33,7 @@ async function findSimilarImagesByVector(queryEmbedding, limit = 10, threshold =
     return [];
   }
 
-  if (DB_TYPE === 'postgres' && supportsVector()) {
+  if (isPostgresLike() && supportsVector()) {
     try {
       const vectorStr = arrayToVectorString(queryEmbedding);
       const results = await sequelize.query(
@@ -85,7 +85,7 @@ async function findSimilarImagesByVector(queryEmbedding, limit = 10, threshold =
 }
 
 async function saveEmbeddingVector(imageId, embedding) {
-  if (DB_TYPE !== 'postgres' || !supportsVector() || !embedding) {
+  if (!isPostgresLike() || !supportsVector() || !embedding) {
     return false;
   }
 

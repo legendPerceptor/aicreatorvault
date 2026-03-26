@@ -1,7 +1,9 @@
 const { DataTypes } = require('sequelize');
 
+const POSTGRES_LIKE_DIALECTS = ['postgres', 'opengauss'];
+
 const AssetRelationship = (sequelize, dbType = 'sqlite') => {
-  const isPostgres = dbType === 'postgres';
+  const isPostgresLike = POSTGRES_LIKE_DIALECTS.includes(dbType);
 
   const schema = {
     id: {
@@ -36,7 +38,7 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
       field: 'relationship_type',
     },
     properties: {
-      type: isPostgres ? DataTypes.JSONB : DataTypes.JSON,
+      type: isPostgresLike ? DataTypes.JSONB : DataTypes.JSON,
       allowNull: true,
       comment: 'Relationship metadata (edit timestamp, similarity score, etc.)',
       defaultValue: {},

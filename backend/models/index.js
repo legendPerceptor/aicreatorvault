@@ -1,10 +1,15 @@
 const { Sequelize } = require('sequelize');
-const { getDatabaseConfig, DB_TYPE, supportsVector } = require('../config/database');
+const {
+  getDatabaseConfig,
+  DB_TYPE,
+  supportsVector,
+  isPostgresLike,
+} = require('../config/database');
 
 const config = getDatabaseConfig();
 
 console.log(`[Database] Using ${DB_TYPE} database`);
-if (DB_TYPE === 'postgres') {
+if (isPostgresLike()) {
   console.log(`[Database] Connecting to ${config.host}:${config.port}/${config.database}`);
 } else {
   console.log(`[Database] Storage: ${config.storage}`);
@@ -50,7 +55,7 @@ async function initializeDatabase() {
     await sequelize.authenticate();
     console.log('[Database] Connection established successfully');
 
-    if (DB_TYPE === 'postgres' && supportsVector()) {
+    if (isPostgresLike() && supportsVector()) {
       try {
         await sequelize.query('CREATE EXTENSION IF NOT EXISTS vector;');
         console.log('[Database] pgvector extension enabled');
@@ -59,7 +64,7 @@ async function initializeDatabase() {
           '[Database] pgvector extension not available. Vector search will use JSON fallback.'
         );
         console.warn(
-          '[Database] To enable vector support, install pgvector extension in PostgreSQL.'
+          `[Database] To enable vector support, install pgvector extension in ${DB_TYPE}.`
         );
       }
     }
@@ -84,4 +89,5 @@ module.exports = {
   AssetRelationship: AssetRelationshipModel,
   DB_TYPE,
   supportsVector,
+  isPostgresLike,
 };

@@ -15,7 +15,7 @@ const BRAVE_IMAGE_SEARCH_URL = 'https://api.search.brave.com/res/v1/images/searc
 const IMAGE_SERVICE_URL = process.env.IMAGE_SERVICE_URL || '';
 
 // SOCKS5 代理配置
-const SOCKS_PROXY_HOST = process.env.SOCKS_PROXY_HOST || '172.22.0.2';
+const SOCKS_PROXY_HOST = process.env.SOCKS_PROXY_HOST || '127.0.0.1';
 const SOCKS_PROXY_PORT = process.env.SOCKS_PROXY_PORT || '1080';
 const socksAgent = tunnel.httpsOverHttp({
   proxy: {
@@ -84,7 +84,7 @@ async function downloadThumbnailToLocal(thumbnailUrl, propertiesUrl, title, sour
     const uuid = uuidv4().split('-')[0];
     const filename = `thumb_${timestamp}_${uuid}.jpg`;
     const filepath = path.join(uploadsDir, filename);
-    
+
     // 优先使用 propertiesUrl（原始图片直链），如果不可用则尝试 thumbnailUrl
     const urlToDownload = propertiesUrl || thumbnailUrl;
     const response = await axios.get(urlToDownload, {
@@ -93,9 +93,10 @@ async function downloadThumbnailToLocal(thumbnailUrl, propertiesUrl, title, sour
       responseType: 'arraybuffer',
       timeout: REFERENCE_DOWNLOAD_TIMEOUT,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770 Safari/537.36',
-        'Accept': 'image/*,*/*',
-        'Referer': 'https://search.brave.com/',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770 Safari/537.36',
+        Accept: 'image/*,*/*',
+        Referer: 'https://search.brave.com/',
       },
     });
     fs.writeFileSync(filepath, Buffer.from(response.data, 'binary'));
@@ -120,15 +121,22 @@ async function performSearch(query, count, res) {
     });
 
     const braveResults = response.data.results || response.data.value || [];
-    
+
     // 下载缩略图到本地
-    const results = await Promise.all(braveResults.map(async (img) => {
-      const localThumb = await downloadThumbnailToLocal(img.thumbnail?.src, img.properties?.url, img.title, img.source);
-      return {
-        ...img,
-        thumbnail: localThumb,  // 直接返回字符串URL，而不是对象
-      };
-    }));
+    const results = await Promise.all(
+      braveResults.map(async (img) => {
+        const localThumb = await downloadThumbnailToLocal(
+          img.thumbnail?.src,
+          img.properties?.url,
+          img.title,
+          img.source
+        );
+        return {
+          ...img,
+          thumbnail: localThumb, // 直接返回字符串URL，而不是对象
+        };
+      })
+    );
 
     res.json({
       success: true,
@@ -177,8 +185,8 @@ router.post('/download', async (req, res) => {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770 Safari/537.36',
-        'Accept': 'image/*,*/*',
-        'Referer': 'https://search.brave.com/',
+        Accept: 'image/*,*/*',
+        Referer: 'https://search.brave.com/',
       },
     });
 
@@ -269,8 +277,8 @@ router.post('/batch-download', async (req, res) => {
           timeout: REFERENCE_DOWNLOAD_TIMEOUT,
           headers: {
             'User-Agent': 'Mozilla/5.0',
-            'Accept': 'image/*,*/*',
-            'Referer': 'https://search.brave.com/',
+            Accept: 'image/*,*/*',
+            Referer: 'https://search.brave.com/',
           },
         });
 

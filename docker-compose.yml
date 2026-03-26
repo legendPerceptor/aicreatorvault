@@ -61,7 +61,6 @@ services:
         condition: service_started
     networks:
       - aicreatorvault-net
-      - proxy-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/prompts"]

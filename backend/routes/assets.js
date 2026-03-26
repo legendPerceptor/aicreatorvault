@@ -34,24 +34,24 @@ const upload = multer({
 // Find asset by type and content (for deduplication)
 router.get('/find', async (req, res) => {
   try {
-    const { assetType, content } = req.query;
+    const { asset_type, content } = req.query;
 
-    if (!assetType || !content) {
+    if (!asset_type || !content) {
       return res.status(400).json({
-        error: 'Missing required parameters: assetType, content',
+        error: 'Missing required parameters: asset_type, content',
       });
     }
 
     // Validate asset type
     const validTypes = ['prompt', 'image', 'derived_image'];
-    if (!validTypes.includes(assetType)) {
+    if (!validTypes.includes(asset_type)) {
       return res.status(400).json({
-        error: `Invalid assetType. Must be one of: ${validTypes.join(', ')}`,
+        error: `Invalid asset_type. Must be one of: ${validTypes.join(', ')}`,
       });
     }
 
     const asset = await Asset.findOne({
-      where: { asset_type: assetType, content },
+      where: { asset_type: asset_type, content },
     });
 
     if (asset) {
@@ -128,7 +128,7 @@ router.post('/', async (req, res) => {
 
   try {
     const {
-      assetType,
+      asset_type,
       content,
       filename,
       path: filePath,
@@ -141,23 +141,23 @@ router.post('/', async (req, res) => {
 
     // Validate asset type
     const validTypes = ['prompt', 'image', 'derived_image'];
-    if (!assetType || !validTypes.includes(assetType)) {
+    if (!asset_type || !validTypes.includes(asset_type)) {
       return res.status(400).json({
-        error: `Invalid assetType. Must be one of: ${validTypes.join(', ')}`,
+        error: `Invalid asset_type. Must be one of: ${validTypes.join(', ')}`,
       });
     }
 
     // For derived images, parentId and derivedType are required
-    if (assetType === 'derived_image' && (!parentId || !derivedType)) {
+    if (asset_type === 'derived_image' && (!parentId || !derivedType)) {
       return res.status(400).json({
         error: 'derived_image assets require parentId and derivedType',
       });
     }
 
-    // Check for duplicate (assetType + content should be unique)
+    // Check for duplicate (asset_type + content should be unique)
     if (content) {
       const existing = await Asset.findOne({
-        where: { asset_type: assetType, content },
+        where: { asset_type: asset_type, content },
       });
 
       if (existing) {
@@ -169,7 +169,7 @@ router.post('/', async (req, res) => {
     }
 
     const assetData = {
-      asset_type: assetType,
+      asset_type: asset_type,
       content,
       filename,
       path: filePath,
@@ -182,7 +182,7 @@ router.post('/', async (req, res) => {
     const asset = await Asset.create(assetData);
 
     // Auto-create relationship for derived images
-    if (assetType === 'derived_image' && parentId) {
+    if (asset_type === 'derived_image' && parentId) {
       const relationshipType =
         derivedType === 'variant' || derivedType === 'upscale' ? 'version_of' : 'derived_from';
 
@@ -200,7 +200,7 @@ router.post('/', async (req, res) => {
       try {
         const existing = await Asset.findOne({
           where: {
-            assetType: body.asset_type,
+            asset_type: body.asset_type,
             content: body.content,
           },
         });
@@ -227,13 +227,13 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 
     const { parentId, derivedType, promptId, score, description } = req.body;
 
-    let assetType = 'image';
+    let asset_type = req.body.asset_type || 'image';
     if (parentId && derivedType) {
-      assetType = 'derived_image';
+      asset_type = 'derived_image';
     }
 
     const asset = await Asset.create({
-      assetType,
+      asset_type,
       filename: req.file.filename,
       path: req.file.path,
       score: score ? parseInt(score, 10) : null,
@@ -292,7 +292,7 @@ router.post('/:id/derive', upload.single('image'), async (req, res) => {
     }
 
     let assetData = {
-      assetType: 'derived_image',
+      asset_type: 'derived_image',
       parentId: parseInt(id, 10),
       derivedType,
       description,

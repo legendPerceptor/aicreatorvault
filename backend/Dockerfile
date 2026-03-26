@@ -3,6 +3,9 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# 使用阿里云 npm 镜像加速
+RUN npm config set registry https://registry.npmmirror.com
+
 # Install dependencies
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts

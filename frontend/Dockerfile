@@ -5,6 +5,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# 使用阿里云 npm 镜像加速
+RUN npm config set registry https://registry.npmmirror.com
+
 # Copy package files
 COPY package*.json ./
 

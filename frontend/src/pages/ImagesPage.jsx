@@ -36,6 +36,7 @@ function ImagesPage({
   const [batchResult, setBatchResult] = useState(null);
   const [autoAnalyze, setAutoAnalyze] = useState(true);
   const [showGenerationForm, setShowGenerationForm] = useState(false);
+  const [genAutoAnalyze, setGenAutoAnalyze] = useState(true);
   const [generationPrompt, setGenerationPrompt] = useState('');
   const [generationN, setGenerationN] = useState(1);
   const [generationAspectRatio, setGenerationAspectRatio] = useState('1:1');
@@ -50,6 +51,7 @@ function ImagesPage({
       prompt: generationPrompt,
       n: generationN,
       aspect_ratio: generationAspectRatio,
+      autoAnalyze: genAutoAnalyze,
     });
     // Select all by default
     const all = {};
@@ -68,7 +70,7 @@ function ImagesPage({
       .filter(([, v]) => v)
       .map(([i]) => parseInt(i));
     const imgs = (pendingImages || []).filter((_, i) => selectedIndices.includes(i));
-    await onSavePendingImages(imgs, generationPrompt, saveMode);
+    await onSavePendingImages(imgs, generationPrompt, saveMode, genAutoAnalyze);
     setSelectedPendingImages({});
     setGenerationPrompt('');
     setShowGenerationForm(false);
@@ -221,6 +223,16 @@ function ImagesPage({
             >
               {isGeneratingImages ? '生成中...' : '生成'}
             </button>
+            <div className="checkbox-group">
+              <input
+                type="checkbox"
+                id="genAutoAnalyze"
+                checked={genAutoAnalyze}
+                onChange={(e) => setGenAutoAnalyze(e.target.checked)}
+                disabled={isGeneratingImages}
+              />
+              <label htmlFor="genAutoAnalyze">自动AI分析</label>
+            </div>
           </form>
         </div>
       )}

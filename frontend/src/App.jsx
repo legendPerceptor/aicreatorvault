@@ -25,6 +25,7 @@ function App() {
     updatePromptImages,
     removeImageFromPrompts,
     fetchUnusedPrompts,
+    fetchPrompts,
   } = usePrompts();
 
   const {
@@ -142,7 +143,7 @@ function App() {
     await uploadImage(formData);
   };
 
-  const handleGenerateImages = async ({ prompt, n, aspect_ratio }) => {
+  const handleGenerateImages = async ({ prompt, n, aspect_ratio, autoAnalyze }) => {
     setIsGeneratingImages(true);
     try {
       const result = await generateImages({ prompt, n, aspect_ratio });
@@ -155,7 +156,7 @@ function App() {
     }
   };
 
-  const handleSavePendingImages = async (imgs, prompt, saveMode) => {
+  const handleSavePendingImages = async (imgs, prompt, saveMode, autoAnalyze) => {
     if (!imgs || imgs.length === 0) return;
 
     try {
@@ -163,6 +164,9 @@ function App() {
         const formData = new FormData();
         if (saveMode === 'prompt-and-images') {
           formData.append('prompt', prompt);
+        }
+        if (!autoAnalyze) {
+          formData.append('autoAnalyze', 'false');
         }
         const imgResponse = await fetch(`/temp/${img.filename}`);
         const imgBlob = await imgResponse.blob();

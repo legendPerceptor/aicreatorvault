@@ -172,6 +172,7 @@ router.get('/', async (req, res) => {
     const images = await Image.findAll({
       where: whereClause,
       include: Prompt,
+      order: [['created_at', 'DESC']],
     });
     res.json(images);
   } catch (error) {

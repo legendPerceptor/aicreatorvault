@@ -1563,6 +1563,33 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+.pending-preview-btn {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.pending-image-card:hover .pending-preview-btn {
+  opacity: 1;
+}
+
+.pending-preview-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

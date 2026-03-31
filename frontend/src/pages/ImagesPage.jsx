@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ImageCard from '../components/ImageCard';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 
 function ImagesPage({
   images,
@@ -42,6 +43,7 @@ function ImagesPage({
   const [generationN, setGenerationN] = useState(1);
   const [generationAspectRatio, setGenerationAspectRatio] = useState('1:1');
   const [selectedPendingImages, setSelectedPendingImages] = useState({});
+  const [pendingPreview, setPendingPreview] = useState(null);
 
   const aspectRatioOptions = ['1:1', '16:9', '4:3', '3:2', '2:3', '3:4', '9:16', '21:9'];
 
@@ -272,11 +274,23 @@ function ImagesPage({
               <div
                 key={index}
                 className={`pending-image-card ${selectedPendingImages[index] ? 'selected' : ''}`}
-                onClick={() => togglePendingImage(index)}
               >
-                <img src={`/temp/${img.filename}`} alt={`生成图片 ${index + 1}`} />
+                <img
+                  src={`/temp/${img.filename}`}
+                  alt={`生成图片 ${index + 1}`}
+                  onClick={() => togglePendingImage(index)}
+                />
                 <div className="pending-overlay">
-                  <span>{selectedPendingImages[index] ? '✓ 已选择' : '点击选择'}</span>
+                  <button
+                    className="pending-preview-btn"
+                    onClick={() => setPendingPreview(img)}
+                    title="预览"
+                  >
+                    👁
+                  </button>
+                  <span onClick={() => togglePendingImage(index)}>
+                    {selectedPendingImages[index] ? '✓ 已选择' : '点击选择'}
+                  </span>
                 </div>
               </div>
             ))}
@@ -454,6 +468,44 @@ function ImagesPage({
           />
         ))}
       </div>
+
+      {/* Pending images preview modal */}
+      {pendingPreview && (
+        <div className="image-preview-modal" onClick={() => setPendingPreview(null)}>
+          <div className="image-preview-content" onClick={(e) => e.stopPropagation()}>
+            <button className="preview-close-btn" onClick={() => setPendingPreview(null)}>
+              ×
+            </button>
+            <div className="preview-image-container">
+              <img src={`/temp/${pendingPreview.filename}`} alt="预览" />
+            </div>
+            <div className="preview-actions">
+              <button
+                className="download-btn"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/temp/${pendingPreview.filename}`);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = pendingPreview.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } catch (error) {
+                    console.error('下载失败:', error);
+                    alert('下载失败，请重试');
+                  }
+                }}
+              >
+                下载图片
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

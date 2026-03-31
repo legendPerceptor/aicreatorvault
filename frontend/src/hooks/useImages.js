@@ -29,7 +29,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
       body: formData,
     });
     const newImageData = await response.json();
-    setImages((prev) => [...prev, newImageData]);
+    setImages((prev) => [newImageData, ...prev]);
     fetchUnusedPrompts();
     return newImageData;
   };

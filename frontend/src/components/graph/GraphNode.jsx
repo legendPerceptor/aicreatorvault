@@ -48,4 +48,6 @@ const GraphNode = memo(({ data, selected }) => {
   );
 });
 
+GraphNode.displayName = 'GraphNode';
+
 export default GraphNode;

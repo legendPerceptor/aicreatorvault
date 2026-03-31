@@ -42,7 +42,7 @@ function ImageCard({
       <div className={`image-card ${isAnalyzed ? 'analyzed' : ''} view-${viewMode}`}>
         <div className="image-header">
           <img
-            src={`/uploads/${image.filename}`}
+            src={`/api/files/${image.user_id}/${image.filename}`}
             alt="AI生成"
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}
@@ -180,7 +180,7 @@ export function SimpleImageCard({ image, onDelete, onAddToTheme }) {
       <div className="image-card">
         <div className="image-header">
           <img
-            src={`/uploads/${image.filename}`}
+            src={`/api/files/${image.user_id}/${image.filename}`}
             alt="AI生成"
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}

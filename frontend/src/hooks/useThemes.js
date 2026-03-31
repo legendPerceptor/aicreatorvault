@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
-function useThemes() {
+function useThemes(isAuthenticated = true) {
   const [themes, setThemes] = useState([]);
   const [selectedTheme, setSelectedTheme] = useState(null);
 
   const fetchThemes = useCallback(() => {
-    fetch('/api/themes')
+    if (!isAuthenticated) return;
+    fetch('/api/themes', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setThemes(data));
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchThemes();
@@ -20,6 +21,7 @@ function useThemes() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ name, description }),
     });
     const newThemeData = await response.json();
@@ -33,9 +35,12 @@ function useThemes() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ imageId }),
     });
-    const themesData = await fetch('/api/themes').then((res) => res.json());
+    const themesData = await fetch('/api/themes', { credentials: 'include' }).then((res) =>
+      res.json()
+    );
     setThemes(themesData);
     const updatedTheme = themesData.find((theme) => theme.id === themeId);
     if (updatedTheme) {
@@ -46,9 +51,12 @@ function useThemes() {
   const removeImageFromTheme = async (themeId, imageId) => {
     const response = await fetch(`/api/themes/${themeId}/images/${imageId}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     if (response.ok) {
-      const themesData = await fetch('/api/themes').then((res) => res.json());
+      const themesData = await fetch('/api/themes', { credentials: 'include' }).then((res) =>
+        res.json()
+      );
       setThemes(themesData);
       const updatedTheme = themesData.find((theme) => theme.id === themeId);
       if (updatedTheme) {

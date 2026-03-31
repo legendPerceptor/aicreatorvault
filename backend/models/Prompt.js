@@ -9,6 +9,12 @@ const Prompt = (sequelize) => {
         primaryKey: true,
         autoIncrement: true,
       },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        field: 'user_id',
+      },
       content: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -27,6 +33,11 @@ const Prompt = (sequelize) => {
           max: 10,
         },
       },
+      is_public: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'is_public',
+      },
       created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
@@ -44,6 +55,14 @@ const Prompt = (sequelize) => {
           unique: true,
           fields: ['content'],
           name: 'prompts_content_unique',
+        },
+        {
+          fields: ['user_id'],
+          name: 'prompts_user_id_index',
+        },
+        {
+          fields: ['is_public'],
+          name: 'prompts_is_public_index',
         },
       ],
     }

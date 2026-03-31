@@ -9,6 +9,12 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
       primaryKey: true,
       autoIncrement: true,
     },
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: 'user_id',
+    },
     source_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

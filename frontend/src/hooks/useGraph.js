@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 export function useGraph(filters = {}) {
   const [nodes, setNodes] = useState([]);
@@ -24,7 +24,7 @@ export function useGraph(filters = {}) {
         params.append('limit', filters.limit);
       }
 
-      const response = await fetch(`${API_BASE}/graph/data?${params}`);
+      const response = await fetch(`${API_BASE}/graph/data?${params}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -97,7 +97,9 @@ export function useGraphTraversal() {
         params.append('relationshipTypes', relationshipTypes.join(','));
       }
 
-      const response = await fetch(`${API_BASE}/graph/traverse/${nodeId}?${params}`);
+      const response = await fetch(`${API_BASE}/graph/traverse/${nodeId}?${params}`, {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -149,7 +151,9 @@ export function useGraphTraversal() {
         params.append('relationshipTypes', relationshipTypes.join(','));
       }
 
-      const response = await fetch(`${API_BASE}/graph/paths/${sourceId}/${targetId}?${params}`);
+      const response = await fetch(`${API_BASE}/graph/paths/${sourceId}/${targetId}?${params}`, {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -175,7 +179,9 @@ export function useGraphTraversal() {
         params.append('relationshipTypes', relationshipTypes.join(','));
       }
 
-      const response = await fetch(`${API_BASE}/graph/neighbors/${nodeId}?${params}`);
+      const response = await fetch(`${API_BASE}/graph/neighbors/${nodeId}?${params}`, {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -210,7 +216,7 @@ export function useGraphStats() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/graph/stats`);
+      const response = await fetch(`${API_BASE}/graph/stats`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

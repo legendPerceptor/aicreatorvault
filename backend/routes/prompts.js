@@ -2,12 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { Prompt, Image, Asset, AssetRelationship } = require('../models');
 const { Op } = require('sequelize');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 // 获取所有提示词
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
-    // 获取所有提示词，包括关联的图片，按最新排序
+    const where = {};
+
+    // Filter by user or public
+    if (req.user) {
+      where.user_id = req.user.id;
+    } else {
+      where.is_public = true;
+    }
+
     const prompts = await Prompt.findAll({
+      where,
       include: Image,
       order: [['created_at', 'DESC']],
     });
@@ -18,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 // 根据内容精确查找提示词（用于去重检查）
-router.get('/find', async (req, res) => {
+router.get('/find', optionalAuth, async (req, res) => {
   try {
     const { content } = req.query;
 
@@ -26,8 +36,17 @@ router.get('/find', async (req, res) => {
       return res.status(400).json({ error: 'content parameter is required' });
     }
 
+    const where = { content };
+
+    // Filter by user or public
+    if (req.user) {
+      where.user_id = req.user.id;
+    } else {
+      where.is_public = true;
+    }
+
     const prompt = await Prompt.findOne({
-      where: { content },
+      where,
       include: Image,
     });
 
@@ -42,10 +61,19 @@ router.get('/find', async (req, res) => {
 });
 
 // 获取未被使用的提示词
-router.get('/unused', async (req, res) => {
+router.get('/unused', optionalAuth, async (req, res) => {
   try {
-    // 获取所有提示词，包括关联的图片，按最新排序
+    const where = {};
+
+    // Filter by user or public
+    if (req.user) {
+      where.user_id = req.user.id;
+    } else {
+      where.is_public = true;
+    }
+
     const prompts = await Prompt.findAll({
+      where,
       include: Image,
       order: [['created_at', 'DESC']],
     });
@@ -58,14 +86,14 @@ router.get('/unused', async (req, res) => {
 });
 
 // 创建新提示词
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { content } = req.body;
 
     // 检查是否已存在相同内容的提示词
     if (content) {
       const existingPrompt = await Prompt.findOne({
-        where: { content },
+        where: { content, user_id: req.user.id },
       });
 
       if (existingPrompt) {
@@ -80,11 +108,15 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const prompt = await Prompt.create(req.body);
+    const prompt = await Prompt.create({
+      ...req.body,
+      user_id: req.user.id,
+    });
 
     // 自动同步到 Asset 表（知识图谱）
     try {
       const asset = await Asset.create({
+        user_id: req.user.id,
         asset_type: 'prompt',
         content: prompt.content,
         score: prompt.score,
@@ -113,12 +145,18 @@ router.post('/', async (req, res) => {
 });
 
 // 更新提示词评分
-router.put('/:id/score', async (req, res) => {
+router.put('/:id/score', authenticate, async (req, res) => {
   try {
     const prompt = await Prompt.findByPk(req.params.id);
     if (!prompt) {
       return res.status(404).json({ error: 'Prompt not found' });
     }
+
+    // Check ownership
+    if (prompt.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await prompt.update({ score: req.body.score });
     // 重新查询提示词信息，包含关联的图片
     const updatedPrompt = await Prompt.findByPk(req.params.id, { include: Image });
@@ -129,11 +167,16 @@ router.put('/:id/score', async (req, res) => {
 });
 
 // 删除提示词
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const prompt = await Prompt.findByPk(req.params.id);
     if (!prompt) {
       return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    // Check ownership
+    if (prompt.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const deleteImages = req.query.deleteImages === 'true';
@@ -165,6 +208,7 @@ router.delete('/:id', async (req, res) => {
     try {
       const asset = await Asset.findOne({
         where: {
+          user_id: req.user.id,
           asset_type: 'prompt',
           metadata: {
             legacy_prompt_id: prompt.id,

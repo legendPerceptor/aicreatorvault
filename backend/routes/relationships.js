@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const graphService = require('../services/graphService');
+const { authenticate } = require('../middleware/auth');
 
 // Create a new relationship
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { sourceId, targetId, relationshipType, properties } = req.body;
 
@@ -42,7 +43,7 @@ router.post('/', async (req, res) => {
 });
 
 // Delete a relationship
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     await graphService.deleteRelationship(parseInt(id, 10));
@@ -57,7 +58,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Update relationship properties
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { AssetRelationship } = require('../models');
     const { id } = req.params;
@@ -66,6 +67,11 @@ router.put('/:id', async (req, res) => {
     const relationship = await AssetRelationship.findByPk(id);
     if (!relationship) {
       return res.status(404).json({ error: 'Relationship not found' });
+    }
+
+    // Check ownership
+    if (relationship.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     await relationship.update({ properties });

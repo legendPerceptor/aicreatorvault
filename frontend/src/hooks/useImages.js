@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
-function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchUnusedPrompts }) {
+function useImages(
+  prompts,
+  { updatePromptImages, removeImageFromPrompts, fetchUnusedPrompts },
+  isAuthenticated = true
+) {
   const [images, setImages] = useState([]);
   const [batchAnalyzing, setBatchAnalyzing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -8,16 +12,18 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   const [analyzedFilter, setAnalyzedFilter] = useState('all');
 
   const fetchImages = useCallback(() => {
+    if (!isAuthenticated) return;
+
     let url = '/api/images';
     if (analyzedFilter === 'analyzed') {
       url += '?analyzed=true';
     } else if (analyzedFilter === 'unanalyzed') {
       url += '?analyzed=false';
     }
-    fetch(url)
+    fetch(url, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setImages(data));
-  }, [analyzedFilter]);
+  }, [analyzedFilter, isAuthenticated]);
 
   useEffect(() => {
     fetchImages();
@@ -26,6 +32,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   const uploadImage = async (formData) => {
     const response = await fetch('/api/images', {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     });
     const newImageData = await response.json();
@@ -37,6 +44,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   const deleteImage = async (id) => {
     await fetch(`/api/images/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     setImages((prev) => prev.filter((image) => image.id !== id));
     removeImageFromPrompts(id);
@@ -49,6 +57,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ score }),
     });
     const updatedData = await response.json();
@@ -63,6 +72,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ promptId: promptId || null }),
     });
     const updatedImage = await response.json();
@@ -81,6 +91,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     try {
       const response = await fetch(`/api/images/${imageId}/analyze`, {
         method: 'POST',
+        credentials: 'include',
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -102,6 +113,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     const response = await fetch('/api/images/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ prompt, n, aspect_ratio }),
     });
     if (!response.ok) {
@@ -131,6 +143,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ forceAll }),
       });
 

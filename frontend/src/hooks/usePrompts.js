@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 
-function usePrompts() {
+function usePrompts(isAuthenticated = true) {
   const [prompts, setPrompts] = useState([]);
   const [unusedPrompts, setUnusedPrompts] = useState([]);
 
   const fetchPrompts = useCallback(() => {
-    fetch('/api/prompts')
+    if (!isAuthenticated) return;
+    fetch('/api/prompts', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setPrompts(data));
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchUnusedPrompts = useCallback(() => {
-    fetch('/api/prompts/unused')
+    if (!isAuthenticated) return;
+    fetch('/api/prompts/unused', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setUnusedPrompts(data));
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchPrompts();
@@ -27,6 +29,7 @@ function usePrompts() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ content }),
     });
     const newPromptData = await response.json();
@@ -38,6 +41,7 @@ function usePrompts() {
   const deletePrompt = async (id, deleteImages = true) => {
     await fetch(`/api/prompts/${id}?deleteImages=${deleteImages}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     setPrompts((prev) => prev.filter((prompt) => prompt.id !== id));
     fetchUnusedPrompts();
@@ -49,6 +53,7 @@ function usePrompts() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ score }),
     });
     const updatedData = await response.json();

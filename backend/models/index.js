@@ -12,6 +12,7 @@ if (DB_TYPE === 'postgres') {
 
 const sequelize = new Sequelize(config);
 
+const User = require('./User');
 const Prompt = require('./Prompt');
 const Image = require('./Image');
 const Theme = require('./Theme');
@@ -19,12 +20,26 @@ const ThemeImage = require('./ThemeImage');
 const Asset = require('./Asset');
 const AssetRelationship = require('./AssetRelationship');
 
+const UserModel = User(sequelize);
 const PromptModel = Prompt(sequelize);
 const ImageModel = Image(sequelize, DB_TYPE);
 const ThemeModel = Theme(sequelize);
 const ThemeImageModel = ThemeImage(sequelize);
 const AssetModel = Asset(sequelize, DB_TYPE);
 const AssetRelationshipModel = AssetRelationship(sequelize, DB_TYPE);
+
+// User associations
+UserModel.hasMany(PromptModel, { foreignKey: 'userId' });
+PromptModel.belongsTo(UserModel, { foreignKey: 'userId' });
+
+UserModel.hasMany(ImageModel, { foreignKey: 'userId' });
+ImageModel.belongsTo(UserModel, { foreignKey: 'userId' });
+
+UserModel.hasMany(ThemeModel, { foreignKey: 'userId' });
+ThemeModel.belongsTo(UserModel, { foreignKey: 'userId' });
+
+UserModel.hasMany(AssetModel, { foreignKey: 'userId' });
+AssetModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
 // Legacy Prompt-Image relationships (kept for backward compatibility)
 PromptModel.hasMany(ImageModel, { foreignKey: 'promptId' });
@@ -76,6 +91,7 @@ initializeDatabase();
 
 module.exports = {
   sequelize,
+  User: UserModel,
   Prompt: PromptModel,
   Image: ImageModel,
   Theme: ThemeModel,

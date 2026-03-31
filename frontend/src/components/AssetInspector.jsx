@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAssetTypeConfig, getRelationshipTypeConfig } from '../utils/graphConfig';
 import './AssetInspector.css';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 function AssetInspector({ assetId, onClose, onUpdate }) {
   const [asset, setAsset] = useState(null);
@@ -23,7 +23,9 @@ function AssetInspector({ assetId, onClose, onUpdate }) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/assets/${assetId}?relationships=true`);
+      const response = await fetch(`${API_BASE}/assets/${assetId}?relationships=true`, {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -47,6 +49,7 @@ function AssetInspector({ assetId, onClose, onUpdate }) {
       const response = await fetch(`${API_BASE}/assets/${assetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(editData),
       });
 
@@ -74,6 +77,7 @@ function AssetInspector({ assetId, onClose, onUpdate }) {
     try {
       const response = await fetch(`${API_BASE}/relationships/${relationshipId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {

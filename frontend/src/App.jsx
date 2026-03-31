@@ -5,9 +5,11 @@ import ThemesPage from './pages/ThemesPage';
 import SearchPage from './pages/SearchPage';
 import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
 import ReferenceSearchPage from './pages/ReferenceSearchPage';
+import AuthPage from './pages/AuthPage';
 import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
+import useAuth from './hooks/useAuth';
 
 function App() {
   const [activeTab, setActiveTab] = useState('prompts');
@@ -16,6 +18,8 @@ function App() {
   const [pendingImages, setPendingImages] = useState([]);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [isSavingPending, setIsSavingPending] = useState(false);
+
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
   const {
     prompts,
@@ -27,7 +31,7 @@ function App() {
     removeImageFromPrompts,
     fetchUnusedPrompts,
     fetchPrompts,
-  } = usePrompts();
+  } = usePrompts(isAuthenticated);
 
   const {
     images,
@@ -43,11 +47,15 @@ function App() {
     analyzedFilter,
     setAnalyzedFilter,
     generateImages,
-  } = useImages(prompts, {
-    updatePromptImages,
-    removeImageFromPrompts,
-    fetchUnusedPrompts,
-  });
+  } = useImages(
+    prompts,
+    {
+      updatePromptImages,
+      removeImageFromPrompts,
+      fetchUnusedPrompts,
+    },
+    isAuthenticated
+  );
 
   const {
     themes,
@@ -56,7 +64,7 @@ function App() {
     addTheme,
     addImageToTheme,
     removeImageFromTheme,
-  } = useThemes();
+  } = useThemes(isAuthenticated);
 
   const handleScoreEdit = (type, id) => {
     const currentScore =
@@ -175,6 +183,7 @@ function App() {
           const promptResponse = await fetch('/api/prompts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ content: prompt }),
           });
           if (!promptResponse.ok) {
@@ -219,11 +228,62 @@ function App() {
     setPendingImages([]);
   };
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>加载中...</p>
+        <style>{`
+          .app-loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+          }
+          .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Show auth page if not authenticated
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
   return (
     <div className="app">
       <div className="header">
-        <h1>AI Creator Vault</h1>
-        <p>管理你的 AI 创作资产</p>
+        <div className="header-content">
+          <div>
+            <h1>AI Creator Vault</h1>
+            <p>管理你的 AI 创作资产</p>
+          </div>
+          <div className="user-info">
+            <span>{user?.username || user?.email}</span>
+            <button onClick={handleLogout} className="logout-button">
+              退出
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="nav">
@@ -321,6 +381,34 @@ function App() {
       )}
 
       {activeTab === 'graph' && <KnowledgeGraphPage />}
+
+      <style>{`
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .logout-button {
+          padding: 8px 16px;
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .logout-button:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
     </div>
   );
 }

@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
 const imageServiceClient = require('../services/imageServiceClient');
+const imageGenerationClient = require('../services/imageGenerationClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
 const retrievalService = require('../services/retrievalService');
 
@@ -39,10 +40,24 @@ const upload = multer({
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
+    // Handle prompt content - create new prompt if provided
+    let promptId = req.body.promptId || req.body.prompt_id;
+
+    if (req.body.prompt && typeof req.body.prompt === 'string') {
+      // Check if prompt already exists
+      let existingPrompt = await Prompt.findOne({ where: { content: req.body.prompt } });
+      if (existingPrompt) {
+        promptId = existingPrompt.id;
+      } else {
+        const newPrompt = await Prompt.create({ content: req.body.prompt });
+        promptId = newPrompt.id;
+      }
+    }
+
     const image = await Image.create({
       filename: req.file.filename,
       path: req.file.path, // 存储容器内绝对路径
-      promptId: req.body.promptId || req.body.prompt_id,
+      promptId: promptId,
     });
 
     // 直接使用容器内路径
@@ -157,6 +172,7 @@ router.get('/', async (req, res) => {
     const images = await Image.findAll({
       where: whereClause,
       include: Prompt,
+      order: [['created_at', 'DESC']],
     });
     res.json(images);
   } catch (error) {
@@ -638,6 +654,43 @@ router.get('/search/suggestions', async (req, res) => {
     });
   } catch (error) {
     console.error('搜索建议失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate images from a text prompt
+ * POST /api/images/generate
+ */
+router.post('/generate', async (req, res) => {
+  try {
+    const { prompt, n = 1, aspect_ratio = '1:1', model = 'image-01' } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'prompt is required and must be a string' });
+    }
+
+    if (n < 1 || n > 4) {
+      return res.status(400).json({ error: 'n must be between 1 and 4' });
+    }
+
+    const result = await imageGenerationClient.generateImages(prompt, {
+      n,
+      aspect_ratio,
+      model,
+    });
+
+    res.json({
+      success: true,
+      prompt: result.prompt,
+      images: result.images.map((img) => ({
+        url: img.url,
+        localPath: img.localPath,
+        filename: img.filename,
+      })),
+    });
+  } catch (error) {
+    console.error('[Image] Generation failed:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

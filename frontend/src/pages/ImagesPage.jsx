@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ImageCard from '../components/ImageCard';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 
 function ImagesPage({
   images,
@@ -22,6 +23,12 @@ function ImagesPage({
   batchProgress,
   analyzedFilter,
   onAnalyzedFilterChange,
+  onGenerateImages,
+  onSavePendingImages,
+  onDiscardPendingImages,
+  pendingImages,
+  isGeneratingImages,
+  isSavingPending,
 }) {
   const [draggedImage, setDraggedImage] = useState(null);
   const [selectedPromptId, setSelectedPromptId] = useState('');
@@ -30,6 +37,54 @@ function ImagesPage({
   const [selectedImagePromptId, setSelectedImagePromptId] = useState('');
   const [batchResult, setBatchResult] = useState(null);
   const [autoAnalyze, setAutoAnalyze] = useState(true);
+  const [showGenerationForm, setShowGenerationForm] = useState(false);
+  const [genAutoAnalyze, setGenAutoAnalyze] = useState(true);
+  const [generationPrompt, setGenerationPrompt] = useState('');
+  const [generationN, setGenerationN] = useState(1);
+  const [generationAspectRatio, setGenerationAspectRatio] = useState('1:1');
+  const [selectedPendingImages, setSelectedPendingImages] = useState({});
+  const [pendingPreview, setPendingPreview] = useState(null);
+
+  const aspectRatioOptions = ['1:1', '16:9', '4:3', '3:2', '2:3', '3:4', '9:16', '21:9'];
+
+  const handleGenerate = async (e) => {
+    e.preventDefault();
+    if (!generationPrompt.trim()) return;
+    await onGenerateImages({
+      prompt: generationPrompt,
+      n: generationN,
+      aspect_ratio: generationAspectRatio,
+      autoAnalyze: genAutoAnalyze,
+    });
+    // Select all by default
+    const all = {};
+    (pendingImages || []).forEach((_, i) => {
+      all[i] = true;
+    });
+    setSelectedPendingImages(all);
+  };
+
+  const togglePendingImage = (index) => {
+    setSelectedPendingImages((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const handleSavePending = async (saveMode) => {
+    const selectedIndices = Object.entries(selectedPendingImages)
+      .filter(([, v]) => v)
+      .map(([i]) => parseInt(i));
+    const imgs = (pendingImages || []).filter((_, i) => selectedIndices.includes(i));
+    await onSavePendingImages(imgs, generationPrompt, saveMode, genAutoAnalyze);
+    setSelectedPendingImages({});
+    setGenerationPrompt('');
+    setShowGenerationForm(false);
+  };
+
+  const handleDiscardPending = () => {
+    onDiscardPendingImages();
+    setSelectedPendingImages({});
+    setGenerationPrompt('');
+    setShowGenerationForm(false);
+  };
 
   const handleImageUpload = async (e) => {
     e.preventDefault();
@@ -124,10 +179,127 @@ function ImagesPage({
 
   return (
     <div className="section">
-      <h2>图片管理</h2>
+      <div className="section-header">
+        <h2>图片管理</h2>
+        <button className="generate-btn" onClick={() => setShowGenerationForm(!showGenerationForm)}>
+          {showGenerationForm ? '取消生成' : 'AI 生成图片'}
+        </button>
+      </div>
+
+      {/* 生成图片表单 - 内联显示 */}
+      {showGenerationForm && (
+        <div className="generation-form-inline">
+          <form onSubmit={handleGenerate} className="generation-form-row">
+            <textarea
+              value={generationPrompt}
+              onChange={(e) => setGenerationPrompt(e.target.value)}
+              placeholder="输入提示词描述想要生成的图片..."
+              rows={2}
+              disabled={isGeneratingImages}
+            />
+            <select
+              value={generationN}
+              onChange={(e) => setGenerationN(parseInt(e.target.value))}
+              disabled={isGeneratingImages}
+            >
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} 张
+                </option>
+              ))}
+            </select>
+            <select
+              value={generationAspectRatio}
+              onChange={(e) => setGenerationAspectRatio(e.target.value)}
+              disabled={isGeneratingImages}
+            >
+              {aspectRatioOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="generate-btn"
+              disabled={isGeneratingImages || !generationPrompt.trim()}
+            >
+              {isGeneratingImages ? '生成中...' : '生成'}
+            </button>
+            <div className="checkbox-group">
+              <input
+                type="checkbox"
+                id="genAutoAnalyze"
+                checked={genAutoAnalyze}
+                onChange={(e) => setGenAutoAnalyze(e.target.checked)}
+                disabled={isGeneratingImages}
+              />
+              <label htmlFor="genAutoAnalyze">自动AI分析</label>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 待保存的生成图片 */}
+      {pendingImages && pendingImages.length > 0 && (
+        <div className="pending-images-section">
+          <div className="pending-header">
+            <h3>生成的图片（待保存）</h3>
+            <div className="pending-actions">
+              <button
+                onClick={() => handleSavePending('prompt-and-images')}
+                className="save-pending-btn save-with-prompt"
+                disabled={isSavingPending}
+              >
+                {isSavingPending ? '分析中...' : '保存提示词 + 图片'}
+              </button>
+              <button
+                onClick={() => handleSavePending('images-only')}
+                className="save-pending-btn save-images-only"
+                disabled={isSavingPending}
+              >
+                {isSavingPending ? '分析中...' : '仅保存图片'}
+              </button>
+              <button
+                onClick={handleDiscardPending}
+                className="discard-pending-btn"
+                disabled={isSavingPending}
+              >
+                {isSavingPending ? '保存中...' : '丢弃'}
+              </button>
+            </div>
+          </div>
+          <div className="pending-images-grid">
+            {pendingImages.map((img, index) => (
+              <div
+                key={index}
+                className={`pending-image-card ${selectedPendingImages[index] ? 'selected' : ''}`}
+              >
+                <img
+                  src={`/temp/${img.filename}`}
+                  alt={`生成图片 ${index + 1}`}
+                  onClick={() => togglePendingImage(index)}
+                />
+                <div className="pending-overlay">
+                  <button
+                    className="pending-preview-btn"
+                    onClick={() => setPendingPreview(img)}
+                    title="预览"
+                  >
+                    👁
+                  </button>
+                  <span onClick={() => togglePendingImage(index)}>
+                    {selectedPendingImages[index] ? '✓ 已选择' : '点击选择'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 当没有暂存图片时，显示普通上传表单和拖拽区域 */}
-      {!draggedImage && (
+      {!draggedImage && !showGenerationForm && (
         <>
           <form onSubmit={handleImageUpload} className="form-group">
             <label htmlFor="image">上传图片：</label>
@@ -296,6 +468,44 @@ function ImagesPage({
           />
         ))}
       </div>
+
+      {/* Pending images preview modal */}
+      {pendingPreview && (
+        <div className="image-preview-modal" onClick={() => setPendingPreview(null)}>
+          <div className="image-preview-content" onClick={(e) => e.stopPropagation()}>
+            <button className="preview-close-btn" onClick={() => setPendingPreview(null)}>
+              ×
+            </button>
+            <div className="preview-image-container">
+              <img src={`/temp/${pendingPreview.filename}`} alt="预览" />
+            </div>
+            <div className="preview-actions">
+              <button
+                className="download-btn"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/temp/${pendingPreview.filename}`);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = pendingPreview.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } catch (error) {
+                    console.error('下载失败:', error);
+                    alert('下载失败，请重试');
+                  }
+                }}
+              >
+                下载图片
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

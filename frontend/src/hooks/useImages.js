@@ -29,7 +29,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
       body: formData,
     });
     const newImageData = await response.json();
-    setImages((prev) => [...prev, newImageData]);
+    setImages((prev) => [newImageData, ...prev]);
     fetchUnusedPrompts();
     return newImageData;
   };
@@ -96,6 +96,19 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     } finally {
       setAnalyzingImageId(null);
     }
+  };
+
+  const generateImages = async ({ prompt, n, aspect_ratio }) => {
+    const response = await fetch('/api/images/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, n, aspect_ratio }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '生成失败');
+    }
+    return response.json();
   };
 
   const batchAnalyze = async (forceAll = false) => {
@@ -178,6 +191,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     batchProgress,
     analyzedFilter,
     setAnalyzedFilter,
+    generateImages,
   };
 }
 

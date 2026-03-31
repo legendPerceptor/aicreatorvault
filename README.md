@@ -7,6 +7,7 @@
 ### 核心功能
 - **提示词管理**：存储和管理 AI 创作提示词，支持评分和关联图片
 - **图片管理**：上传和管理 AI 生成的图片，支持评分和关联提示词
+- **AI 图片生成**：使用 MiniMax API 直接生成图片，支持多图生成、多种宽高比
 - **主题管理**：围绕主题组织参考图片，支持拖拽上传和灵活分类
 - **参考图搜索**：搜索网络参考图，一键下载添加到本地库
 
@@ -74,6 +75,10 @@ XRAY_CONFIG_PATH=./xray/config.json
 
 # Brave Search API（可选，用于参考图搜索）
 BRAVE_API_KEY=your_brave_api_key
+
+# MiniMax API（用于 AI 图片生成）
+IMAGE_GEN_API_URL=https://api.minimaxi.com/v1/image_generation
+IMAGE_GEN_API_KEY=your_minimax_api_key
 ```
 
 #### 3. 配置代理
@@ -169,7 +174,6 @@ cd image-service && pip install -r requirements.txt && cd ..
 
 ```bash
 cp .env.example .env
-cp backend/.env.example backend/.env
 cp image-service/.env.example image-service/.env
 ```
 
@@ -206,7 +210,7 @@ Docker 部署默认使用 PostgreSQL + pgvector。
 
 ### 配置方式
 
-在 `backend/.env` 文件中设置：
+在 `.env` 文件中设置：
 
 ```env
 # 数据库类型：sqlite 或 postgres
@@ -245,16 +249,16 @@ aicreatorvault/
 │   │   ├── graph.js             # 知识图谱 API
 │   │   └── referenceSearch.js   # 参考图搜索 API
 │   ├── services/
-│   │   ├── imageServiceClient.js # AI 服务客户端
-│   │   ├── graphService.js      # 图谱遍历服务
-│   │   └── retrievalService.js  # 检索服务（混合检索）
+│   │   ├── imageServiceClient.js      # AI 服务客户端（图片分析）
+│   │   ├── imageGenerationClient.js    # MiniMax 图片生成客户端
+│   │   ├── graphService.js            # 图谱遍历服务
+│   │   └── retrievalService.js        # 检索服务（混合检索）
 │   ├── utils/
 │   │   └── vectorSearch.js      # 向量搜索工具
 │   ├── migrations/              # 数据库迁移脚本
 │   │   └── migrateToAssets.js   # 迁移到知识图谱
 │   ├── uploads/                 # 上传的图片
-│   ├── .env                     # 环境变量配置
-│   ├── .env.example             # 环境变量模板
+│   ├── temp/                    # 生成的临时图片
 │   ├── server.js                # 后端服务器
 │   └── Dockerfile               # 后端容器配置
 ├── frontend/
@@ -330,6 +334,7 @@ aicreatorvault/
 
 - `GET /api/images` - 获取所有图片
 - `POST /api/images` - 上传图片（自动分析）
+- `POST /api/images/generate` - AI 生成图片（MiniMax）
 - `POST /api/images/:id/analyze` - 分析图片
 - `POST /api/images/batch-analyze` - 批量分析图片
 - `PUT /api/images/:id/score` - 更新图片评分

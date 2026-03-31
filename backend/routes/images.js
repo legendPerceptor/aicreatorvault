@@ -40,10 +40,24 @@ const upload = multer({
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
+    // Handle prompt content - create new prompt if provided
+    let promptId = req.body.promptId || req.body.prompt_id;
+
+    if (req.body.prompt && typeof req.body.prompt === 'string') {
+      // Check if prompt already exists
+      let existingPrompt = await Prompt.findOne({ where: { content: req.body.prompt } });
+      if (existingPrompt) {
+        promptId = existingPrompt.id;
+      } else {
+        const newPrompt = await Prompt.create({ content: req.body.prompt });
+        promptId = newPrompt.id;
+      }
+    }
+
     const image = await Image.create({
       filename: req.file.filename,
       path: req.file.path, // 存储容器内绝对路径
-      promptId: req.body.promptId || req.body.prompt_id,
+      promptId: promptId,
     });
 
     // 直接使用容器内路径

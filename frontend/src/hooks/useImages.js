@@ -98,6 +98,19 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     }
   };
 
+  const generateImages = async ({ prompt, n, aspect_ratio }) => {
+    const response = await fetch('/api/images/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, n, aspect_ratio }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '生成失败');
+    }
+    return response.json();
+  };
+
   const batchAnalyze = async (forceAll = false) => {
     setBatchAnalyzing(true);
     setBatchProgress({ current: 0, total: 0 });
@@ -178,6 +191,7 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
     batchProgress,
     analyzedFilter,
     setAnalyzedFilter,
+    generateImages,
   };
 }
 

@@ -13,6 +13,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('prompts');
   const [editingScores, setEditingScores] = useState({});
   const [scoreValues, setScoreValues] = useState({});
+  const [pendingImages, setPendingImages] = useState([]);
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
 
   const {
     prompts,
@@ -38,6 +40,7 @@ function App() {
     batchProgress,
     analyzedFilter,
     setAnalyzedFilter,
+    generateImages,
   } = useImages(prompts, {
     updatePromptImages,
     removeImageFromPrompts,
@@ -139,6 +142,43 @@ function App() {
     await uploadImage(formData);
   };
 
+  const handleGenerateImages = async ({ prompt, n, aspect_ratio }) => {
+    setIsGeneratingImages(true);
+    try {
+      const result = await generateImages({ prompt, n, aspect_ratio });
+      setPendingImages(result.images || []);
+    } catch (error) {
+      alert(`生成失败: ${error.message}`);
+      setPendingImages([]);
+    } finally {
+      setIsGeneratingImages(false);
+    }
+  };
+
+  const handleSavePendingImages = async (imgs, prompt, saveMode) => {
+    if (!imgs || imgs.length === 0) return;
+
+    try {
+      for (const img of imgs) {
+        const formData = new FormData();
+        if (saveMode === 'prompt-and-images') {
+          formData.append('prompt', prompt);
+        }
+        const imgResponse = await fetch(`/temp/${img.filename}`);
+        const imgBlob = await imgResponse.blob();
+        formData.append('image', imgBlob, img.filename);
+        await uploadImage(formData);
+      }
+      setPendingImages([]);
+    } catch (error) {
+      alert(`保存失败: ${error.message}`);
+    }
+  };
+
+  const handleDiscardPendingImages = () => {
+    setPendingImages([]);
+  };
+
   return (
     <div className="app">
       <div className="header">
@@ -194,6 +234,11 @@ function App() {
           batchProgress={batchProgress}
           analyzedFilter={analyzedFilter}
           onAnalyzedFilterChange={setAnalyzedFilter}
+          onGenerateImages={handleGenerateImages}
+          onSavePendingImages={handleSavePendingImages}
+          onDiscardPendingImages={handleDiscardPendingImages}
+          pendingImages={pendingImages}
+          isGeneratingImages={isGeneratingImages}
         />
       )}
 

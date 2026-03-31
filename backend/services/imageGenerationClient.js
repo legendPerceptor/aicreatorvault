@@ -14,6 +14,11 @@ const UPLOADS_DIR =
     ? '/app/uploads'
     : path.join(__dirname, '../uploads');
 
+const TEMP_DIR =
+  process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV
+    ? '/app/temp'
+    : path.join(__dirname, '../temp');
+
 class ImageGenerationClient {
   constructor() {
     this.client = axios.create({
@@ -69,17 +74,17 @@ class ImageGenerationClient {
       throw new Error('No image URLs returned from API');
     }
 
-    // Ensure uploads directory exists
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    // Ensure temp directory exists
+    if (!fs.existsSync(TEMP_DIR)) {
+      fs.mkdirSync(TEMP_DIR, { recursive: true });
     }
 
-    // Download images and save locally
+    // Download images and save to temp
     const images = [];
     for (let i = 0; i < data.data.image_urls.length; i++) {
       const imageUrl = data.data.image_urls[i];
       const filename = `generated_${Date.now()}_${i + 1}.jpg`;
-      const localPath = path.join(UPLOADS_DIR, filename);
+      const localPath = path.join(TEMP_DIR, filename);
 
       try {
         const imageResponse = await axios.get(imageUrl, {

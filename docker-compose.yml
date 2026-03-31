@@ -48,6 +48,8 @@ services:
       - BRAVE_IMAGE_SEARCH_URL=https://api.search.brave.com/res/v1/images/search
       - SOCKS_PROXY_HOST=${SOCKS_PROXY_HOST:-aigc-xray}
       - SOCKS_PROXY_PORT=${SOCKS_PROXY_PORT:-1080}
+      - IMAGE_GEN_API_URL=${IMAGE_GEN_API_URL:-https://api.minimaxi.com/v1/image_generation}
+      - IMAGE_GEN_API_KEY=${IMAGE_GEN_API_KEY:?IMAGE_GEN_API_KEY is required}
     volumes:
       # 使用 bind mount，数据存储在宿主机
       # 修改为你 NAS 上的实际路径

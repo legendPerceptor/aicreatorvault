@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
 const imageServiceClient = require('../services/imageServiceClient');
+const imageGenerationClient = require('../services/imageGenerationClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
 const retrievalService = require('../services/retrievalService');
 
@@ -638,6 +639,43 @@ router.get('/search/suggestions', async (req, res) => {
     });
   } catch (error) {
     console.error('搜索建议失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate images from a text prompt
+ * POST /api/images/generate
+ */
+router.post('/generate', async (req, res) => {
+  try {
+    const { prompt, n = 1, aspect_ratio = '1:1', model = 'image-01' } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'prompt is required and must be a string' });
+    }
+
+    if (n < 1 || n > 4) {
+      return res.status(400).json({ error: 'n must be between 1 and 4' });
+    }
+
+    const result = await imageGenerationClient.generateImages(prompt, {
+      n,
+      aspect_ratio,
+      model,
+    });
+
+    res.json({
+      success: true,
+      prompt: result.prompt,
+      images: result.images.map((img) => ({
+        url: img.url,
+        localPath: img.localPath,
+        filename: img.filename,
+      })),
+    });
+  } catch (error) {
+    console.error('[Image] Generation failed:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

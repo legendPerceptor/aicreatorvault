@@ -15,6 +15,7 @@ function App() {
   const [scoreValues, setScoreValues] = useState({});
   const [pendingImages, setPendingImages] = useState([]);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [isSavingPending, setIsSavingPending] = useState(false);
 
   const {
     prompts,
@@ -159,11 +160,37 @@ function App() {
   const handleSavePendingImages = async (imgs, prompt, saveMode, autoAnalyze) => {
     if (!imgs || imgs.length === 0) return;
 
+    setIsSavingPending(true);
     try {
+      let promptId = null;
+
+      // If saving with prompt, create the prompt first and reuse for all images
+      if (saveMode === 'prompt-and-images') {
+        // Check if prompt already exists
+        const existingPrompt = prompts.find((p) => p.content === prompt);
+        if (existingPrompt) {
+          promptId = existingPrompt.id;
+        } else {
+          // Create new prompt
+          const promptResponse = await fetch('/api/prompts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: prompt }),
+          });
+          if (!promptResponse.ok) {
+            const errorData = await promptResponse.json();
+            throw new Error(errorData.error || '创建提示词失败');
+          }
+          const newPrompt = await promptResponse.json();
+          promptId = newPrompt.id;
+        }
+      }
+
+      // Upload images with the promptId
       for (const img of imgs) {
         const formData = new FormData();
-        if (saveMode === 'prompt-and-images') {
-          formData.append('prompt', prompt);
+        if (promptId) {
+          formData.append('promptId', promptId);
         }
         if (!autoAnalyze) {
           formData.append('autoAnalyze', 'false');
@@ -173,9 +200,18 @@ function App() {
         formData.append('image', imgBlob, img.filename);
         await uploadImage(formData);
       }
+
+      // Refresh prompts list to show the new/updated prompt
+      if (saveMode === 'prompt-and-images') {
+        fetchPrompts();
+        fetchUnusedPrompts();
+      }
+
       setPendingImages([]);
     } catch (error) {
       alert(`保存失败: ${error.message}`);
+    } finally {
+      setIsSavingPending(false);
     }
   };
 
@@ -243,6 +279,7 @@ function App() {
           onDiscardPendingImages={handleDiscardPendingImages}
           pendingImages={pendingImages}
           isGeneratingImages={isGeneratingImages}
+          isSavingPending={isSavingPending}
         />
       )}
 

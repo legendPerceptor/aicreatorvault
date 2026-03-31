@@ -27,6 +27,7 @@ function ImagesPage({
   onDiscardPendingImages,
   pendingImages,
   isGeneratingImages,
+  isSavingPending,
 }) {
   const [draggedImage, setDraggedImage] = useState(null);
   const [selectedPromptId, setSelectedPromptId] = useState('');
@@ -246,17 +247,23 @@ function ImagesPage({
               <button
                 onClick={() => handleSavePending('prompt-and-images')}
                 className="save-pending-btn save-with-prompt"
+                disabled={isSavingPending}
               >
-                保存提示词 + 图片
+                {isSavingPending ? '分析中...' : '保存提示词 + 图片'}
               </button>
               <button
                 onClick={() => handleSavePending('images-only')}
                 className="save-pending-btn save-images-only"
+                disabled={isSavingPending}
               >
-                仅保存图片
+                {isSavingPending ? '分析中...' : '仅保存图片'}
               </button>
-              <button onClick={handleDiscardPending} className="discard-pending-btn">
-                丢弃
+              <button
+                onClick={handleDiscardPending}
+                className="discard-pending-btn"
+                disabled={isSavingPending}
+              >
+                {isSavingPending ? '保存中...' : '丢弃'}
               </button>
             </div>
           </div>

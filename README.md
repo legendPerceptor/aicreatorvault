@@ -2,6 +2,10 @@
 
 一个服务于 AI 创作者的资产管理平台，帮助你安全地存储、组织和检索 AI 生成的图片、提示词等创作资产。通过知识图谱技术，可视化探索资产之间的关系，追踪创作演化路径。
 
+<p align="center">
+  <img src="images/aicreator-vault-image-page.png" alt="AI Creator Vault UI" width="800">
+</p>
+
 ## 功能特点
 
 ### 核心功能

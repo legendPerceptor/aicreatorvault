@@ -39,7 +39,8 @@ function AuthPage() {
       } else {
         await register(username, email, password);
       }
-      // Auth successful - context updated, component will re-render with isAuthenticated=true
+      // Auth successful - reload to reinitialize all hooks with correct auth state
+      window.location.reload();
     } catch (err) {
       setError(err.message);
     } finally {

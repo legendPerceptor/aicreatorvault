@@ -4,6 +4,40 @@
 
 ### 使用 curl 命令测试 API
 
+#### 认证 API
+
+所有需要认证的 API 请求都需要在 Header 中包含 Access Token：
+```bash
+-H "Authorization: Bearer <access_token>"
+```
+
+**登录获取 Token**
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"email":"your@email.com","password":"yourpassword"}' \
+  -c cookies.txt \
+  http://localhost:3001/api/auth/login
+```
+
+**注册新用户**
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"username":"yourname","email":"your@email.com","password":"yourpassword"}' \
+  -c cookies.txt \
+  http://localhost:3001/api/auth/register
+```
+
+**获取当前用户信息**
+```bash
+curl -H "Authorization: Bearer <access_token>" \
+  http://localhost:3001/api/auth/me
+```
+
+**登出**
+```bash
+curl -X POST -c cookies.txt http://localhost:3001/api/auth/logout
+```
+
 #### 1. 测试提示词 API
 
 - **获取所有提示词**
@@ -146,12 +180,20 @@
 
 - **backend/**: 后端代码
   - **routes/**: API 路由
+    - **auth.js**: 认证相关路由 (登录、注册、登出、Token刷新)
   - **models/**: 数据库模型
+    - **User.js**: 用户模型
+  - **middleware/**: 中间件
+    - **auth.js**: 认证中间件 (authenticate, optionalAuth)
+  - **utils/**: 工具函数
+    - **auth.js**: JWT Token 生成和验证
   - **uploads/**: 上传的图片文件
   - **server.js**: 服务器入口文件
 
 - **frontend/**: 前端代码
   - **src/**: 源代码
+    - **contexts/AuthContext.jsx**: React Auth Context (共享认证状态)
+    - **hooks/useAuth.js**: 认证 Hook
   - **public/**: 静态文件
   - **vite.config.js**: Vite 配置文件
 

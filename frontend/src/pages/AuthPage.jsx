@@ -7,6 +7,7 @@ function AuthPage({ onAuthSuccess }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -53,6 +54,7 @@ function AuthPage({ onAuthSuccess }) {
       if (onAuthSuccess) {
         onAuthSuccess(data.user);
       }
+      console.log('[Auth] Success:', data.user);
     } catch (err) {
       setError(err.message);
     } finally {

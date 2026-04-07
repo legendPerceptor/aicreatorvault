@@ -19,7 +19,7 @@ function App() {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [isSavingPending, setIsSavingPending] = useState(false);
 
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, setUser, isAuthenticated, isLoading, logout, checkAuth } = useAuth();
 
   const {
     prompts,
@@ -266,7 +266,7 @@ function App() {
 
   // Show auth page if not authenticated
   if (!isAuthenticated) {
-    return <AuthPage />;
+    return <AuthPage onAuthSuccess={(user) => setUser(user)} />;
   }
 
   return (

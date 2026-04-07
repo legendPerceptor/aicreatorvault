@@ -5,7 +5,7 @@ function ImagePreviewModal({ image, onClose }) {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(`/api/files/${image.user_id}/${image.filename}`, {
+      const response = await fetch(`/api/files/${image.user_id}/images/${image.filename}`, {
         credentials: 'include',
       });
       const blob = await response.blob();
@@ -36,7 +36,7 @@ function ImagePreviewModal({ image, onClose }) {
           ×
         </button>
         <div className="preview-image-container">
-          <img src={`/api/files/${image.user_id}/${image.filename}`} alt="预览" />
+          <img src={`/api/files/${image.user_id}/images/${image.filename}`} alt="预览" />
         </div>
         <div className="preview-actions">
           <button className="download-btn" onClick={handleDownload}>

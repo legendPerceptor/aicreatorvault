@@ -37,10 +37,13 @@ router.get('/:userId/:filename', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid filename' });
     }
 
+    // Use UPLOADS_DIR base path, not the database path
+    // Database stores absolute host paths which won't work in container
     const filePath = path.join(UPLOADS_DIR, 'users', userId, filename);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.error(`[Files] File not found: ${filePath}`);
       return res.status(404).json({ error: 'File not found' });
     }
 
@@ -76,10 +79,13 @@ router.get('/:userId/images/:filename', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid filename' });
     }
 
+    // Use UPLOADS_DIR base path, not the database path
+    // Database stores absolute host paths which won't work in container
     const filePath = path.join(UPLOADS_DIR, 'users', userId, 'images', filename);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.error(`[Files] File not found: ${filePath}`);
       return res.status(404).json({ error: 'File not found' });
     }
 

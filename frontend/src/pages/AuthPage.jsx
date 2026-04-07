@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
-function AuthPage({ onAuthSuccess }) {
+function AuthPage() {
+  const { login, register } = useAuth();
   const [mode, setMode] = useState('login'); // 'login' or 'register'
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -32,29 +34,12 @@ function AuthPage({ onAuthSuccess }) {
     setIsLoading(true);
 
     try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const body = mode === 'login' ? { email, password } : { username, email, password };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        await register(username, email, password);
       }
-
-      // Auth successful, call the success callback
-      if (onAuthSuccess) {
-        onAuthSuccess(data.user);
-      }
-      console.log('[Auth] Success:', data.user);
+      // Auth successful - context updated, component will re-render with isAuthenticated=true
     } catch (err) {
       setError(err.message);
     } finally {

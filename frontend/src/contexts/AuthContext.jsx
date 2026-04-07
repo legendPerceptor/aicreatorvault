@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 const TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-function useAuth() {
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(() => sessionStorage.getItem(TOKEN_KEY));
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +44,6 @@ function useAuth() {
         setAccessToken(token);
       } else if (refreshToken) {
         // Cookie refresh failed, try using localStorage refresh token
-        // Call refresh endpoint with token in Authorization header as fallback
         refreshResponse = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
           headers: {
@@ -77,7 +78,7 @@ function useAuth() {
         setUser(null);
       }
     } catch (err) {
-      console.error('[useAuth] Auth check failed:', err);
+      console.error('[Auth] Auth check failed:', err);
       setUser(null);
       setAccessToken(null);
     } finally {
@@ -158,40 +159,15 @@ function useAuth() {
         credentials: 'include',
       });
     } catch (err) {
-      console.error('[useAuth] Logout error:', err);
+      console.error('[Auth] Logout error:', err);
     } finally {
       setUser(null);
       setAccessToken(null);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
-      setAccessToken(null);
     }
   }, []);
 
-  const refreshToken = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        setUser(null);
-        setAccessToken(null);
-        return false;
-      }
-
-      const data = await response.json();
-      setAccessToken(data.accessToken);
-      return data.accessToken;
-    } catch (err) {
-      console.error('[useAuth] Token refresh failed:', err);
-      setUser(null);
-      setAccessToken(null);
-      return false;
-    }
-  }, []);
-
-  return {
+  const value = {
     user,
     setUser,
     accessToken,
@@ -201,9 +177,16 @@ function useAuth() {
     login,
     register,
     logout,
-    refreshToken,
     checkAuth,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export default useAuth;
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

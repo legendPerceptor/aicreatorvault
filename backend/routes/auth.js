@@ -112,6 +112,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const tokens = generateTokens(user.id);
     sendTokens(res, tokens);
 
+    // Also send refreshToken in body for localStorage backup
     res.json({
       user: {
         id: user.id,
@@ -119,6 +120,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         email: user.email,
       },
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken, // Include for localStorage backup
     });
   } catch (error) {
     console.error('[Auth] Login error:', error);

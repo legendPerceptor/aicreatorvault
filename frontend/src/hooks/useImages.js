@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getAuthHeader } from '../utils/authHeader';
+
+const TOKEN_KEY = 'access_token';
 
 function useImages(
   prompts,
@@ -14,24 +17,33 @@ function useImages(
   const fetchImages = useCallback(() => {
     if (!isAuthenticated) return;
 
+    // Read token directly from sessionStorage to avoid closure issues
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
     let url = '/api/images';
     if (analyzedFilter === 'analyzed') {
       url += '?analyzed=true';
     } else if (analyzedFilter === 'unanalyzed') {
       url += '?analyzed=false';
     }
-    fetch(url, { credentials: 'include' })
+    fetch(url, { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setImages(data));
   }, [analyzedFilter, isAuthenticated]);
 
   useEffect(() => {
-    fetchImages();
-  }, [fetchImages]);
+    if (isAuthenticated) {
+      fetchImages();
+    }
+  }, [isAuthenticated, fetchImages]);
 
   const uploadImage = async (formData) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const response = await fetch('/api/images', {
       method: 'POST',
+      headers,
       credentials: 'include',
       body: formData,
     });
@@ -42,8 +54,11 @@ function useImages(
   };
 
   const deleteImage = async (id) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     await fetch(`/api/images/${id}`, {
       method: 'DELETE',
+      headers,
       credentials: 'include',
     });
     setImages((prev) => prev.filter((image) => image.id !== id));
@@ -52,11 +67,14 @@ function useImages(
   };
 
   const updateImageScore = async (id, score) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch(`/api/images/${id}/score`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ score }),
     });
@@ -67,11 +85,14 @@ function useImages(
   };
 
   const updateImagePrompt = async (imageId, promptId) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch(`/api/images/${imageId}/prompt`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ promptId: promptId || null }),
     });
@@ -89,8 +110,11 @@ function useImages(
   const analyzeSingleImage = async (imageId) => {
     setAnalyzingImageId(imageId);
     try {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(`/api/images/${imageId}/analyze`, {
         method: 'POST',
+        headers,
         credentials: 'include',
       });
       if (!response.ok) {
@@ -110,9 +134,14 @@ function useImages(
   };
 
   const generateImages = async ({ prompt, n, aspect_ratio }) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch('/api/images/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ prompt, n, aspect_ratio }),
     });
@@ -138,11 +167,14 @@ function useImages(
 
       setBatchProgress({ current: 0, total: imagesToAnalyze.length });
 
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
       const response = await fetch('/api/images/batch-analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ forceAll }),
       });

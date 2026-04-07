@@ -6,13 +6,14 @@ import SearchPage from './pages/SearchPage';
 import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
 import ReferenceSearchPage from './pages/ReferenceSearchPage';
 import AuthPage from './pages/AuthPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
-import useAuth from './hooks/useAuth';
+import { getAuthHeader } from './utils/authHeader';
 import './App.css';
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState('prompts');
   const [editingScores, setEditingScores] = useState({});
   const [scoreValues, setScoreValues] = useState({});
@@ -20,7 +21,7 @@ function App() {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [isSavingPending, setIsSavingPending] = useState(false);
 
-  const { user, setUser, isAuthenticated, isLoading, logout, checkAuth } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, checkAuth } = useAuth();
 
   const {
     prompts,
@@ -183,7 +184,7 @@ function App() {
           // Create new prompt
           const promptResponse = await fetch('/api/prompts', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
             credentials: 'include',
             body: JSON.stringify({ content: prompt }),
           });
@@ -267,7 +268,7 @@ function App() {
 
   // Show auth page if not authenticated
   if (!isAuthenticated) {
-    return <AuthPage onAuthSuccess={(user) => setUser(user)} />;
+    return <AuthPage />;
   }
 
   return (
@@ -383,6 +384,14 @@ function App() {
 
       {activeTab === 'graph' && <KnowledgeGraphPage />}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

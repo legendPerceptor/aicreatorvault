@@ -1,34 +1,45 @@
 import { useState, useEffect, useCallback } from 'react';
 
+const TOKEN_KEY = 'access_token';
+
 function usePrompts(isAuthenticated = true) {
   const [prompts, setPrompts] = useState([]);
   const [unusedPrompts, setUnusedPrompts] = useState([]);
 
   const fetchPrompts = useCallback(() => {
     if (!isAuthenticated) return;
-    fetch('/api/prompts', { credentials: 'include' })
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch('/api/prompts', { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setPrompts(data));
   }, [isAuthenticated]);
 
   const fetchUnusedPrompts = useCallback(() => {
     if (!isAuthenticated) return;
-    fetch('/api/prompts/unused', { credentials: 'include' })
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch('/api/prompts/unused', { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setUnusedPrompts(data));
   }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchPrompts();
-    fetchUnusedPrompts();
-  }, [fetchPrompts, fetchUnusedPrompts]);
+    if (isAuthenticated) {
+      fetchPrompts();
+      fetchUnusedPrompts();
+    }
+  }, [isAuthenticated, fetchPrompts, fetchUnusedPrompts]);
 
   const addPrompt = async (content) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch('/api/prompts', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ content }),
     });
@@ -39,8 +50,11 @@ function usePrompts(isAuthenticated = true) {
   };
 
   const deletePrompt = async (id, deleteImages = true) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     await fetch(`/api/prompts/${id}?deleteImages=${deleteImages}`, {
       method: 'DELETE',
+      headers,
       credentials: 'include',
     });
     setPrompts((prev) => prev.filter((prompt) => prompt.id !== id));
@@ -48,11 +62,14 @@ function usePrompts(isAuthenticated = true) {
   };
 
   const updatePromptScore = async (id, score) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch(`/api/prompts/${id}/score`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ score }),
     });

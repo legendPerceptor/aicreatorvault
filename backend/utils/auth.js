@@ -47,7 +47,7 @@ function sendTokens(res, tokens) {
   const cookieOptions = {
     httpOnly: true,
     secure: AUTH_COOKIE_SECURE,
-    sameSite: AUTH_COOKIE_SECURE ? 'strict' : 'lax',
+    sameSite: false, // Disable SameSite for development
   };
 
   res.cookie('refreshToken', tokens.refreshToken, {

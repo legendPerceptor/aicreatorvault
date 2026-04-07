@@ -10,6 +10,7 @@ import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
 import useAuth from './hooks/useAuth';
+import './App.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('prompts');
@@ -381,34 +382,6 @@ function App() {
       )}
 
       {activeTab === 'graph' && <KnowledgeGraphPage />}
-
-      <style>{`
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        .user-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .logout-button {
-          padding: 8px 16px;
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        .logout-button:hover {
-          background: rgba(255, 255, 255, 0.3);
-        }
-      `}</style>
     </div>
   );
 }

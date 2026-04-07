@@ -9,6 +9,12 @@ const Image = (sequelize, dbType = 'sqlite') => {
       primaryKey: true,
       autoIncrement: true,
     },
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: 'user_id',
+    },
     filename: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -96,6 +102,11 @@ const Image = (sequelize, dbType = 'sqlite') => {
         key: 'id',
       },
       field: 'prompt_id', // 明确指定数据库列名
+    },
+    is_public: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_public',
     },
   };
 

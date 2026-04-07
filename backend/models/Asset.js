@@ -9,6 +9,12 @@ const Asset = (sequelize, dbType = 'sqlite') => {
       primaryKey: true,
       autoIncrement: true,
     },
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: 'user_id',
+    },
     asset_type: {
       type: DataTypes.ENUM('prompt', 'image', 'derived_image'),
       allowNull: false,

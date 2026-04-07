@@ -8,6 +8,7 @@ const imageServiceClient = require('../services/imageServiceClient');
 const imageGenerationClient = require('../services/imageGenerationClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
 const retrievalService = require('../services/retrievalService');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 // 根据环境选择 uploads 目录
 // Docker 模式: NODE_ENV=production, 使用 /app/uploads
@@ -22,146 +23,185 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB 限制
-  },
-});
-
-router.post('/', upload.single('image'), async (req, res) => {
-  try {
-    // Handle prompt content - create new prompt if provided
-    let promptId = req.body.promptId || req.body.prompt_id;
-
-    if (req.body.prompt && typeof req.body.prompt === 'string') {
-      // Check if prompt already exists
-      let existingPrompt = await Prompt.findOne({ where: { content: req.body.prompt } });
-      if (existingPrompt) {
-        promptId = existingPrompt.id;
-      } else {
-        const newPrompt = await Prompt.create({ content: req.body.prompt });
-        promptId = newPrompt.id;
+// Multer storage with user directory support
+const getStorage = (userId) => {
+  return multer.diskStorage({
+    destination: (req, file, cb) => {
+      const userDir = path.join(UPLOADS_DIR, 'users', String(userId), 'images');
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir, { recursive: true });
       }
-    }
+      cb(null, userDir);
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + path.extname(file.originalname));
+    },
+  });
+};
 
-    const image = await Image.create({
-      filename: req.file.filename,
-      path: req.file.path, // 存储容器内绝对路径
-      promptId: promptId,
+const getUpload = (userId) => {
+  return multer({
+    storage: getStorage(userId),
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB 限制
+    },
+  });
+};
+
+router.post(
+  '/',
+  (req, res, next) => {
+    // Skip auth for legacy uploads but require userId
+    const userId = req.body.userId || req.body.user_id || 1;
+    getUpload(userId).single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
     });
-
-    // 直接使用容器内路径
-    const imagePath = req.file.path;
-
-    // 检查是否要自动分析，默认为true以保持向后兼容
-    const autoAnalyze =
-      req.body.autoAnalyze === undefined ||
-      req.body.autoAnalyze === 'true' ||
-      req.body.autoAnalyze === 'on';
-
-    if (autoAnalyze) {
-      try {
-        const analysis = await imageServiceClient.analyzeImage(imagePath);
-        await image.update({
-          description: analysis.description,
-          embedding: analysis.embedding,
-          embeddingModel: analysis.model,
-          analyzedAt: new Date(),
-        });
-        if (DB_TYPE === 'postgres' && supportsVector()) {
-          await saveEmbeddingVector(image.id, analysis.embedding);
-        }
-
-        // 同步写入 Qdrant 向量数据库
-        try {
-          await imageServiceClient.qdrantUpsert(image.id, analysis.embedding, {
-            prompt_id: image.prompt_id,
-            filename: image.filename,
-            description: analysis.description,
-          });
-          console.log(`[Image] 已写入 Qdrant: Image #${image.id}`);
-        } catch (qdrantError) {
-          console.error('[Image] Qdrant 写入失败:', qdrantError.message);
-          // 不影响主流程
-        }
-      } catch (analyzeError) {
-        console.error('AI分析失败，但图片已保存:', analyzeError.message);
-      }
-    }
-
-    // 自动同步到 Asset 表（知识图谱）
+  },
+  async (req, res) => {
     try {
-      const { Asset, AssetRelationship } = require('../models');
-      // Op unused
+      // Handle prompt content - create new prompt if provided
+      let promptId = req.body.promptId || req.body.prompt_id;
+      const userId = req.body.userId || req.body.user_id || 1;
 
-      const asset = await Asset.create({
-        asset_type: 'image',
-        filename: image.filename,
-        path: image.path,
-        score: image.score,
-        description: image.description,
-        metadata: {
-          legacy_image_id: image.id,
-          originalName: req.file.originalname,
-          size: req.file.size,
-          mimetype: req.file.mimetype,
-        },
+      if (req.body.prompt && typeof req.body.prompt === 'string') {
+        // Check if prompt already exists for this user
+        let existingPrompt = await Prompt.findOne({
+          where: { content: req.body.prompt, user_id: userId },
+        });
+        if (existingPrompt) {
+          promptId = existingPrompt.id;
+        } else {
+          const newPrompt = await Prompt.create({
+            content: req.body.prompt,
+            user_id: userId,
+          });
+          promptId = newPrompt.id;
+        }
+      }
+
+      const image = await Image.create({
+        filename: req.file.filename,
+        path: req.file.path, // 存储容器内绝对路径
+        promptId: promptId,
+        user_id: userId,
       });
 
-      // 如果有关联的 promptId，创建 GENERATED 关系
-      if (req.body.promptId || req.body.prompt_id) {
-        // 查找 prompt 对应的 Asset
-        const promptAsset = await Asset.findOne({
-          where: {
-            asset_type: 'prompt',
-            metadata: {
-              legacy_prompt_id: parseInt(req.body.promptId || req.body.prompt_id),
-            },
+      // 直接使用容器内路径
+      const imagePath = req.file.path;
+
+      // 检查是否要自动分析，默认为true以保持向后兼容
+      const autoAnalyze =
+        req.body.autoAnalyze === undefined ||
+        req.body.autoAnalyze === 'true' ||
+        req.body.autoAnalyze === 'on';
+
+      if (autoAnalyze) {
+        try {
+          const analysis = await imageServiceClient.analyzeImage(imagePath);
+          await image.update({
+            description: analysis.description,
+            embedding: analysis.embedding,
+            embeddingModel: analysis.model,
+            analyzedAt: new Date(),
+          });
+          if (DB_TYPE === 'postgres' && supportsVector()) {
+            await saveEmbeddingVector(image.id, analysis.embedding);
+          }
+
+          // 同步写入 Qdrant 向量数据库
+          try {
+            await imageServiceClient.qdrantUpsert(image.id, analysis.embedding, {
+              prompt_id: image.prompt_id,
+              filename: image.filename,
+              description: analysis.description,
+            });
+            console.log(`[Image] 已写入 Qdrant: Image #${image.id}`);
+          } catch (qdrantError) {
+            console.error('[Image] Qdrant 写入失败:', qdrantError.message);
+            // 不影响主流程
+          }
+        } catch (analyzeError) {
+          console.error('AI分析失败，但图片已保存:', analyzeError.message);
+        }
+      }
+
+      // 自动同步到 Asset 表（知识图谱）
+      try {
+        const { Asset, AssetRelationship } = require('../models');
+        // Op unused
+
+        const asset = await Asset.create({
+          user_id: userId,
+          asset_type: 'image',
+          filename: image.filename,
+          path: image.path,
+          score: image.score,
+          description: image.description,
+          metadata: {
+            legacy_image_id: image.id,
+            originalName: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype,
           },
         });
 
-        if (promptAsset) {
-          await AssetRelationship.create({
-            source_id: promptAsset.id,
-            target_id: asset.id,
-            relationship_type: 'generated',
-            properties: {
-              createdAt: new Date().toISOString(),
+        // 如果有关联的 promptId，创建 GENERATED 关系
+        if (req.body.promptId || req.body.prompt_id) {
+          // 查找 prompt 对应的 Asset
+          const promptAsset = await Asset.findOne({
+            where: {
+              user_id: userId,
+              asset_type: 'prompt',
+              metadata: {
+                legacy_prompt_id: parseInt(req.body.promptId || req.body.prompt_id),
+              },
             },
           });
-          console.log(
-            `[Image] Created GENERATED relationship: Asset #${promptAsset.id} -> Asset #${asset.id}`
-          );
+
+          if (promptAsset) {
+            await AssetRelationship.create({
+              user_id: userId,
+              source_id: promptAsset.id,
+              target_id: asset.id,
+              relationship_type: 'generated',
+              properties: {
+                createdAt: new Date().toISOString(),
+              },
+            });
+            console.log(
+              `[Image] Created GENERATED relationship: Asset #${promptAsset.id} -> Asset #${asset.id}`
+            );
+          }
         }
+
+        console.log(`[Image] Created Asset #${asset.id} for Image #${image.id}`);
+      } catch (assetError) {
+        console.error('[Image] Failed to create Asset:', assetError.message);
+        // 不影响主流程，只记录错误
       }
 
-      console.log(`[Image] Created Asset #${asset.id} for Image #${image.id}`);
-    } catch (assetError) {
-      console.error('[Image] Failed to create Asset:', assetError.message);
-      // 不影响主流程，只记录错误
+      const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
+      res.json(imageWithPrompt);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-
-    const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
-    res.json(imageWithPrompt);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { analyzed } = req.query;
     const whereClause = {};
+
+    // Filter by user or public
+    if (req.user) {
+      whereClause.user_id = req.user.id;
+    } else {
+      whereClause.is_public = true;
+    }
 
     if (analyzed === 'true') {
       whereClause.description = { [require('sequelize').Op.ne]: null };
@@ -180,12 +220,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/:id/score', async (req, res) => {
+router.put('/:id/score', authenticate, async (req, res) => {
   try {
     const image = await Image.findByPk(req.params.id);
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
+
+    // Check ownership
+    if (image.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await image.update({ score: req.body.score });
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
     res.json(imageWithPrompt);
@@ -194,12 +240,18 @@ router.put('/:id/score', async (req, res) => {
   }
 });
 
-router.put('/:id/prompt', async (req, res) => {
+router.put('/:id/prompt', authenticate, async (req, res) => {
   try {
     const image = await Image.findByPk(req.params.id);
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
+
+    // Check ownership
+    if (image.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await image.update({ prompt_id: req.body.promptId || req.body.prompt_id });
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
     res.json(imageWithPrompt);
@@ -208,11 +260,16 @@ router.put('/:id/prompt', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const image = await Image.findByPk(req.params.id);
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // Check ownership
+    if (image.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // 使用数据库中存储的路径
@@ -229,6 +286,7 @@ router.delete('/:id', async (req, res) => {
 
       const asset = await Asset.findOne({
         where: {
+          user_id: req.user.id,
           asset_type: 'image',
           metadata: {
             legacy_image_id: image.id,
@@ -267,11 +325,16 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/analyze', async (req, res) => {
+router.post('/:id/analyze', authenticate, async (req, res) => {
   try {
     const image = await Image.findByPk(req.params.id);
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // Check ownership
+    if (image.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // 使用数据库中存储的路径
@@ -313,11 +376,19 @@ router.post('/:id/analyze', async (req, res) => {
   }
 });
 
-router.post('/search', async (req, res) => {
+router.post('/search', optionalAuth, async (req, res) => {
   try {
     const { query, topK = 10 } = req.body;
 
-    const images = await Image.findAll({ include: Prompt });
+    const where = {};
+    // Filter by user or public
+    if (req.user) {
+      where.user_id = req.user.id;
+    } else {
+      where.is_public = true;
+    }
+
+    const images = await Image.findAll({ where, include: Prompt });
     const imagesWithEmbeddings = images
       .filter((img) => img.embedding)
       .map((img) => ({
@@ -361,63 +432,97 @@ router.post('/search', async (req, res) => {
   }
 });
 
-router.post('/search-by-image', upload.single('image'), async (req, res) => {
-  try {
-    const { topK = 10 } = req.body;
-
-    const images = await Image.findAll({ include: Prompt });
-    const imagesWithEmbeddings = images
-      .filter((img) => img.embedding)
-      .map((img) => ({
-        id: img.id,
-        filename: img.filename,
-        description: img.description,
-        embedding: img.embedding,
-        score: img.score,
-      }));
-
-    if (imagesWithEmbeddings.length === 0) {
-      return res.json([]);
-    }
-
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const results = await imageServiceClient.searchByImage(
-      fileBuffer,
-      req.file.originalname,
-      imagesWithEmbeddings,
-      topK
-    );
-
-    fs.unlinkSync(req.file.path);
-
-    const resultIds = results.map((r) => r.id);
-    const fullImages = await Image.findAll({
-      where: { id: resultIds },
-      include: Prompt,
-    });
-
-    const imageMap = new Map(fullImages.map((img) => [img.id, img]));
-    const sortedResults = results
-      .map((r) => {
-        const img = imageMap.get(r.id);
-        if (img) {
-          return {
-            ...img.toJSON(),
-            similarity: r.similarity,
-          };
+router.post(
+  '/search-by-image',
+  optionalAuth,
+  (req, res, next) => {
+    // Use temp directory for unauthenticated uploads
+    const storage = multer.diskStorage({
+      destination: (req, file, cb) => {
+        const tempDir = path.join(UPLOADS_DIR, 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
-        return null;
-      })
-      .filter(Boolean);
+        cb(null, tempDir);
+      },
+      filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+      },
+    });
+    const uploadTemp = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+    uploadTemp.single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const { topK = 10 } = req.body;
 
-    res.json(sortedResults);
-  } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) {
+      const where = {};
+      // Filter by user or public
+      if (req.user) {
+        where.user_id = req.user.id;
+      } else {
+        where.is_public = true;
+      }
+
+      const images = await Image.findAll({ where, include: Prompt });
+      const imagesWithEmbeddings = images
+        .filter((img) => img.embedding)
+        .map((img) => ({
+          id: img.id,
+          filename: img.filename,
+          description: img.description,
+          embedding: img.embedding,
+          score: img.score,
+        }));
+
+      if (imagesWithEmbeddings.length === 0) {
+        return res.json([]);
+      }
+
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const results = await imageServiceClient.searchByImage(
+        fileBuffer,
+        req.file.originalname,
+        imagesWithEmbeddings,
+        topK
+      );
+
       fs.unlinkSync(req.file.path);
+
+      const resultIds = results.map((r) => r.id);
+      const fullImages = await Image.findAll({
+        where: { id: resultIds },
+        include: Prompt,
+      });
+
+      const imageMap = new Map(fullImages.map((img) => [img.id, img]));
+      const sortedResults = results
+        .map((r) => {
+          const img = imageMap.get(r.id);
+          if (img) {
+            return {
+              ...img.toJSON(),
+              similarity: r.similarity,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      res.json(sortedResults);
+    } catch (error) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ error: error.message });
     }
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 router.get('/service/status', async (req, res) => {
   try {
@@ -428,7 +533,7 @@ router.get('/service/status', async (req, res) => {
   }
 });
 
-router.post('/batch-analyze', async (req, res) => {
+router.post('/batch-analyze', authenticate, async (req, res) => {
   try {
     const { forceAll = false } = req.body;
 
@@ -439,10 +544,11 @@ router.post('/batch-analyze', async (req, res) => {
 
     let imagesToAnalyze;
     if (forceAll) {
-      imagesToAnalyze = await Image.findAll();
+      imagesToAnalyze = await Image.findAll({ where: { user_id: req.user.id } });
     } else {
       imagesToAnalyze = await Image.findAll({
         where: {
+          user_id: req.user.id,
           description: null,
         },
       });
@@ -472,7 +578,7 @@ router.post('/batch-analyze', async (req, res) => {
       if (result.status === 'success') {
         try {
           const filename = path.basename(result.image_path);
-          const image = await Image.findOne({ where: { filename } });
+          const image = await Image.findOne({ where: { filename, user_id: req.user.id } });
 
           if (image) {
             await image.update({
@@ -520,7 +626,7 @@ router.post('/batch-analyze', async (req, res) => {
  * 混合检索 API
  * 结合关键词和语义搜索，返回重排序后的结果
  */
-router.post('/search/hybrid', async (req, res) => {
+router.post('/search/hybrid', optionalAuth, async (req, res) => {
   try {
     const {
       query,
@@ -537,6 +643,14 @@ router.post('/search/hybrid', async (req, res) => {
       return res.status(400).json({ error: 'Query is required' });
     }
 
+    // Filter by user or public
+    const imageWhere = {};
+    if (req.user) {
+      imageWhere.user_id = req.user.id;
+    } else {
+      imageWhere.is_public = true;
+    }
+
     // 优化查询
     const optimizedQuery = retrievalService.optimizeQuery(query);
 
@@ -549,6 +663,7 @@ router.post('/search/hybrid', async (req, res) => {
       minSimilarity,
       themeIds,
       includeUnanalyzed,
+      imageWhere,
     });
 
     res.json({
@@ -593,7 +708,7 @@ router.post('/search/expand', async (req, res) => {
  * 搜索建议 API
  * 基于部分输入提供搜索建议
  */
-router.get('/search/suggestions', async (req, res) => {
+router.get('/search/suggestions', optionalAuth, async (req, res) => {
   try {
     const { q } = req.query;
 
@@ -601,11 +716,18 @@ router.get('/search/suggestions', async (req, res) => {
       return res.json({ suggestions: [] });
     }
 
-    // Op unused
+    const where = {};
+    // Filter by user or public
+    if (req.user) {
+      where.user_id = req.user.id;
+    } else {
+      where.is_public = true;
+    }
 
     // 从描述中提取匹配的词作为建议
     const images = await Image.findAll({
       where: {
+        ...where,
         description: {
           [Op.iLike]: `%${q}%`,
         },
@@ -630,6 +752,7 @@ router.get('/search/suggestions', async (req, res) => {
     // 从提示词中提取建议
     const prompts = await Prompt.findAll({
       where: {
+        ...where,
         content: {
           [Op.iLike]: `%${q}%`,
         },

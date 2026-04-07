@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const graphService = require('../services/graphService');
+const { optionalAuth } = require('../middleware/auth');
 
 // Get graph data (nodes and edges)
-router.get('/data', async (req, res) => {
+router.get('/data', optionalAuth, async (req, res) => {
   try {
     const { assetTypes, relationshipTypes, limit } = req.query;
 
@@ -20,6 +21,11 @@ router.get('/data', async (req, res) => {
       filters.limit = parseInt(limit, 10);
     }
 
+    // Filter by user if authenticated
+    if (req.user) {
+      filters.userId = req.user.id;
+    }
+
     const data = await graphService.getGraphData(filters);
     res.json(data);
   } catch (error) {
@@ -28,7 +34,7 @@ router.get('/data', async (req, res) => {
 });
 
 // Get all nodes (assets)
-router.get('/nodes', async (req, res) => {
+router.get('/nodes', optionalAuth, async (req, res) => {
   try {
     const { types, limit } = req.query;
 
@@ -40,6 +46,11 @@ router.get('/nodes', async (req, res) => {
       filters.limit = parseInt(limit, 10);
     }
 
+    // Filter by user if authenticated
+    if (req.user) {
+      filters.userId = req.user.id;
+    }
+
     const { nodes } = await graphService.getGraphData(filters);
     res.json(nodes);
   } catch (error) {
@@ -48,13 +59,18 @@ router.get('/nodes', async (req, res) => {
 });
 
 // Get all edges (relationships)
-router.get('/edges', async (req, res) => {
+router.get('/edges', optionalAuth, async (req, res) => {
   try {
     const { types } = req.query;
 
     const filters = {};
     if (types) {
       filters.relationshipTypes = Array.isArray(types) ? types : types.split(',');
+    }
+
+    // Filter by user if authenticated
+    if (req.user) {
+      filters.userId = req.user.id;
     }
 
     const { edges } = await graphService.getGraphData(filters);
@@ -65,7 +81,7 @@ router.get('/edges', async (req, res) => {
 });
 
 // Traverse from a node
-router.get('/traverse/:id', async (req, res) => {
+router.get('/traverse/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { depth, relationshipTypes } = req.query;
@@ -89,7 +105,7 @@ router.get('/traverse/:id', async (req, res) => {
 });
 
 // Find shortest path between nodes
-router.get('/paths/:sourceId/:targetId', async (req, res) => {
+router.get('/paths/:sourceId/:targetId', optionalAuth, async (req, res) => {
   try {
     const { sourceId, targetId } = req.params;
     const { relationshipTypes } = req.query;
@@ -126,7 +142,7 @@ router.get('/paths/:sourceId/:targetId', async (req, res) => {
 });
 
 // Get neighbors of a node
-router.get('/neighbors/:id', async (req, res) => {
+router.get('/neighbors/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { relationshipTypes } = req.query;
@@ -149,9 +165,14 @@ router.get('/neighbors/:id', async (req, res) => {
 });
 
 // Get connected components
-router.get('/components', async (req, res) => {
+router.get('/components', optionalAuth, async (req, res) => {
   try {
-    const components = await graphService.getConnectedComponents();
+    const filters = {};
+    if (req.user) {
+      filters.userId = req.user.id;
+    }
+
+    const components = await graphService.getConnectedComponents(filters);
     res.json(components);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -159,7 +180,7 @@ router.get('/components', async (req, res) => {
 });
 
 // Get node details
-router.get('/nodes/:id', async (req, res) => {
+router.get('/nodes/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const details = await graphService.getNodeDetails(id);
@@ -174,9 +195,14 @@ router.get('/nodes/:id', async (req, res) => {
 });
 
 // Get graph statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', optionalAuth, async (req, res) => {
   try {
-    const stats = await graphService.getGraphStats();
+    const filters = {};
+    if (req.user) {
+      filters.userId = req.user.id;
+    }
+
+    const stats = await graphService.getGraphStats(filters);
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });

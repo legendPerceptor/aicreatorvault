@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { Asset, AssetRelationship, sequelize } = require('../models');
 const graphService = require('../services/graphService');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 // 根据环境选择 uploads 目录
 const UPLOADS_DIR =
@@ -12,27 +13,32 @@ const UPLOADS_DIR =
     ? '/app/uploads'
     : path.join(__dirname, '../uploads');
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-    }
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// Multer storage with user directory support
+const getStorage = (userId) => {
+  return multer.diskStorage({
+    destination: (req, file, cb) => {
+      const userDir = path.join(UPLOADS_DIR, 'users', String(userId), 'images');
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir, { recursive: true });
+      }
+      cb(null, userDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+  });
+};
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
-});
+const getUpload = (userId) => {
+  return multer({
+    storage: getStorage(userId),
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  });
+};
 
 // Find asset by type and content (for deduplication)
-router.get('/find', async (req, res) => {
+router.get('/find', optionalAuth, async (req, res) => {
   try {
     const { asset_type, content } = req.query;
 
@@ -50,9 +56,14 @@ router.get('/find', async (req, res) => {
       });
     }
 
-    const asset = await Asset.findOne({
-      where: { asset_type: asset_type, content },
-    });
+    const where = { asset_type: asset_type, content };
+
+    // Filter by user
+    if (req.user) {
+      where.user_id = req.user.id;
+    }
+
+    const asset = await Asset.findOne({ where });
 
     if (asset) {
       return res.json(graphService.assetToGraphNode(asset));
@@ -65,11 +76,17 @@ router.get('/find', async (req, res) => {
 });
 
 // Get all assets with filtering
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { type, parentId, derivedType, limit, offset } = req.query;
 
     const where = {};
+
+    // Filter by user
+    if (req.user) {
+      where.user_id = req.user.id;
+    }
+
     if (type) {
       where.asset_type = type;
     }
@@ -100,13 +117,18 @@ router.get('/', async (req, res) => {
 });
 
 // Get a single asset by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const asset = await Asset.findByPk(id);
 
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    // Check user access
+    if (!req.user || asset.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Include relationships if requested
@@ -123,7 +145,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create a new asset
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   const body = req.body;
 
   try {
@@ -157,7 +179,7 @@ router.post('/', async (req, res) => {
     // Check for duplicate (asset_type + content should be unique)
     if (content) {
       const existing = await Asset.findOne({
-        where: { asset_type: asset_type, content },
+        where: { asset_type: asset_type, content, user_id: req.user.id },
       });
 
       if (existing) {
@@ -169,6 +191,7 @@ router.post('/', async (req, res) => {
     }
 
     const assetData = {
+      user_id: req.user.id,
       asset_type: asset_type,
       content,
       filename,
@@ -202,6 +225,7 @@ router.post('/', async (req, res) => {
           where: {
             asset_type: body.asset_type,
             content: body.content,
+            user_id: req.user.id,
           },
         });
         if (existing) {
@@ -219,124 +243,155 @@ router.post('/', async (req, res) => {
 });
 
 // Upload an image asset
-router.post('/upload', upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const { parentId, derivedType, promptId, score, description } = req.body;
-
-    let asset_type = req.body.asset_type || 'image';
-    if (parentId && derivedType) {
-      asset_type = 'derived_image';
-    }
-
-    const asset = await Asset.create({
-      asset_type,
-      filename: req.file.filename,
-      path: req.file.path,
-      score: score ? parseInt(score, 10) : null,
-      description,
-      parentId: parentId ? parseInt(parentId, 10) : null,
-      derivedType: derivedType || null,
-      metadata: {
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-      },
+router.post(
+  '/upload',
+  authenticate,
+  (req, res, next) => {
+    getUpload(req.user.id).single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
     });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
 
-    // Create relationship based on parent
-    if (parentId) {
+      const { parentId, derivedType, promptId, score, description } = req.body;
+
+      let asset_type = req.body.asset_type || 'image';
+      if (parentId && derivedType) {
+        asset_type = 'derived_image';
+      }
+
+      const asset = await Asset.create({
+        user_id: req.user.id,
+        asset_type,
+        filename: req.file.filename,
+        path: req.file.path,
+        score: score ? parseInt(score, 10) : null,
+        description,
+        parentId: parentId ? parseInt(parentId, 10) : null,
+        derivedType: derivedType || null,
+        metadata: {
+          originalName: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype,
+        },
+      });
+
+      // Create relationship based on parent
+      if (parentId) {
+        const relationshipType =
+          derivedType === 'variant' || derivedType === 'upscale' ? 'version_of' : 'derived_from';
+
+        await graphService.createRelationship(parseInt(parentId, 10), asset.id, relationshipType, {
+          derivedType,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      // Create relationship from prompt if provided
+      if (promptId) {
+        await graphService.createRelationship(parseInt(promptId, 10), asset.id, 'generated', {
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      res.status(201).json(graphService.assetToGraphNode(asset));
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Derive a new asset from an existing one
+router.post(
+  '/:id/derive',
+  authenticate,
+  (req, res, next) => {
+    getUpload(req.user.id).single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { derivedType, description } = req.body;
+
+      // Validate derived type
+      const validTypes = ['edit', 'variant', 'upscale', 'crop'];
+      if (!derivedType || !validTypes.includes(derivedType)) {
+        return res.status(400).json({
+          error: `Invalid derivedType. Must be one of: ${validTypes.join(', ')}`,
+        });
+      }
+
+      // Check if parent exists
+      const parent = await Asset.findByPk(id);
+      if (!parent) {
+        return res.status(404).json({ error: 'Parent asset not found' });
+      }
+
+      // Check ownership
+      if (parent.user_id !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      let assetData = {
+        user_id: req.user.id,
+        asset_type: 'derived_image',
+        parentId: parseInt(id, 10),
+        derivedType,
+        description,
+      };
+
+      // If a file was uploaded, include file info
+      if (req.file) {
+        assetData.filename = req.file.filename;
+        assetData.path = req.file.path;
+        assetData.metadata = {
+          originalName: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype,
+        };
+      } else {
+        // For non-file derivations, copy parent's file info
+        assetData.filename = parent.filename;
+        assetData.path = parent.path;
+      }
+
+      const asset = await Asset.create(assetData);
+
+      // Create relationship
       const relationshipType =
         derivedType === 'variant' || derivedType === 'upscale' ? 'version_of' : 'derived_from';
 
-      await graphService.createRelationship(parseInt(parentId, 10), asset.id, relationshipType, {
-        derivedType,
-        created_at: new Date().toISOString(),
-      });
-    }
+      const relationship = await graphService.createRelationship(
+        parseInt(id, 10),
+        asset.id,
+        relationshipType,
+        { derivedType, created_at: new Date().toISOString() }
+      );
 
-    // Create relationship from prompt if provided
-    if (promptId) {
-      await graphService.createRelationship(parseInt(promptId, 10), asset.id, 'generated', {
-        created_at: new Date().toISOString(),
+      res.status(201).json({
+        asset: graphService.assetToGraphNode(asset),
+        relationship,
       });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-
-    res.status(201).json(graphService.assetToGraphNode(asset));
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
-});
-
-// Derive a new asset from an existing one
-router.post('/:id/derive', upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { derivedType, description } = req.body;
-
-    // Validate derived type
-    const validTypes = ['edit', 'variant', 'upscale', 'crop'];
-    if (!derivedType || !validTypes.includes(derivedType)) {
-      return res.status(400).json({
-        error: `Invalid derivedType. Must be one of: ${validTypes.join(', ')}`,
-      });
-    }
-
-    // Check if parent exists
-    const parent = await Asset.findByPk(id);
-    if (!parent) {
-      return res.status(404).json({ error: 'Parent asset not found' });
-    }
-
-    let assetData = {
-      asset_type: 'derived_image',
-      parentId: parseInt(id, 10),
-      derivedType,
-      description,
-    };
-
-    // If a file was uploaded, include file info
-    if (req.file) {
-      assetData.filename = req.file.filename;
-      assetData.path = req.file.path;
-      assetData.metadata = {
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-      };
-    } else {
-      // For non-file derivations, copy parent's file info
-      assetData.filename = parent.filename;
-      assetData.path = parent.path;
-    }
-
-    const asset = await Asset.create(assetData);
-
-    // Create relationship
-    const relationshipType =
-      derivedType === 'variant' || derivedType === 'upscale' ? 'version_of' : 'derived_from';
-
-    const relationship = await graphService.createRelationship(
-      parseInt(id, 10),
-      asset.id,
-      relationshipType,
-      { derivedType, created_at: new Date().toISOString() }
-    );
-
-    res.status(201).json({
-      asset: graphService.assetToGraphNode(asset),
-      relationship,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+);
 
 // Update an asset
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { score, description, metadata } = req.body;
@@ -344,6 +399,11 @@ router.put('/:id', async (req, res) => {
     const asset = await Asset.findByPk(id);
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    // Check ownership
+    if (asset.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const updates = {};
@@ -359,13 +419,18 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete an asset
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const asset = await Asset.findByPk(id);
 
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    // Check ownership
+    if (asset.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Delete file if it's an image

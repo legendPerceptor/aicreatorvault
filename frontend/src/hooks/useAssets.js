@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 export function useAssets() {
   const [assets, setAssets] = useState([]);
@@ -23,7 +23,7 @@ export function useAssets() {
         params.append('offset', filters.offset);
       }
 
-      const response = await fetch(`${API_BASE}/assets?${params}`);
+      const response = await fetch(`${API_BASE}/assets?${params}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -46,7 +46,7 @@ export function useAssets() {
 
     try {
       const params = includeRelationships ? '?relationships=true' : '';
-      const response = await fetch(`${API_BASE}/assets/${id}${params}`);
+      const response = await fetch(`${API_BASE}/assets/${id}${params}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -70,6 +70,7 @@ export function useAssets() {
       const response = await fetch(`${API_BASE}/assets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(assetData),
       });
 
@@ -98,6 +99,7 @@ export function useAssets() {
       const response = await fetch(`${API_BASE}/assets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(updates),
       });
 
@@ -124,6 +126,7 @@ export function useAssets() {
     try {
       const response = await fetch(`${API_BASE}/assets/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -157,6 +160,7 @@ export function useAssets() {
 
       const response = await fetch(`${API_BASE}/assets/${parentId}/derive`, {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 
@@ -201,6 +205,7 @@ export function useAssets() {
 
       const response = await fetch(`${API_BASE}/assets/upload`, {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

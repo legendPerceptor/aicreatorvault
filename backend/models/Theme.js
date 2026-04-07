@@ -9,6 +9,12 @@ const Theme = (sequelize) => {
         primaryKey: true,
         autoIncrement: true,
       },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        field: 'user_id',
+      },
       name: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -16,6 +22,11 @@ const Theme = (sequelize) => {
       description: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      is_public: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'is_public',
       },
       created_at: {
         type: DataTypes.DATE,
@@ -29,6 +40,16 @@ const Theme = (sequelize) => {
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
+      indexes: [
+        {
+          fields: ['user_id'],
+          name: 'themes_user_id_index',
+        },
+        {
+          fields: ['is_public'],
+          name: 'themes_is_public_index',
+        },
+      ],
     }
   );
 };

@@ -1,25 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
 
-function useThemes() {
+const TOKEN_KEY = 'access_token';
+
+function useThemes(isAuthenticated = true) {
   const [themes, setThemes] = useState([]);
   const [selectedTheme, setSelectedTheme] = useState(null);
 
   const fetchThemes = useCallback(() => {
-    fetch('/api/themes')
+    if (!isAuthenticated) return;
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch('/api/themes', { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setThemes(data));
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchThemes();
-  }, [fetchThemes]);
+    if (isAuthenticated) {
+      fetchThemes();
+    }
+  }, [isAuthenticated, fetchThemes]);
 
   const addTheme = async (name, description) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch('/api/themes', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ name, description }),
     });
     const newThemeData = await response.json();
@@ -28,14 +39,20 @@ function useThemes() {
   };
 
   const addImageToTheme = async (themeId, imageId) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     await fetch(`/api/themes/${themeId}/images`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ imageId }),
     });
-    const themesData = await fetch('/api/themes').then((res) => res.json());
+    const themesData = await fetch('/api/themes', { headers, credentials: 'include' }).then((res) =>
+      res.json()
+    );
     setThemes(themesData);
     const updatedTheme = themesData.find((theme) => theme.id === themeId);
     if (updatedTheme) {
@@ -44,11 +61,17 @@ function useThemes() {
   };
 
   const removeImageFromTheme = async (themeId, imageId) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const response = await fetch(`/api/themes/${themeId}/images/${imageId}`, {
       method: 'DELETE',
+      headers,
+      credentials: 'include',
     });
     if (response.ok) {
-      const themesData = await fetch('/api/themes').then((res) => res.json());
+      const themesData = await fetch('/api/themes', { headers, credentials: 'include' }).then(
+        (res) => res.json()
+      );
       setThemes(themesData);
       const updatedTheme = themesData.find((theme) => theme.id === themeId);
       if (updatedTheme) {

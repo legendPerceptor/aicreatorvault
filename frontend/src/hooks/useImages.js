@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getAuthHeader } from '../utils/authHeader';
 
-function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchUnusedPrompts }) {
+const TOKEN_KEY = 'access_token';
+
+function useImages(
+  prompts,
+  { updatePromptImages, removeImageFromPrompts, fetchUnusedPrompts },
+  isAuthenticated = true
+) {
   const [images, setImages] = useState([]);
   const [batchAnalyzing, setBatchAnalyzing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -8,24 +15,36 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   const [analyzedFilter, setAnalyzedFilter] = useState('all');
 
   const fetchImages = useCallback(() => {
+    if (!isAuthenticated) return;
+
+    // Read token directly from sessionStorage to avoid closure issues
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
     let url = '/api/images';
     if (analyzedFilter === 'analyzed') {
       url += '?analyzed=true';
     } else if (analyzedFilter === 'unanalyzed') {
       url += '?analyzed=false';
     }
-    fetch(url)
+    fetch(url, { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setImages(data));
-  }, [analyzedFilter]);
+  }, [analyzedFilter, isAuthenticated]);
 
   useEffect(() => {
-    fetchImages();
-  }, [fetchImages]);
+    if (isAuthenticated) {
+      fetchImages();
+    }
+  }, [isAuthenticated, fetchImages]);
 
   const uploadImage = async (formData) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const response = await fetch('/api/images', {
       method: 'POST',
+      headers,
+      credentials: 'include',
       body: formData,
     });
     const newImageData = await response.json();
@@ -35,8 +54,12 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   };
 
   const deleteImage = async (id) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     await fetch(`/api/images/${id}`, {
       method: 'DELETE',
+      headers,
+      credentials: 'include',
     });
     setImages((prev) => prev.filter((image) => image.id !== id));
     removeImageFromPrompts(id);
@@ -44,11 +67,15 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   };
 
   const updateImageScore = async (id, score) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch(`/api/images/${id}/score`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ score }),
     });
     const updatedData = await response.json();
@@ -58,11 +85,15 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   };
 
   const updateImagePrompt = async (imageId, promptId) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch(`/api/images/${imageId}/prompt`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ promptId: promptId || null }),
     });
     const updatedImage = await response.json();
@@ -79,8 +110,12 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   const analyzeSingleImage = async (imageId) => {
     setAnalyzingImageId(imageId);
     try {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(`/api/images/${imageId}/analyze`, {
         method: 'POST',
+        headers,
+        credentials: 'include',
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -99,9 +134,15 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
   };
 
   const generateImages = async ({ prompt, n, aspect_ratio }) => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     const response = await fetch('/api/images/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({ prompt, n, aspect_ratio }),
     });
     if (!response.ok) {
@@ -126,11 +167,15 @@ function useImages(prompts, { updatePromptImages, removeImageFromPrompts, fetchU
 
       setBatchProgress({ current: 0, total: imagesToAnalyze.length });
 
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
       const response = await fetch('/api/images/batch-analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ forceAll }),
       });
 

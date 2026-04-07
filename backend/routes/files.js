@@ -8,18 +8,27 @@ const { optionalAuth } = require('../middleware/auth');
 const UPLOADS_DIR =
   process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV
     ? '/app/uploads'
-    : path.join(__dirname, '../uploads');
+    : path.join(__dirname, '../../uploads');
+
+// Legacy 用户 ID，其文件默认公开访问
+const LEGACY_USER_ID = 1;
 
 /**
  * GET /api/files/:userId/:filename
  * Serve user files with authorization check
+ * Legacy user (id=1) files are publicly accessible
  */
 router.get('/:userId/:filename', optionalAuth, async (req, res) => {
   try {
     const { userId, filename } = req.params;
+    const userIdNum = parseInt(userId, 10);
 
     // Authorization check
-    if (!req.user || req.user.id !== parseInt(userId, 10)) {
+    // Legacy user's files are public
+    const isLegacyUser = userIdNum === LEGACY_USER_ID;
+    const isOwner = req.user && req.user.id === userIdNum;
+
+    if (!isLegacyUser && !isOwner) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -46,13 +55,19 @@ router.get('/:userId/:filename', optionalAuth, async (req, res) => {
 /**
  * GET /api/files/:userId/images/:filename
  * Alias for user image files
+ * Legacy user (id=1) files are publicly accessible
  */
 router.get('/:userId/images/:filename', optionalAuth, async (req, res) => {
   try {
     const { userId, filename } = req.params;
+    const userIdNum = parseInt(userId, 10);
 
     // Authorization check
-    if (!req.user || req.user.id !== parseInt(userId, 10)) {
+    // Legacy user's files are public
+    const isLegacyUser = userIdNum === LEGACY_USER_ID;
+    const isOwner = req.user && req.user.id === userIdNum;
+
+    if (!isLegacyUser && !isOwner) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

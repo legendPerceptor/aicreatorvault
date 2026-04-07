@@ -31,17 +31,16 @@ function AuthPage({ onAuthSuccess }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const body = mode === 'login' ? { email, password } : { username, email, password };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          username: mode === 'register' ? username : email.split('@')[0],
-          email,
-          password,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();

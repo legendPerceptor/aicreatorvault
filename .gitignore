@@ -53,3 +53,5 @@ build/
 uploads/
 xray/config.json
 frontend/*.png
+
+draft/

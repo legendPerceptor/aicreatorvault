@@ -17,7 +17,13 @@ const filesRouter = require('./routes/files');
 const app = express();
 
 // 中间件
-app.use(cors());
+// CORS 配置 - 支持 credentials 用于 cookie
+app.use(
+  cors({
+    origin: true, // 开发环境允许所有来源，生产环境应配置具体域名
+    credentials: true, // 允许发送 cookie
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

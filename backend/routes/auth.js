@@ -1,14 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { User } = require('../models');
 const { generateTokens, verifyToken, sendTokens, clearTokens } = require('../utils/auth');
 const { authenticate } = require('../middleware/auth');
+
+// 登录速率限制：5分钟内最多 10 次尝试
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 分钟
+  max: 10,
+  message: { error: '登录尝试次数过多，请 5 分钟后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 注册速率限制：1小时内最多 5 次
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 小时
+  max: 5,
+  message: { error: '注册请求过多，请 1 小时后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * POST /api/auth/register
  * Register a new user
  */
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -69,7 +88,7 @@ router.post('/register', async (req, res) => {
  * POST /api/auth/login
  * Login with email and password
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

@@ -110,6 +110,8 @@ services:
   # ==================== PostgreSQL + pgvector ====================
   postgres:
     image: pgvector/pgvector:pg16
+    ports:
+      - "${DB_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${DB_USER:-aicreator}
       - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}

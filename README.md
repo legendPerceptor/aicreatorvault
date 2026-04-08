@@ -9,11 +9,13 @@
 ## 功能特点
 
 ### 核心功能
+- **多用户认证**：完整的用户注册、登录、登出系统，支持 JWT + Refresh Token 双令牌机制
 - **提示词管理**：存储和管理 AI 创作提示词，支持评分和关联图片
 - **图片管理**：上传和管理 AI 生成的图片，支持评分和关联提示词
 - **AI 图片生成**：使用 MiniMax API 直接生成图片，支持多图生成、多种宽高比
 - **主题管理**：围绕主题组织参考图片，支持拖拽上传和灵活分类
 - **参考图搜索**：搜索网络参考图，一键下载添加到本地库
+- **用户隔离**：文件和数据按用户隔离，确保隐私安全
 
 ### 智能搜索
 - **AI 图片分析**：自动分析图片内容并生成描述和嵌入向量
@@ -68,6 +70,12 @@ DB_PASSWORD=your_secure_password
 # Synology: /volume1/docker/aicreatorvault/uploads
 # 本地开发: ./uploads
 UPLOADS_PATH=./uploads
+
+# JWT 认证配置
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+AUTH_COOKIE_SECURE=false  # 生产环境设为 true（HTTPS）
 
 # OpenAI API
 OPENAI_API_KEY=sk-your-api-key
@@ -244,23 +252,30 @@ aicreatorvault/
 │   │   ├── Theme.js             # 主题模型
 │   │   ├── ThemeImage.js        # 主题-图片关联模型
 │   │   ├── Asset.js             # 统一资产模型（知识图谱）
-│   │   └── AssetRelationship.js # 资产关系模型（知识图谱）
+│   │   ├── AssetRelationship.js # 资产关系模型（知识图谱）
+│   │   └── User.js             # 用户模型
 │   ├── routes/
 │   │   ├── prompts.js           # 提示词 API
 │   │   ├── images.js            # 图片 API
 │   │   ├── themes.js            # 主题 API
 │   │   ├── assets.js            # 资产管理 API（含衍生版本）
 │   │   ├── graph.js             # 知识图谱 API
+│   │   ├── auth.js              # 认证 API
+│   │   ├── files.js             # 受保护的文件服务
 │   │   └── referenceSearch.js   # 参考图搜索 API
+│   ├── middleware/
+│   │   └── auth.js              # 认证中间件
+│   ├── utils/
+│   │   ├── vectorSearch.js      # 向量搜索工具
+│   │   └── auth.js              # JWT 认证工具
 │   ├── services/
 │   │   ├── imageServiceClient.js      # AI 服务客户端（图片分析）
 │   │   ├── imageGenerationClient.js    # MiniMax 图片生成客户端
 │   │   ├── graphService.js            # 图谱遍历服务
 │   │   └── retrievalService.js        # 检索服务（混合检索）
-│   ├── utils/
-│   │   └── vectorSearch.js      # 向量搜索工具
 │   ├── migrations/              # 数据库迁移脚本
-│   │   └── migrateToAssets.js   # 迁移到知识图谱
+│   │   ├── migrateToAssets.js   # 迁移到知识图谱
+│   │   └── addUsers.js         # 多用户迁移
 │   ├── uploads/                 # 上传的图片
 │   ├── temp/                    # 生成的临时图片
 │   ├── server.js                # 后端服务器
@@ -287,7 +302,16 @@ aicreatorvault/
 │   │   │   ├── useImages.js          # 图片数据钩子
 │   │   │   ├── useThemes.js          # 主题数据钩子
 │   │   │   ├── useAssets.js          # 资产数据钩子
-│   │   │   └── useGraph.js           # 图谱数据钩子
+│   │   │   ├── useGraph.js           # 图谱数据钩子
+│   │   │   └── useAuth.js           # 认证状态钩子
+│   │   ├── pages/
+│   │   │   ├── PromptsPage.jsx       # 提示词管理
+│   │   │   ├── ImagesPage.jsx        # 图片管理
+│   │   │   ├── SearchPage.jsx        # 搜索页面
+│   │   │   ├── ThemesPage.jsx        # 主题管理
+│   │   │   ├── ReferenceSearchPage.jsx # 参考图搜索
+│   │   │   ├── KnowledgeGraphPage.jsx # 知识图谱
+│   │   │   └── AuthPage.jsx         # 认证页面（登录/注册）
 │   │   ├── App.jsx              # 主应用组件
 │   │   ├── main.jsx             # 入口文件
 │   │   └── index.css            # 样式文件
@@ -326,7 +350,34 @@ aicreatorvault/
 
 ## API 端点
 
-### 提示词 API
+> **注意**：除认证 API 外，大多数 API 端点需要认证。请求时需在 Header 中包含 Access Token：
+> ```bash
+> -H "Authorization: Bearer <access_token>"
+> ```
+
+### 认证 API（无需认证）
+
+- `POST /api/auth/register` - 注册新用户
+- `POST /api/auth/login` - 用户登录
+- `POST /api/auth/logout` - 用户登出
+- `POST /api/auth/refresh` - 刷新 Access Token
+- `GET /api/auth/me` - 获取当前用户信息
+
+#### 获取 Access Token 示例
+
+```bash
+# 1. 登录获取 Token
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"email":"your@email.com","password":"yourpassword"}' \
+  -c cookies.txt \
+  http://localhost:3001/api/auth/login
+
+# 2. 使用 Access Token 访问需要认证的 API
+curl -H "Authorization: Bearer <access_token>" \
+  http://localhost:3001/api/prompts
+```
+
+### 提示词 API（需要认证）
 
 - `GET /api/prompts` - 获取所有提示词
 - `GET /api/prompts/unused` - 获取未使用的提示词
@@ -436,6 +487,29 @@ AI Creator Vault 引入了知识图谱功能，将所有创作资产（提示词
 ```bash
 node backend/migrations/migrateToAssets.js
 ```
+
+## 多用户数据迁移
+
+升级到多用户版本后，需要运行用户迁移脚本将现有数据迁移到多用户体系：
+
+```bash
+# 本地环境
+node backend/migrations/addUsers.js
+
+# Docker 环境
+docker exec -it <container_name> node backend/migrations/addUsers.js
+
+# 预览模式（不执行实际更改）
+node backend/migrations/addUsers.js --dry-run
+```
+
+迁移脚本功能：
+- 创建默认用户 `legacy@local`（ID=1）
+- 为所有现有数据添加 `user_id=1`
+- 将上传文件从 `uploads/` 迁移到 `uploads/users/1/images/`
+- 支持多次运行（幂等操作）
+
+**注意**：迁移前请备份数据库和上传文件。
 
 ## 更多文档
 

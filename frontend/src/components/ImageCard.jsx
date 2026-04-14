@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import StarRating, { StaticStarRating } from './StarRating';
 import ImagePreviewModal from './ImagePreviewModal';
 import { SimilarityBadge, MatchReason } from './search/SimilarityRadar';
+import { useTranslation } from '../i18n/useTranslation';
 
 function ImageCard({
   image,
@@ -28,6 +29,7 @@ function ImageCard({
   matchReasons = null,
   viewMode = 'grid',
 }) {
+  const { t } = useTranslation();
   const [showPreview, setShowPreview] = useState(false);
 
   const formatSimilarity = (sim) => {
@@ -43,7 +45,7 @@ function ImageCard({
         <div className="image-header">
           <img
             src={`/api/files/${image.user_id}/images/${image.filename}`}
-            alt="AI生成"
+            alt={t('imageCard.aiGenerated')}
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}
           />
@@ -53,7 +55,7 @@ function ImageCard({
             </button>
           )}
           {showSimilarity && similarity !== null && <SimilarityBadge similarity={similarity} />}
-          {isAnalyzed && <div className="analyzed-badge">已分析</div>}
+          {isAnalyzed && <div className="analyzed-badge">{t('imageCard.analyzed')}</div>}
         </div>
         <div className="content">
           {showSimilarity && matchReasons && matchReasons.length > 0 && (
@@ -63,7 +65,7 @@ function ImageCard({
           {image.description && (
             <div className="ai-description">
               <div className="description-header">
-                <span className="ai-label">AI 描述</span>
+                <span className="ai-label">{t('imageCard.aiDescription')}</span>
               </div>
               <p className="description-text">
                 {image.description.length > 100
@@ -72,7 +74,7 @@ function ImageCard({
               </p>
               {image.analyzedAt && (
                 <span className="analyzed-time">
-                  分析于: {new Date(image.analyzedAt).toLocaleDateString()}
+                  {t('imageCard.analyzedAt', { date: new Date(image.analyzedAt).toLocaleDateString() })}
                 </span>
               )}
             </div>
@@ -81,9 +83,9 @@ function ImageCard({
           {showPromptEdit &&
             (editingImagePrompt === image.id ? (
               <div className="prompt-edit">
-                <label>选择提示词：</label>
+                <label>{t('imageCard.selectPrompt')}</label>
                 <select value={selectedImagePromptId || ''} onChange={onPromptChange}>
-                  <option value="">无</option>
+                  <option value="">{t('common.none')}</option>
                   {prompts.map((prompt) => (
                     <option key={prompt.id} value={prompt.id}>
                       {prompt.content.substring(0, 30)}...
@@ -91,8 +93,8 @@ function ImageCard({
                   ))}
                 </select>
                 <div className="prompt-actions">
-                  <button onClick={() => onUpdatePrompt(image.id)}>确认</button>
-                  <button onClick={onCancelEditPrompt}>取消</button>
+                  <button onClick={() => onUpdatePrompt(image.id)}>{t('common.confirm')}</button>
+                  <button onClick={onCancelEditPrompt}>{t('common.cancel')}</button>
                 </div>
               </div>
             ) : (
@@ -108,20 +110,20 @@ function ImageCard({
                         className="edit-prompt-btn"
                         onClick={() => onStartEditPrompt(image.id, image.Prompt.id)}
                       >
-                        修改
+                        {t('imageCard.modify')}
                       </button>
                     )}
                   </div>
                 )}
                 {!image.Prompt && (
                   <div className="prompt">
-                    <span>无关联提示词</span>
+                    <span>{t('imageCard.noLinkedPrompt')}</span>
                     {onStartEditPrompt && (
                       <button
                         className="edit-prompt-btn"
                         onClick={() => onStartEditPrompt(image.id)}
                       >
-                        添加
+                        {t('imageCard.addPrompt')}
                       </button>
                     )}
                   </div>
@@ -137,14 +139,14 @@ function ImageCard({
                 onClick={() => onAnalyzeSingle(image.id)}
                 disabled={analyzingImageId === image.id}
               >
-                {analyzingImageId === image.id ? '分析中...' : '分析图片'}
+                {analyzingImageId === image.id ? t('imageCard.analyzing') : t('imageCard.analyzeImage')}
               </button>
             </div>
           )}
 
           {showScore && (
             <div className="score">
-              <label>评分：</label>
+              <label>{t('imageCard.score')}</label>
               {editingScores[`images_${image.id}`] ? (
                 <div className="score-edit">
                   <StarRating
@@ -154,13 +156,13 @@ function ImageCard({
                     onScoreChange={onScoreChange}
                   />
                   <div className="score-actions">
-                    <button onClick={() => onScoreConfirm('images', image.id)}>确认</button>
-                    <button onClick={() => onScoreCancel('images', image.id)}>取消</button>
+                    <button onClick={() => onScoreConfirm('images', image.id)}>{t('common.confirm')}</button>
+                    <button onClick={() => onScoreCancel('images', image.id)}>{t('common.cancel')}</button>
                   </div>
                 </div>
               ) : (
                 <span className="score-value" onClick={() => onScoreEdit('images', image.id)}>
-                  {image.score ? <StaticStarRating score={image.score} /> : '点击评分'}
+                  {image.score ? <StaticStarRating score={image.score} /> : t('imageCard.clickToScore')}
                 </span>
               )}
             </div>
@@ -173,6 +175,7 @@ function ImageCard({
 }
 
 export function SimpleImageCard({ image, onDelete, onAddToTheme }) {
+  const { t } = useTranslation();
   const [showPreview, setShowPreview] = useState(false);
 
   return (
@@ -181,7 +184,7 @@ export function SimpleImageCard({ image, onDelete, onAddToTheme }) {
         <div className="image-header">
           <img
             src={`/api/files/${image.user_id}/images/${image.filename}`}
-            alt="AI生成"
+            alt={t('imageCard.aiGenerated')}
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}
           />
@@ -193,7 +196,7 @@ export function SimpleImageCard({ image, onDelete, onAddToTheme }) {
         </div>
         {onAddToTheme && (
           <button className="add-to-theme-btn" onClick={() => onAddToTheme(image.id)}>
-            添加到主题
+            {t('imageCard.addToTheme')}
           </button>
         )}
       </div>

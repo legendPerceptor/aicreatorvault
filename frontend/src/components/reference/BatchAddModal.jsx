@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function BatchAddModal({ themes, selectedCount, onClose, onConfirm }) {
+  const { t } = useTranslation();
   const [selectedTheme, setSelectedTheme] = useState(null);
 
   const handleConfirm = () => {
@@ -11,7 +13,7 @@ function BatchAddModal({ themes, selectedCount, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>批量添加参考图</h3>
+          <h3>{t('batchAdd.title')}</h3>
           <button className="btn-close" onClick={onClose}>
             ×
           </button>
@@ -19,16 +21,16 @@ function BatchAddModal({ themes, selectedCount, onClose, onConfirm }) {
 
         <div className="modal-body">
           <p className="info-text">
-            即将添加 <strong>{selectedCount}</strong> 张参考图到数据库
+            {t('batchAdd.aboutToAdd')}<strong>{selectedCount}</strong>{t('batchAdd.images')}
           </p>
 
           <div className="theme-selector">
-            <label>选择主题（可选）：</label>
+            <label>{t('batchAdd.selectTheme')}</label>
             <select
               value={selectedTheme || ''}
               onChange={(e) => setSelectedTheme(e.target.value ? Number(e.target.value) : null)}
             >
-              <option value="">不关联主题</option>
+              <option value="">{t('batchAdd.noTheme')}</option>
               {themes.map((theme) => (
                 <option key={theme.id} value={theme.id}>
                   {theme.name}
@@ -38,17 +40,17 @@ function BatchAddModal({ themes, selectedCount, onClose, onConfirm }) {
           </div>
 
           <div className="preview-info">
-            <p>💡 图片将自动下载并添加到素材库</p>
-            <p>🤖 系统会自动分析图片内容并生成标签</p>
+            <p>💡 {t('batchAdd.autoDownload')}</p>
+            <p>🤖 {t('batchAdd.autoAnalyze')}</p>
           </div>
         </div>
 
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>
-            取消
+            {t('batchAdd.cancel')}
           </button>
           <button className="btn-confirm" onClick={handleConfirm}>
-            确认添加
+            {t('batchAdd.confirmAdd')}
           </button>
         </div>
       </div>

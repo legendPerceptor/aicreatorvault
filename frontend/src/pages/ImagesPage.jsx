@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ImageCard from '../components/ImageCard';
 import ImagePreviewModal from '../components/ImagePreviewModal';
+import { useTranslation } from '../i18n/useTranslation';
 
 function ImagesPage({
   images,
@@ -30,6 +31,7 @@ function ImagesPage({
   isGeneratingImages,
   isSavingPending,
 }) {
+  const { t } = useTranslation();
   const [draggedImage, setDraggedImage] = useState(null);
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [showPromptSelection, setShowPromptSelection] = useState(false);
@@ -56,7 +58,6 @@ function ImagesPage({
       aspect_ratio: generationAspectRatio,
       autoAnalyze: genAutoAnalyze,
     });
-    // Select all by default
     const all = {};
     (pendingImages || []).forEach((_, i) => {
       all[i] = true;
@@ -90,14 +91,12 @@ function ImagesPage({
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    // 使用状态中的autoAnalyze值
     if (!autoAnalyze) {
       formData.set('autoAnalyze', 'false');
     }
 
     await onUploadImage(formData);
     e.target.reset();
-    // 重置checkbox状态为默认值
     setAutoAnalyze(true);
   };
 
@@ -137,7 +136,6 @@ function ImagesPage({
     setDraggedImage(null);
     setSelectedPromptId('');
     setShowPromptSelection(false);
-    // 重置checkbox状态为默认值
     setAutoAnalyze(true);
   };
 
@@ -165,8 +163,8 @@ function ImagesPage({
 
   const handleBatchAnalyze = async (forceAll = false) => {
     const message = forceAll
-      ? '确定要重新分析所有图片吗？这可能需要一些时间。'
-      : '确定要批量分析未分析的图片吗？这可能需要一些时间。';
+      ? t('images.confirmReanalyzeAll')
+      : t('images.confirmBatchAnalyze');
     if (!window.confirm(message)) {
       return;
     }
@@ -180,20 +178,19 @@ function ImagesPage({
   return (
     <div className="section">
       <div className="section-header">
-        <h2>图片管理</h2>
+        <h2>{t('images.title')}</h2>
         <button className="generate-btn" onClick={() => setShowGenerationForm(!showGenerationForm)}>
-          {showGenerationForm ? '取消生成' : 'AI 生成图片'}
+          {showGenerationForm ? t('images.cancelGeneration') : t('images.generateImages')}
         </button>
       </div>
 
-      {/* 生成图片表单 - 内联显示 */}
       {showGenerationForm && (
         <div className="generation-form-inline">
           <form onSubmit={handleGenerate} className="generation-form-row">
             <textarea
               value={generationPrompt}
               onChange={(e) => setGenerationPrompt(e.target.value)}
-              placeholder="输入提示词描述想要生成的图片..."
+              placeholder={t('images.promptLabel')}
               rows={2}
               disabled={isGeneratingImages}
             />
@@ -204,7 +201,7 @@ function ImagesPage({
             >
               {[1, 2, 3, 4].map((n) => (
                 <option key={n} value={n}>
-                  {n} 张
+                  {t('images.count', { n })}
                 </option>
               ))}
             </select>
@@ -224,7 +221,7 @@ function ImagesPage({
               className="generate-btn"
               disabled={isGeneratingImages || !generationPrompt.trim()}
             >
-              {isGeneratingImages ? '生成中...' : '生成'}
+              {isGeneratingImages ? t('images.generating') : t('images.generate')}
             </button>
             <div className="checkbox-group">
               <input
@@ -234,38 +231,37 @@ function ImagesPage({
                 onChange={(e) => setGenAutoAnalyze(e.target.checked)}
                 disabled={isGeneratingImages}
               />
-              <label htmlFor="genAutoAnalyze">自动AI分析</label>
+              <label htmlFor="genAutoAnalyze">{t('images.autoAnalyze')}</label>
             </div>
           </form>
         </div>
       )}
 
-      {/* 待保存的生成图片 */}
       {pendingImages && pendingImages.length > 0 && (
         <div className="pending-images-section">
           <div className="pending-header">
-            <h3>生成的图片（待保存）</h3>
+            <h3>{t('images.pendingImages')}</h3>
             <div className="pending-actions">
               <button
                 onClick={() => handleSavePending('prompt-and-images')}
                 className="save-pending-btn save-with-prompt"
                 disabled={isSavingPending}
               >
-                {isSavingPending ? '分析中...' : '保存提示词 + 图片'}
+                {isSavingPending ? t('images.analyzing') : t('images.savePromptAndImages')}
               </button>
               <button
                 onClick={() => handleSavePending('images-only')}
                 className="save-pending-btn save-images-only"
                 disabled={isSavingPending}
               >
-                {isSavingPending ? '分析中...' : '仅保存图片'}
+                {isSavingPending ? t('images.analyzing') : t('images.saveImagesOnly')}
               </button>
               <button
                 onClick={handleDiscardPending}
                 className="discard-pending-btn"
                 disabled={isSavingPending}
               >
-                {isSavingPending ? '保存中...' : '丢弃'}
+                {isSavingPending ? t('common.saving') : t('images.discard')}
               </button>
             </div>
           </div>
@@ -277,19 +273,19 @@ function ImagesPage({
               >
                 <img
                   src={`/temp/${img.filename}`}
-                  alt={`生成图片 ${index + 1}`}
+                  alt={t('images.generatingImageAlt', { index: index + 1 })}
                   onClick={() => togglePendingImage(index)}
                 />
                 <div className="pending-overlay">
                   <button
                     className="pending-preview-btn"
                     onClick={() => setPendingPreview(img)}
-                    title="预览"
+                    title={t('common.preview')}
                   >
                     👁
                   </button>
                   <span onClick={() => togglePendingImage(index)}>
-                    {selectedPendingImages[index] ? '✓ 已选择' : '点击选择'}
+                    {selectedPendingImages[index] ? `✓ ${t('common.selected')}` : t('images.clickToSelect')}
                   </span>
                 </div>
               </div>
@@ -298,15 +294,17 @@ function ImagesPage({
         </div>
       )}
 
-      {/* 当没有暂存图片时，显示普通上传表单和拖拽区域 */}
       {!draggedImage && !showGenerationForm && (
         <>
           <form onSubmit={handleImageUpload} className="form-group">
-            <label htmlFor="image">上传图片：</label>
-            <input type="file" id="image" name="image" />
-            <label htmlFor="promptId">关联提示词：</label>
+            <label htmlFor="image">{t('images.uploadImage')}</label>
+            <div className="file-input-wrapper">
+              <input type="file" id="image" name="image" />
+              <label htmlFor="image" className="file-input-label">{t('images.selectFile')}</label>
+            </div>
+            <label htmlFor="promptId">{t('images.linkPrompt')}</label>
             <select id="promptId" name="promptId">
-              <option value="">选择提示词</option>
+              <option value="">{t('images.selectPrompt')}</option>
               {unusedPrompts.map((prompt) => (
                 <option key={prompt.id} value={prompt.id}>
                   {prompt.content.substring(0, 50)}...
@@ -321,9 +319,9 @@ function ImagesPage({
                 checked={autoAnalyze}
                 onChange={(e) => setAutoAnalyze(e.target.checked)}
               />
-              <label htmlFor="autoAnalyze">自动进行AI分析</label>
+              <label htmlFor="autoAnalyze">{t('images.autoAIAnalysis')}</label>
             </div>
-            <button type="submit">上传图片</button>
+            <button type="submit">{t('images.uploadImageBtn')}</button>
           </form>
           <div
             className="drag-drop-area"
@@ -331,28 +329,27 @@ function ImagesPage({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <p>拖拽图片到这里上传</p>
+            <p>{t('images.dragToUpload')}</p>
           </div>
         </>
       )}
 
-      {/* 当有暂存图片时，显示暂存图片部分 */}
       {draggedImage && (
         <div className="staged-image-section">
-          <h3>暂存图片</h3>
+          <h3>{t('images.stagedImage')}</h3>
           <div className="staged-image-preview">
-            <img src={URL.createObjectURL(draggedImage)} alt="暂存图片" />
-            <p>文件名: {draggedImage.name}</p>
-            <p>大小: {(draggedImage.size / 1024).toFixed(2)} KB</p>
+            <img src={URL.createObjectURL(draggedImage)} alt={t('images.stagedImage')} />
+            <p>{t('images.fileName', { name: draggedImage.name })}</p>
+            <p>{t('images.fileSize', { size: (draggedImage.size / 1024).toFixed(2) })}</p>
           </div>
           <form onSubmit={handleStagedImageUpload} className="form-group">
-            <label htmlFor="stagedPromptId">选择提示词：</label>
+            <label htmlFor="stagedPromptId">{t('images.selectPromptLabel')}</label>
             <select
               id="stagedPromptId"
               value={selectedPromptId}
               onChange={(e) => setSelectedPromptId(e.target.value)}
             >
-              <option value="">无</option>
+              <option value="">{t('common.none')}</option>
               {unusedPrompts.map((prompt) => (
                 <option key={prompt.id} value={prompt.id}>
                   {prompt.content.substring(0, 50)}...
@@ -367,29 +364,28 @@ function ImagesPage({
                 checked={autoAnalyze}
                 onChange={(e) => setAutoAnalyze(e.target.checked)}
               />
-              <label htmlFor="stagedAutoAnalyze">自动进行AI分析</label>
+              <label htmlFor="stagedAutoAnalyze">{t('images.autoAIAnalysis')}</label>
             </div>
             <div className="staged-image-actions">
-              <button type="submit">确认上传</button>
+              <button type="submit">{t('images.confirmUpload')}</button>
               <button type="button" onClick={handleCancelStagedImage}>
-                取消
+                {t('common.cancel')}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* 筛选栏 - 放在图片列表上方，包含批量分析按钮 */}
       <div className="filter-section">
-        <label>筛选：</label>
+        <label>{t('images.filter')}</label>
         <select
           value={analyzedFilter}
           onChange={(e) => onAnalyzedFilterChange(e.target.value)}
           className="filter-select"
         >
-          <option value="all">全部图片</option>
-          <option value="analyzed">已分析</option>
-          <option value="unanalyzed">未分析</option>
+          <option value="all">{t('images.allImages')}</option>
+          <option value="analyzed">{t('images.analyzed')}</option>
+          <option value="unanalyzed">{t('images.unanalyzed')}</option>
         </select>
 
         <div className="batch-analyze-buttons">
@@ -398,21 +394,21 @@ function ImagesPage({
             disabled={batchAnalyzing}
             className="batch-analyze-btn"
           >
-            {batchAnalyzing ? '分析中...' : '分析未分析图片'}
+            {batchAnalyzing ? t('images.analyzing') : t('images.analyzeUnanalyzed')}
           </button>
           <button
             onClick={() => handleBatchAnalyze(true)}
             disabled={batchAnalyzing}
             className="batch-analyze-btn batch-analyze-btn-secondary"
           >
-            {batchAnalyzing ? '分析中...' : '重新分析全部'}
+            {batchAnalyzing ? t('images.analyzing') : t('images.reanalyzeAll')}
           </button>
         </div>
 
         <span className="image-count">
-          共 {images.length} 张图片
+          {t('images.totalImages', { count: images.length })}
           {unanalyzedCount > 0 && !batchAnalyzing && (
-            <span className="unanalyzed-count">（{unanalyzedCount} 张图片待分析）</span>
+            <span className="unanalyzed-count">{t('images.unanalyzedCount', { count: unanalyzedCount })}</span>
           )}
         </span>
 
@@ -436,8 +432,12 @@ function ImagesPage({
             className={`batch-result ${batchResult.updated > 0 ? 'success' : batchResult.failed > 0 ? 'error' : 'warning'}`}
           >
             <p>
-              批量分析完成：共 {batchResult.total} 张，成功 {batchResult.updated} 张，失败{' '}
-              {batchResult.failed} 张{batchResult.skipped > 0 && `，跳过 ${batchResult.skipped} 张`}
+              {t('images.batchComplete', {
+                total: batchResult.total,
+                updated: batchResult.updated,
+                failed: batchResult.failed,
+                skipped: batchResult.skipped > 0 ? t('images.batchSkipped', { count: batchResult.skipped }) : '',
+              })}
               {batchResult.message && ` - ${batchResult.message}`}
             </p>
           </div>
@@ -469,7 +469,6 @@ function ImagesPage({
         ))}
       </div>
 
-      {/* Pending images preview modal */}
       {pendingPreview && (
         <div className="image-preview-modal" onClick={() => setPendingPreview(null)}>
           <div className="image-preview-content" onClick={(e) => e.stopPropagation()}>
@@ -477,7 +476,7 @@ function ImagesPage({
               ×
             </button>
             <div className="preview-image-container">
-              <img src={`/temp/${pendingPreview.filename}`} alt="预览" />
+              <img src={`/temp/${pendingPreview.filename}`} alt={t('imagePreview.previewAlt')} />
             </div>
             <div className="preview-actions">
               <button
@@ -495,12 +494,12 @@ function ImagesPage({
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                   } catch (error) {
-                    console.error('下载失败:', error);
-                    alert('下载失败，请重试');
+                    console.error('Download failed:', error);
+                    alert(t('images.downloadFailed'));
                   }
                 }}
               >
-                下载图片
+                {t('images.downloadImage')}
               </button>
             </div>
           </div>

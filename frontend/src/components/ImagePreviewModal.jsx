@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 function ImagePreviewModal({ image, onClose }) {
+  const { t } = useTranslation();
   if (!image) return null;
 
   const handleDownload = async () => {
@@ -19,7 +21,7 @@ function ImagePreviewModal({ image, onClose }) {
       document.body.removeChild(a);
     } catch (error) {
       console.error('下载失败:', error);
-      alert('下载失败，请重试');
+      alert(t('imagePreview.downloadFailed'));
     }
   };
 
@@ -36,11 +38,11 @@ function ImagePreviewModal({ image, onClose }) {
           ×
         </button>
         <div className="preview-image-container">
-          <img src={`/api/files/${image.user_id}/images/${image.filename}`} alt="预览" />
+          <img src={`/api/files/${image.user_id}/images/${image.filename}`} alt={t('imagePreview.previewAlt')} />
         </div>
         <div className="preview-actions">
           <button className="download-btn" onClick={handleDownload}>
-            下载图片
+            {t('imagePreview.downloadImage')}
           </button>
         </div>
       </div>

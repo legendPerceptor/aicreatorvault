@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [filters, setFilters] = useState({
     minScore: 0,
@@ -55,13 +57,13 @@ function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
       <div className="filters-header">
         <button type="button" className="filters-toggle" onClick={() => setIsExpanded(!isExpanded)}>
           <span className="toggle-icon">{isExpanded ? '▼' : '▶'}</span>
-          <span>筛选条件</span>
-          {hasActiveFilters() && <span className="active-badge">已启用</span>}
+          <span>{t('searchFilters.filterConditions')}</span>
+          {hasActiveFilters() && <span className="active-badge">{t('searchFilters.enabled')}</span>}
         </button>
 
         {hasActiveFilters() && (
           <button type="button" className="reset-filters-btn" onClick={resetFilters}>
-            重置
+            {t('common.reset')}
           </button>
         )}
       </div>
@@ -71,7 +73,7 @@ function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
           {/* 评分过滤器 */}
           <div className="filter-group">
             <label className="filter-label">
-              评分范围：{filters.minScore} - {filters.maxScore}
+              {t('searchFilters.scoreRange', { min: filters.minScore, max: filters.maxScore })}
             </label>
             <div className="filter-range">
               <input
@@ -95,15 +97,15 @@ function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
               />
             </div>
             <div className="range-values">
-              <span>最低: {filters.minScore}⭐</span>
-              <span>最高: {filters.maxScore}⭐</span>
+              <span>{t('searchFilters.min', { value: filters.minScore })}</span>
+              <span>{t('searchFilters.max', { value: filters.maxScore })}</span>
             </div>
           </div>
 
           {/* 相似度过滤器 */}
           <div className="filter-group">
             <label className="filter-label">
-              相似度阈值：{(filters.minSimilarity * 100).toFixed(0)}%
+              {t('searchFilters.similarityThreshold', { value: (filters.minSimilarity * 100).toFixed(0) })}
             </label>
             <input
               type="range"
@@ -115,28 +117,28 @@ function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
               className="range-input full-width"
             />
             <div className="range-hint">
-              只显示相似度高于 {(filters.minSimilarity * 100).toFixed(0)}% 的结果
+              {t('searchFilters.similarityHint', { value: (filters.minSimilarity * 100).toFixed(0) })}
             </div>
           </div>
 
           {/* 日期过滤器 */}
           <div className="filter-group">
-            <label className="filter-label">日期范围</label>
+            <label className="filter-label">{t('searchFilters.dateRange')}</label>
             <div className="date-inputs">
               <input
                 type="date"
                 value={filters.dateFrom || ''}
                 onChange={(e) => handleFilterChange('dateFrom', e.target.value || null)}
                 className="date-input"
-                placeholder="开始日期"
+                placeholder={t('searchFilters.startDate')}
               />
-              <span className="date-separator">至</span>
+              <span className="date-separator">{t('searchFilters.to')}</span>
               <input
                 type="date"
                 value={filters.dateTo || ''}
                 onChange={(e) => handleFilterChange('dateTo', e.target.value || null)}
                 className="date-input"
-                placeholder="结束日期"
+                placeholder={t('searchFilters.endDate')}
               />
             </div>
           </div>
@@ -144,7 +146,7 @@ function SearchFilters({ onFilterChange, themes = [], initialFilters = {} }) {
           {/* 主题过滤器 */}
           {themes.length > 0 && (
             <div className="filter-group">
-              <label className="filter-label">主题</label>
+              <label className="filter-label">{t('searchFilters.theme')}</label>
               <div className="theme-tags">
                 {themes.map((theme) => (
                   <button

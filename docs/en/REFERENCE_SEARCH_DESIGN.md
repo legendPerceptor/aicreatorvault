@@ -1,55 +1,58 @@
-# 参考图搜索功能设计文档
+# Reference Image Search Feature Design Document
 
-## 目标
-在 AI Creator Vault 中实现"参考图搜索"功能，让用户能够：
-1. 输入描述或关键词搜索网络上的参考图
-2. 在搜索结果页面预览和选择图片
-3. 一键下载并添加到本地数据库
+> [中文版](../zh/REFERENCE_SEARCH_DESIGN.md)
 
-## 技术方案
 
-### 1. 数据流
+## Goals
+Implement a "reference image search" feature in AI Creator Vault that allows users to:
+1. Enter descriptions or keywords to search for reference images on the web
+2. Preview and select images on the search results page
+3. Download and add images to the local database with one click
+
+## Technical Solution
+
+### 1. Data Flow
 
 ```
-用户输入 → Brave Search API → 获取图片URL列表 → 前端展示 → 用户选择 → 下载图片 → 添加到数据库
+User input → Brave Search API → Get image URL list → Frontend display → User selection → Download image → Add to database
 ```
 
-### 2. 后端 API 设计
+### 2. Backend API Design
 
-#### 新增路由：`/api/reference-search`
+#### New Route: `/api/reference-search`
 
 ```javascript
-// 搜索参考图
+// Search reference images
 POST /api/reference-search/search
 Body: { query: string, count: number }
 Response: {
   results: [
     {
-      thumbnail: string,    // 缩略图 URL
-      originalUrl: string,  // 原图 URL
-      title: string,        // 图片标题
-      source: string,       // 来源网站
+      thumbnail: string,    // Thumbnail URL
+      originalUrl: string,  // Original image URL
+      title: string,        // Image title
+      source: string,       // Source website
       width: number,
       height: number
     }
   ]
 }
 
-// 下载并添加参考图到数据库
+// Download and add reference image to database
 POST /api/reference-search/download
 Body: {
   url: string,
   title: string,
   source: string,
-  themeId?: number  // 可选，直接关联到主题
+  themeId?: number  // Optional, directly associate with theme
 }
 Response: {
   success: boolean,
-  image: Image,     // 创建的图片对象
+  image: Image,     // Created image object
   message: string
 }
 
-// 批量下载
+// Batch download
 POST /api/reference-search/batch-download
 Body: {
   images: [{ url, title, source }],
@@ -62,50 +65,50 @@ Response: {
 }
 ```
 
-### 3. 前端组件设计
+### 3. Frontend Component Design
 
-#### 新页面：`ReferenceSearchPage.jsx`
+#### New Page: `ReferenceSearchPage.jsx`
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🌐 参考图搜索                                            │
+│  🌐 Reference Image Search                               │
 ├─────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────┐    │
-│  │ 搜索框：描述你想要的参考图...              [搜索] │    │
+│  │ Search: Describe the reference image...  [Search]│    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                         │
-│  过滤器：[全部] [风景] [人物] [建筑] [抽象] ...          │
+│  Filters: [All] [Landscape] [Portrait] [Architecture]   │
 │                                                         │
 ├─────────────────────────────────────────────────────────┤
-│  搜索结果 (20张)          [已选: 3张] [批量添加]        │
+│  Search Results (20)         [Selected: 3] [Batch Add]  │
 │                                                         │
 │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐              │
 │  │ 🖼️ │ │ 🖼️ │ │ 🖼️ │ │ 🖼️ │ │ 🖼️ │              │
 │  │     │ │  ✓  │ │     │ │  ✓  │ │     │              │
-│  │[添加]│ │[添加]│ │[添加]│ │[添加]│ │[添加]│              │
+│  │[Add]│ │[Add]│ │[Add]│ │[Add]│ │[Add]│              │
 │  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘              │
 │                                                         │
 │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐              │
 │  │ 🖼️ │ │ 🖼️ │ │ 🖼️ │ │ 🖼️ │ │ 🖼️ │              │
 │  │  ✓  │ │     │ │     │ │     │ │     │              │
-│  │[添加]│ │[添加]│ │[添加]│ │[添加]│ │[添加]│              │
+│  │[Add]│ │[Add]│ │[Add]│ │[Add]│ │[Add]│              │
 │  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘              │
 │                                                         │
-│  [加载更多]                                             │
+│  [Load More]                                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
-#### 组件列表
+#### Component List
 
-1. **ReferenceSearchBox** - 搜索输入框
-2. **ReferenceSearchFilters** - 过滤器（可选）
-3. **ReferenceSearchResults** - 搜索结果网格
-4. **ReferenceImageCard** - 单个搜索结果卡片
-5. **BatchAddModal** - 批量添加到主题的弹窗
+1. **ReferenceSearchBox** - Search input box
+2. **ReferenceSearchFilters** - Filters (optional)
+3. **ReferenceSearchResults** - Search results grid
+4. **ReferenceImageCard** - Individual search result card
+5. **BatchAddModal** - Modal for batch adding to themes
 
-### 4. 后端实现细节
+### 4. Backend Implementation Details
 
-#### 4.1 Brave Search 集成
+#### 4.1 Brave Search Integration
 
 ```javascript
 // backend/routes/referenceSearch.js
@@ -132,7 +135,7 @@ async function searchImages(query, count = 20) {
 }
 ```
 
-#### 4.2 图片下载服务
+#### 4.2 Image Download Service
 
 ```javascript
 // backend/services/imageDownloader.js
@@ -160,12 +163,12 @@ async function downloadImage(url, uploadsDir) {
 }
 ```
 
-### 5. 数据库模型扩展
+### 5. Database Model Extension
 
-在 Image 模型中添加字段：
+Add fields to the Image model:
 
 ```javascript
-// 添加到 Image 模型
+// Add to Image model
 isReference: {
   type: DataTypes.BOOLEAN,
   defaultValue: false
@@ -180,76 +183,76 @@ sourceName: {
 }
 ```
 
-### 6. 用户交互流程
+### 6. User Interaction Flow
 
-1. **搜索阶段**
-   - 用户在搜索框输入描述（如 "cyberpunk city night"）
-   - 点击搜索，调用 Brave Image Search API
-   - 展示缩略图网格
+1. **Search Phase**
+   - User enters a description in the search box (e.g., "cyberpunk city night")
+   - Click search, call Brave Image Search API
+   - Display thumbnail grid
 
-2. **选择阶段**
-   - 用户可以点击图片预览大图
-   - 勾选想要的图片
-   - 可以选择添加到哪个主题（可选）
+2. **Selection Phase**
+   - User can click an image to preview the full-size version
+   - Check the desired images
+   - Optionally select which theme to add to
 
-3. **添加阶段**
-   - 单张：点击"添加"按钮，立即下载并添加
-   - 批量：选择多张后点击"批量添加"
-   - 后台下载图片，调用现有的图片分析服务
-   - 添加完成后显示成功提示
+3. **Add Phase**
+   - Single: Click "Add" button to download and add immediately
+   - Batch: Select multiple images and click "Batch Add"
+   - Download images in background, call existing image analysis service
+   - Show success notification after completion
 
-### 7. 错误处理
+### 7. Error Handling
 
-- 下载失败：显示错误，允许重试
-- API 限制：显示友好提示，建议稍后再试
-- 网络问题：超时处理，显示错误信息
+- Download failure: Show error, allow retry
+- API rate limit: Show friendly message, suggest trying later
+- Network issues: Timeout handling, display error message
 
-### 8. 性能优化
+### 8. Performance Optimization
 
-- 缩略图懒加载
-- 下载队列管理（避免并发过高）
-- 进度显示（批量下载时）
+- Thumbnail lazy loading
+- Download queue management (avoid excessive concurrency)
+- Progress display (for batch downloads)
 
-### 9. 配置项
+### 9. Configuration
 
-在 `.env` 中添加：
+Add to `.env`:
 
 ```env
 # Brave Search API
 BRAVE_API_KEY=your_api_key
 
-# 参考图搜索配置
+# Reference image search configuration
 REFERENCE_SEARCH_ENABLED=true
 REFERENCE_SEARCH_MAX_RESULTS=50
 REFERENCE_DOWNLOAD_TIMEOUT=15000
 ```
 
-## 实现计划
+## Implementation Plan
 
-### Phase 1: 基础功能（1-2天）
-- [ ] 创建后端路由 `referenceSearch.js`
-- [ ] 实现 Brave Search 集成
-- [ ] 实现图片下载服务
-- [ ] 创建前端页面和基础组件
+### Phase 1: Basic Features (1-2 days)
+- [ ] Create backend route `referenceSearch.js`
+- [ ] Implement Brave Search integration
+- [ ] Implement image download service
+- [ ] Create frontend page and basic components
 
-### Phase 2: 交互优化（1天）
-- [ ] 添加预览大图功能
-- [ ] 实现批量选择和下载
-- [ ] 添加进度显示
-- [ ] 错误处理和重试
+### Phase 2: Interaction Optimization (1 day)
+- [ ] Add full-size image preview
+- [ ] Implement batch selection and download
+- [ ] Add progress display
+- [ ] Error handling and retry
 
-### Phase 3: 高级功能（可选）
-- [ ] 搜索历史记录
-- [ ] 收藏搜索结果
-- [ ] 自动去重（检查是否已下载）
-- [ ] 与 AI 分析结合（搜索前分析用户意图）
+### Phase 3: Advanced Features (Optional)
+- [ ] Search history
+- [ ] Favorite search results
+- [ ] Auto-deduplication (check if already downloaded)
+- [ ] Combine with AI analysis (analyze user intent before searching)
 
-## API 费用
+## API Pricing
 
-Brave Search API 免费额度：
-- 2,000 次搜索/月
-- 适合个人使用
+Brave Search API free tier:
+- 2,000 searches/month
+- Suitable for personal use
 
-如果需要更高配额：
-- Basic: $5/月，5,000 次搜索
-- Pro: $50/月，60,000 次搜索
+For higher quotas:
+- Basic: $5/month, 5,000 searches
+- Pro: $50/month, 60,000 searches

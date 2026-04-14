@@ -1,5 +1,8 @@
 # 开发者指南
 
+> [English](../en/developers.md)
+
+
 ## 测试方法
 
 ### 使用 curl 命令测试 API

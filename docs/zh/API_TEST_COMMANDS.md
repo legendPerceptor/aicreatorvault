@@ -1,5 +1,8 @@
 # AICreatorVault API 测试命令
 
+> [English](../en/API_TEST_COMMANDS.md)
+
+
 ## 基础 API
 
 ### 1. 获取图片列表

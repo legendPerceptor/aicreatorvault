@@ -1,5 +1,8 @@
 # Qdrant 集成快速开始
 
+> [English](../en/QDRANT_QUICKSTART.md)
+
+
 ## 🎯 这是什么？
 
 Qdrant 是一个高性能向量数据库，用于语义搜索。集成后：

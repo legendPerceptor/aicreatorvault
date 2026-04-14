@@ -1,5 +1,8 @@
 # Pre-commit 配置说明
 
+> [English](../en/PRE-COMMIT-README.md)
+
+
 ## 概述
 本项目使用 `.pre-commit` 来管理多语言的代码质量检查，支持 JavaScript、JSX 和 Python 文件。
 

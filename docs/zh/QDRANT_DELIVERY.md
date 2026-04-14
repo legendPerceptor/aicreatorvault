@@ -1,5 +1,8 @@
 # Qdrant 集成完成报告
 
+> [English](../en/QDRANT_DELIVERY.md)
+
+
 ## ✅ 已完成的工作
 
 ### 1. 核心功能开发

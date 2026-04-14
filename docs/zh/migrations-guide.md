@@ -1,5 +1,8 @@
 # 数据库迁移说明
 
+> [English](../en/migrations-guide.md)
+
+
 ## 迁移目的
 
 为 `Images` 表添加参考图搜索功能所需的字段。

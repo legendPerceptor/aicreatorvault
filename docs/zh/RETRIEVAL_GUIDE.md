@@ -1,5 +1,8 @@
 # AI 检索系统设计文档
 
+> [English](../en/RETRIEVAL_GUIDE.md)
+
+
 ## 概述
 
 AI Creator Vault 的检索系统采用多层次、多模态的检索架构，提供灵活的搜索方式和精准的结果排序。

@@ -1,5 +1,8 @@
 # Knowledge Graph Feature
 
+> [中文版](../zh/KNOWLEDGE_GRAPH.md)
+
+
 ## Overview
 
 The Knowledge Graph feature adds a new "知识图谱" (Knowledge Graph) tab to the AIGC Assistant that visualizes relationships between creative assets. This implementation enables:

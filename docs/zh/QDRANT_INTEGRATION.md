@@ -1,5 +1,8 @@
 # Qdrant 集成测试指南
 
+> [English](../en/QDRANT_INTEGRATION.md)
+
+
 ## 快速开始
 
 ### 1. 启动服务

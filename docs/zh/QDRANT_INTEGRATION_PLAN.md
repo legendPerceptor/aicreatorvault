@@ -1,5 +1,8 @@
 # Qdrant 集成计划
 
+> [English](../en/QDRANT_INTEGRATION_PLAN.md)
+
+
 ## 目标
 在 AI 分析图片时同时写入 Qdrant，实现高效的向量检索。
 

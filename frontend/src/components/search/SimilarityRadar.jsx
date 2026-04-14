@@ -1,31 +1,30 @@
 import React from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function SimilarityRadar({ similarity = 0, size = 60, showLabel = true }) {
+  const { t } = useTranslation();
   const percentage = Math.max(0, Math.min(1, similarity));
   const radius = size / 2;
   const center = size / 2;
   const strokeWidth = 4;
 
-  // 计算颜色
   const getColor = (sim) => {
-    if (sim >= 0.8) return '#10b981'; // 绿色 - 高度匹配
-    if (sim >= 0.6) return '#3b82f6'; // 蓝色 - 中等匹配
-    if (sim >= 0.4) return '#f59e0b'; // 橙色 - 低匹配
-    return '#ef4444'; // 红色 - 很低匹配
+    if (sim >= 0.8) return '#10b981';
+    if (sim >= 0.6) return '#3b82f6';
+    if (sim >= 0.4) return '#f59e0b';
+    return '#ef4444';
   };
 
-  // 计算圆周进度
   const circumference = 2 * Math.PI * (radius - strokeWidth / 2);
   const offset = circumference * (1 - percentage);
 
   const color = getColor(percentage);
   const level =
-    percentage >= 0.8 ? '高' : percentage >= 0.6 ? '中' : percentage >= 0.4 ? '低' : '很低';
+    percentage >= 0.8 ? t('similarity.high') : percentage >= 0.6 ? t('similarity.medium') : percentage >= 0.4 ? t('similarity.low') : t('similarity.veryLow');
 
   return (
     <div className="similarity-radar">
       <svg width={size} height={size} className="radar-chart">
-        {/* 背景圆 */}
         <circle
           cx={center}
           cy={center}
@@ -35,7 +34,6 @@ function SimilarityRadar({ similarity = 0, size = 60, showLabel = true }) {
           strokeWidth={strokeWidth}
         />
 
-        {/* 进度圆 */}
         <circle
           cx={center}
           cy={center}
@@ -50,7 +48,6 @@ function SimilarityRadar({ similarity = 0, size = 60, showLabel = true }) {
           className="radar-progress"
         />
 
-        {/* 中心文字 */}
         <text
           x={center}
           y={center}
@@ -65,7 +62,7 @@ function SimilarityRadar({ similarity = 0, size = 60, showLabel = true }) {
       {showLabel && (
         <div className="similarity-info">
           <span className="similarity-label" style={{ color }}>
-            匹配度：{level}
+            {t('similarity.matchLevel', { level })}
           </span>
         </div>
       )}
@@ -73,8 +70,8 @@ function SimilarityRadar({ similarity = 0, size = 60, showLabel = true }) {
   );
 }
 
-// 简化版本 - 用于搜索结果卡片
 export function SimilarityBadge({ similarity, showPercentage = true }) {
+  const { t } = useTranslation();
   const percentage = Math.max(0, Math.min(1, similarity));
   const getColor = (sim) => {
     if (sim >= 0.8) return { bg: '#d1fae5', text: '#065f46', border: '#10b981' };
@@ -95,13 +92,13 @@ export function SimilarityBadge({ similarity, showPercentage = true }) {
       }}
     >
       {showPercentage && <span className="percentage">{(percentage * 100).toFixed(0)}%</span>}
-      <span className="label">相似度</span>
+      <span className="label">{t('similarity.similarity')}</span>
     </div>
   );
 }
 
-// 匹配原因说明组件
 export function MatchReason({ reasons = [], maxItems = 3 }) {
+  const { t } = useTranslation();
   if (!reasons || reasons.length === 0) return null;
 
   const displayReasons = reasons.slice(0, maxItems);
@@ -110,7 +107,7 @@ export function MatchReason({ reasons = [], maxItems = 3 }) {
     <div className="match-reason">
       <div className="match-reason-header">
         <span className="match-icon">💡</span>
-        <span className="match-label">匹配原因：</span>
+        <span className="match-label">{t('similarity.matchReasons')}</span>
       </div>
       <div className="match-reasons-list">
         {displayReasons.map((reason, index) => (
@@ -119,7 +116,7 @@ export function MatchReason({ reasons = [], maxItems = 3 }) {
           </span>
         ))}
         {reasons.length > maxItems && (
-          <span className="match-reason-more">+{reasons.length - maxItems} 更多</span>
+          <span className="match-reason-more">{t('similarity.more', { count: reasons.length - maxItems })}</span>
         )}
       </div>
     </div>

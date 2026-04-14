@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 function ImageGenerationPanel({
   onGenerate,
@@ -18,6 +19,7 @@ function ImageGenerationPanel({
   const [saving, setSaving] = useState(false);
   const [linkToPromptId, setLinkToPromptId] = useState('');
   const [error, setError] = useState(null);
+  const { t } = useTranslation();
 
   const aspectRatioOptions = ['1:1', '16:9', '4:3', '3:2', '2:3', '3:4', '9:16', '21:9'];
 
@@ -71,7 +73,7 @@ function ImageGenerationPanel({
       .map(([index]) => parseInt(index));
 
     if (selectedIndices.length === 0 && mode !== 'prompt-only') {
-      alert('请选择至少一张图片');
+      alert(t('imageGeneration.selectAtLeastOne'));
       return;
     }
 
@@ -103,7 +105,7 @@ function ImageGenerationPanel({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content image-generation-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>AI 图片生成</h3>
+          <h3>{t('imageGeneration.title')}</h3>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -115,12 +117,12 @@ function ImageGenerationPanel({
           // Generation form
           <form onSubmit={handleGenerate} className="generation-form">
             <div className="form-group">
-              <label htmlFor="gen-prompt">提示词：</label>
+              <label htmlFor="gen-prompt">{t('imageGeneration.promptLabel')}</label>
               <textarea
                 id="gen-prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="描述你想要生成的图片..."
+                placeholder={t('imageGeneration.promptPlaceholder')}
                 rows={4}
                 disabled={generating}
               />
@@ -128,7 +130,7 @@ function ImageGenerationPanel({
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="gen-n">生成数量：</label>
+                <label htmlFor="gen-n">{t('imageGeneration.countLabel')}</label>
                 <select
                   id="gen-n"
                   value={n}
@@ -137,14 +139,14 @@ function ImageGenerationPanel({
                 >
                   {[1, 2, 3, 4].map((num) => (
                     <option key={num} value={num}>
-                      {num} 张
+                      {t('imageGeneration.countUnit', { n: num })}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="gen-ratio">宽高比：</label>
+                <label htmlFor="gen-ratio">{t('imageGeneration.aspectRatio')}</label>
                 <select
                   id="gen-ratio"
                   value={aspectRatio}
@@ -161,20 +163,20 @@ function ImageGenerationPanel({
             </div>
 
             <button type="submit" className="generate-btn" disabled={generating || !prompt.trim()}>
-              {generating ? '生成中...' : '生成图片'}
+              {generating ? t('imageGeneration.generating') : t('imageGeneration.generate')}
             </button>
           </form>
         ) : (
           // Generated images preview and save options
           <div className="preview-section">
             <div className="preview-header">
-              <p>生成了 {generatedImages.length} 张图片，请选择要保存的图片：</p>
+              <p>{t('imageGeneration.generated', { count: generatedImages.length })}</p>
               <div className="selection-actions">
                 <button type="button" onClick={selectAll}>
-                  全选
+                  {t('common.selectAll')}
                 </button>
                 <button type="button" onClick={deselectAll}>
-                  取消全选
+                  {t('common.deselectAll')}
                 </button>
               </div>
             </div>
@@ -186,25 +188,25 @@ function ImageGenerationPanel({
                   className={`generated-image-card ${selectedImages[index] ? 'selected' : ''}`}
                   onClick={() => toggleImageSelection(index)}
                 >
-                  <img src={`/uploads/${image.filename}`} alt={`生成图片 ${index + 1}`} />
+                  <img src={`/uploads/${image.filename}`} alt={t('imageGeneration.generatedImageAlt', { index: index + 1 })} />
                   <div className="image-overlay">
-                    <span>{selectedImages[index] ? '✓ 已选择' : '点击选择'}</span>
+                    <span>{selectedImages[index] ? t('imageGeneration.selected') : t('imageGeneration.clickToSelect')}</span>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="save-options">
-              <h4>保存选项</h4>
+              <h4>{t('imageGeneration.saveOptions')}</h4>
 
               <div className="form-group">
-                <label htmlFor="link-prompt">关联已有提示词：</label>
+                <label htmlFor="link-prompt">{t('imageGeneration.linkExistingPrompt')}</label>
                 <select
                   id="link-prompt"
                   value={linkToPromptId}
                   onChange={(e) => setLinkToPromptId(e.target.value)}
                 >
-                  <option value="">不关联</option>
+                  <option value="">{t('imageGeneration.noLink')}</option>
                   {unusedPrompts.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.content.substring(0, 50)}...
@@ -219,21 +221,21 @@ function ImageGenerationPanel({
                   onClick={() => handleSave('prompt-and-images')}
                   disabled={saving}
                 >
-                  {saving ? '保存中...' : '保存提示词 + 图片'}
+                  {saving ? t('imageGeneration.saving') : t('imageGeneration.savePromptAndImages')}
                 </button>
                 <button
                   className="save-btn save-images"
                   onClick={() => handleSave('images-only')}
                   disabled={saving}
                 >
-                  仅保存图片
+                  {t('imageGeneration.saveImagesOnly')}
                 </button>
                 <button
                   className="save-btn save-prompt"
                   onClick={() => handleSave('prompt-only')}
                   disabled={saving}
                 >
-                  仅保存提示词
+                  {t('imageGeneration.savePromptOnly')}
                 </button>
               </div>
             </div>
@@ -246,7 +248,7 @@ function ImageGenerationPanel({
                 setSelectedImages({});
               }}
             >
-              重新生成
+              {t('imageGeneration.regenerate')}
             </button>
           </div>
         )}

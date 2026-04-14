@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function ReferenceSearchBox({ onSearch, isSearching }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e) => {
@@ -26,24 +28,24 @@ function ReferenceSearchBox({ onSearch, isSearching }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="描述你想要的参考图，如：cyberpunk city night, neon lights..."
+            placeholder={t('referenceSearch.placeholder')}
             disabled={isSearching}
           />
           <button type="submit" disabled={isSearching || !query.trim()}>
             {isSearching ? (
               <>
                 <span className="spinner"></span>
-                搜索中...
+                {t('referenceSearch.searching')}
               </>
             ) : (
-              '🔍 搜索'
+              `🔍 ${t('referenceSearch.searchBtn')}`
             )}
           </button>
         </div>
       </form>
 
       <div className="search-suggestions">
-        <span className="suggestion-label">试试这些：</span>
+        <span className="suggestion-label">{t('referenceSearch.tryThese')}</span>
         {suggestions.map((s) => (
           <button
             key={s}

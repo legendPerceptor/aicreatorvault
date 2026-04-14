@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function SmartSearchBox({
   value = '',
@@ -6,9 +7,10 @@ function SmartSearchBox({
   onSearch,
   onImageUpload,
   isSearching = false,
-  placeholder = '搜索：输入关键词、描述你想要的内容，或拖入图片...',
+  placeholder = null,
   serviceStatus = 'unknown',
 }) {
+  const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [searchMode, setSearchMode] = useState('auto'); // auto | text | image
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -138,10 +140,10 @@ function SmartSearchBox({
     if (intent === 'empty' && !uploadedImage) return null;
 
     const badges = {
-      keyword: { text: '关键词', icon: '🔍', color: '#3b82f6' },
-      semantic: { text: 'AI 语义', icon: '🧠', color: '#8b5cf6' },
-      image: { text: '以图搜图', icon: '🖼️', color: '#ec4899' },
-      hybrid: { text: '混合检索', icon: '🔗', color: '#f59e0b' },
+      keyword: { text: t('searchBox.keywordBadge'), icon: '🔍', color: '#3b82f6' },
+      semantic: { text: t('searchBox.semanticBadge'), icon: '🧠', color: '#8b5cf6' },
+      image: { text: t('searchBox.imageBadge'), icon: '🖼️', color: '#ec4899' },
+      hybrid: { text: t('searchBox.hybridBadge'), icon: '🔗', color: '#f59e0b' },
     };
 
     const badge = badges[intent];
@@ -165,7 +167,7 @@ function SmartSearchBox({
       <form onSubmit={handleSubmit} className="search-form">
         <div className="search-input-wrapper">
           {/* 状态指示器 */}
-          <div className="search-status" title={`AI 服务状态: ${serviceStatus}`}>
+          <div className="search-status" title={t('searchBox.aiServiceStatus', { status: serviceStatus })}>
             {getStatusIcon()}
           </div>
 
@@ -175,7 +177,7 @@ function SmartSearchBox({
             className="search-input"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
+            placeholder={placeholder || t('searchBox.placeholder')}
             disabled={searchMode === 'image'}
           />
 
@@ -193,7 +195,7 @@ function SmartSearchBox({
                   type="button"
                   className="icon-btn clear-image-btn"
                   onClick={clearImage}
-                  title="清除图片"
+                  title={t('searchBox.clearImage')}
                 >
                   ✕
                 </button>
@@ -204,7 +206,7 @@ function SmartSearchBox({
               type="button"
               className="icon-btn upload-btn"
               onClick={() => fileInputRef.current?.click()}
-              title="上传图片搜索"
+              title={t('searchBox.uploadImageSearch')}
             >
               📁
             </button>
@@ -214,7 +216,7 @@ function SmartSearchBox({
               className="search-submit-btn"
               disabled={isSearching || (!value.trim() && !uploadedImage)}
             >
-              {isSearching ? '搜索中...' : '搜索'}
+              {isSearching ? t('common.searching') : t('common.search')}
             </button>
           </div>
 
@@ -230,35 +232,35 @@ function SmartSearchBox({
 
         {/* 搜索模式选择器 */}
         <div className="search-mode-selector">
-          <label className="mode-label">搜索模式：</label>
+          <label className="mode-label">{t('searchBox.searchMode')}</label>
           <div className="mode-options">
             <button
               type="button"
               className={`mode-option ${searchMode === 'auto' ? 'active' : ''}`}
               onClick={() => setSearchMode('auto')}
             >
-              🤖 自动检测
+              🤖 {t('searchBox.autoDetect')}
             </button>
             <button
               type="button"
               className={`mode-option ${searchMode === 'keyword' ? 'active' : ''}`}
               onClick={() => setSearchMode('keyword')}
             >
-              🔍 关键词
+              🔍 {t('searchBox.keyword')}
             </button>
             <button
               type="button"
               className={`mode-option ${searchMode === 'semantic' ? 'active' : ''}`}
               onClick={() => setSearchMode('semantic')}
             >
-              🧠 AI 语义
+              🧠 {t('searchBox.semantic')}
             </button>
             <button
               type="button"
               className={`mode-option ${searchMode === 'hybrid' ? 'active' : ''}`}
               onClick={() => setSearchMode('hybrid')}
             >
-              🔗 混合检索
+              🔗 {t('searchBox.hybrid')}
             </button>
             <button
               type="button"
@@ -268,7 +270,7 @@ function SmartSearchBox({
                 fileInputRef.current?.click();
               }}
             >
-              🖼️ 以图搜图
+              🖼️ {t('searchBox.imageSearch')}
             </button>
           </div>
         </div>
@@ -278,7 +280,7 @@ function SmartSearchBox({
           <div className="drag-overlay">
             <div className="drag-message">
               <span className="drag-icon">📷</span>
-              <p>拖放图片到这里进行搜索</p>
+              <p>{t('searchBox.dragImage')}</p>
             </div>
           </div>
         )}

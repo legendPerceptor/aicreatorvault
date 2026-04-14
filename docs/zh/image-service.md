@@ -1,5 +1,8 @@
 # AIGC Image Service
 
+> [English](../en/image-service.md)
+
+
 基于 Daft + OpenAI 的多模态图像分析服务，提供 AI 图像描述生成、语义搜索和以图搜图功能。
 
 ## 功能特性

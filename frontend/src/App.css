@@ -37,6 +37,22 @@
   font-size: 14px;
 }
 
+.lang-toggle-button {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.lang-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .logout-button {
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.2);

@@ -3,6 +3,7 @@ import ImageCard from '../components/ImageCard';
 import SmartSearchBox from '../components/search/SmartSearchBox';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchResultsToolbar from '../components/search/SearchResultsToolbar';
+import { useTranslation } from '../i18n/useTranslation';
 import './SearchPage.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
@@ -30,8 +31,7 @@ function SearchPage({
   const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image | hybrid
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // 检查服务状态
+  const { t } = useTranslation();
   const checkServiceStatus = async () => {
     try {
       const response = await fetch(`${API_BASE}/images/service/status`);
@@ -170,7 +170,7 @@ function SearchPage({
       setSearchResults(processedResults);
     } catch (error) {
       console.error('搜索失败:', error);
-      alert(`搜索失败: ${error.message}`);
+      alert(t('search.searchFailed', { error: error.message }));
     } finally {
       setIsSearching(false);
     }
@@ -200,7 +200,7 @@ function SearchPage({
       setSearchResults(processedResults);
     } catch (error) {
       console.error('以图搜图失败:', error);
-      alert('以图搜图失败，请确保图像分析服务正在运行');
+      alert(t('search.imageSearchFailed'));
     } finally {
       setIsSearching(false);
     }
@@ -239,8 +239,8 @@ function SearchPage({
   return (
     <div className="search-page">
       <div className="search-page-header">
-        <h1>检索参考</h1>
-        <p className="search-page-description">使用关键词、AI 语义或上传图片来搜索相似的创作参考</p>
+        <h1>{t('search.title')}</h1>
+        <p className="search-page-description">{t('search.description')}</p>
       </div>
 
       {/* 智能搜索框 */}
@@ -251,7 +251,7 @@ function SearchPage({
         onImageUpload={handleImageSearch}
         isSearching={isSearching}
         serviceStatus={serviceStatus}
-        placeholder="描述你想要找的内容，或拖入图片..."
+        placeholder={t('search.placeholder')}
       />
 
       {/* 过滤器 */}
@@ -296,10 +296,10 @@ function SearchPage({
           ) : (
             <div className="no-results">
               <div className="no-results-icon">🔍</div>
-              <h3>未找到匹配的结果</h3>
-              <p>尝试调整搜索词或降低相似度阈值</p>
+              <h3>{t('search.noResults')}</h3>
+              <p>{t('search.tryAdjusting')}</p>
               <button onClick={clearSearch} className="btn-clear-search">
-                清空搜索
+                {t('search.clearSearch')}
               </button>
             </div>
           )}
@@ -311,36 +311,36 @@ function SearchPage({
         <div className="search-welcome">
           <div className="welcome-card">
             <div className="welcome-icon">🎨</div>
-            <h2>开始搜索你的创作参考</h2>
+            <h2>{t('search.startSearch')}</h2>
             <div className="welcome-tips">
               <div className="tip">
                 <span className="tip-icon">🔍</span>
                 <div className="tip-content">
-                  <strong>关键词搜索</strong>
-                  <p>输入简单的关键词快速查找</p>
+                  <strong>{t('search.keywordSearch')}</strong>
+                  <p>{t('search.keywordSearchDesc')}</p>
                 </div>
               </div>
               <div className="tip">
                 <span className="tip-icon">🧠</span>
                 <div className="tip-content">
-                  <strong>AI 语义搜索</strong>
-                  <p>用自然语言描述你想要的内容</p>
+                  <strong>{t('search.semanticSearch')}</strong>
+                  <p>{t('search.semanticSearchDesc')}</p>
                 </div>
               </div>
               <div className="tip">
                 <span className="tip-icon">🖼️</span>
                 <div className="tip-content">
-                  <strong>以图搜图</strong>
-                  <p>上传图片找到相似的创作参考</p>
+                  <strong>{t('search.imageSearch')}</strong>
+                  <p>{t('search.imageSearchDesc')}</p>
                 </div>
               </div>
             </div>
             {serviceStatus !== 'connected' && (
               <div className="service-warning">
                 <span className="warning-icon">⚠️</span>
-                <span>AI 服务未连接，语义搜索和以图搜图功能不可用</span>
+                <span>{t('search.aiServiceDisconnected')}</span>
                 <button onClick={checkServiceStatus} className="btn-reconnect">
-                  重新连接
+                  {t('search.reconnect')}
                 </button>
               </div>
             )}

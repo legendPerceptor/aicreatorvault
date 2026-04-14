@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 function ReferenceSearchResults({
   results,
@@ -8,11 +9,13 @@ function ReferenceSearchResults({
   onDownload,
   isSearching,
 }) {
+  const { t } = useTranslation();
+
   if (isSearching) {
     return (
       <div className="search-loading">
         <div className="loading-spinner"></div>
-        <p>正在搜索图片...</p>
+        <p>{t('referenceSearch.searchingImages')}</p>
       </div>
     );
   }
@@ -21,8 +24,8 @@ function ReferenceSearchResults({
     return (
       <div className="search-empty">
         <div className="empty-icon">🖼️</div>
-        <h3>开始搜索参考图</h3>
-        <p>输入关键词或描述，从网络搜索你想要的参考图片</p>
+        <h3>{t('referenceSearch.startTitle')}</h3>
+        <p>{t('referenceSearch.startDesc')}</p>
       </div>
     );
   }
@@ -49,7 +52,7 @@ function ReferenceSearchResults({
                 <button
                   className="btn-preview"
                   onClick={() => window.open(image.url, '_blank')}
-                  title="查看原图"
+                  title={t('referenceSearch.viewOriginal')}
                 >
                   🔗
                 </button>
@@ -75,14 +78,14 @@ function ReferenceSearchResults({
                 className={`btn-select ${isSelected(image) ? 'active' : ''}`}
                 onClick={() => onToggleSelect(image)}
               >
-                {isSelected(image) ? '✓ 已选' : '选择'}
+                {isSelected(image) ? t('referenceSearch.selected') : t('referenceSearch.select')}
               </button>
               <button
                 className="btn-download"
                 onClick={() => onDownload(image)}
                 disabled={isDownloading(image)}
               >
-                {isDownloading(image) ? '下载中...' : '添加'}
+                {isDownloading(image) ? t('referenceSearch.downloading') : t('referenceSearch.add')}
               </button>
             </div>
           </div>

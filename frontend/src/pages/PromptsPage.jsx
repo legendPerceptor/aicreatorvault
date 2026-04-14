@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StarRating, { StaticStarRating } from '../components/StarRating';
 import ImageCard from '../components/ImageCard';
+import { useTranslation } from '../i18n/useTranslation';
 
 function PromptsPage({
   prompts,
@@ -17,6 +18,7 @@ function PromptsPage({
   onScoreCancel,
 }) {
   const [newPrompt, setNewPrompt] = useState('');
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,19 +29,19 @@ function PromptsPage({
 
   return (
     <div className="section">
-      <h2>提示词管理</h2>
+      <h2>{t('prompts.title')}</h2>
       <form onSubmit={handleSubmit} className="form-group">
-        <label htmlFor="prompt">新提示词：</label>
+        <label htmlFor="prompt">{t('prompts.newPrompt')}</label>
         <textarea
           id="prompt"
           value={newPrompt}
           onChange={(e) => setNewPrompt(e.target.value)}
-          placeholder="输入你的提示词..."
+          placeholder={t('prompts.promptPlaceholder')}
         />
-        <button type="submit">添加提示词</button>
+        <button type="submit">{t('prompts.addPrompt')}</button>
       </form>
       <div className="prompts-list">
-        <h3>历史提示词</h3>
+        <h3>{t('prompts.historyPrompts')}</h3>
         {prompts.map((prompt) => (
           <div key={prompt.id} className="prompt-container-vertical">
             <div className="prompt-content">
@@ -48,7 +50,7 @@ function PromptsPage({
               </div>
               <div className="score-container">
                 <div className="score">
-                  <label>评分：</label>
+                  <label>{t('prompts.score')}</label>
                   {editingScores[`prompts_${prompt.id}`] ? (
                     <div className="score-edit">
                       <StarRating
@@ -58,13 +60,13 @@ function PromptsPage({
                         onScoreChange={onScoreChange}
                       />
                       <div className="score-actions">
-                        <button onClick={() => onScoreConfirm('prompts', prompt.id)}>确认</button>
-                        <button onClick={() => onScoreCancel('prompts', prompt.id)}>取消</button>
+                        <button onClick={() => onScoreConfirm('prompts', prompt.id)}>{t('common.confirm')}</button>
+                        <button onClick={() => onScoreCancel('prompts', prompt.id)}>{t('common.cancel')}</button>
                       </div>
                     </div>
                   ) : (
                     <span className="score-value" onClick={() => onScoreEdit('prompts', prompt.id)}>
-                      {prompt.score ? <StaticStarRating score={prompt.score} /> : '点击评分'}
+                      {prompt.score ? <StaticStarRating score={prompt.score} /> : t('prompts.clickToScore')}
                     </span>
                   )}
                 </div>
@@ -74,14 +76,14 @@ function PromptsPage({
                     className="delete-prompt-btn"
                     onClick={(e) => onDeletePrompt(e, prompt.id, true)}
                   >
-                    删除提示词及图片
+                    {t('prompts.deletePromptAndImages')}
                   </button>
                   <button
                     type="button"
                     className="delete-prompt-only-btn"
                     onClick={(e) => onDeletePrompt(e, prompt.id, false)}
                   >
-                    仅删除提示词
+                    {t('prompts.deletePromptOnly')}
                   </button>
                 </div>
               </div>
@@ -104,7 +106,7 @@ function PromptsPage({
                 ))
               ) : (
                 <div className="no-images">
-                  <p>无关联图片</p>
+                  <p>{t('prompts.noImages')}</p>
                 </div>
               )}
             </div>

@@ -7,6 +7,7 @@ import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
 import ReferenceSearchPage from './pages/ReferenceSearchPage';
 import AuthPage from './pages/AuthPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useTranslation } from './i18n/useTranslation';
 import usePrompts from './hooks/usePrompts';
 import useImages from './hooks/useImages';
 import useThemes from './hooks/useThemes';
@@ -22,6 +23,7 @@ function AppContent() {
   const [isSavingPending, setIsSavingPending] = useState(false);
 
   const { user, isAuthenticated, isLoading, logout, checkAuth } = useAuth();
+  const { t, toggleLanguage, language } = useTranslation();
 
   const {
     prompts,
@@ -131,7 +133,7 @@ function AppContent() {
     e.preventDefault();
     e.stopPropagation();
 
-    const confirmed = window.confirm('确定要删除这张图片吗？');
+    const confirmed = window.confirm(t('app.confirmDeleteImage'));
     if (confirmed) {
       setTimeout(() => {
         deleteImage(id);
@@ -142,8 +144,8 @@ function AppContent() {
   const handleDeletePrompt = async (e, id, deleteImages = true) => {
     e.preventDefault();
     const confirmMessage = deleteImages
-      ? '确定要删除这个提示词及其关联的所有图片吗？'
-      : '确定要仅删除这个提示词，保留关联的图片吗？';
+      ? t('app.confirmDeletePromptWithImages')
+      : t('app.confirmDeletePromptOnly');
 
     if (window.confirm(confirmMessage)) {
       await deletePrompt(id, deleteImages);
@@ -160,7 +162,7 @@ function AppContent() {
       const result = await generateImages({ prompt, n, aspect_ratio });
       setPendingImages(result.images || []);
     } catch (error) {
-      alert(`生成失败: ${error.message}`);
+      alert(t('app.generationFailed', { error: error.message }));
       setPendingImages([]);
     } finally {
       setIsGeneratingImages(false);
@@ -190,7 +192,7 @@ function AppContent() {
           });
           if (!promptResponse.ok) {
             const errorData = await promptResponse.json();
-            throw new Error(errorData.error || '创建提示词失败');
+            throw new Error(errorData.error || t('app.createPromptFailed'));
           }
           const newPrompt = await promptResponse.json();
           promptId = newPrompt.id;
@@ -220,7 +222,7 @@ function AppContent() {
 
       setPendingImages([]);
     } catch (error) {
-      alert(`保存失败: ${error.message}`);
+      alert(t('app.saveFailed', { error: error.message }));
     } finally {
       setIsSavingPending(false);
     }
@@ -239,7 +241,7 @@ function AppContent() {
     return (
       <div className="app-loading">
         <div className="loading-spinner"></div>
-        <p>加载中...</p>
+        <p>{t('app.loading')}</p>
         <style>{`
           .app-loading {
             display: flex;
@@ -276,25 +278,28 @@ function AppContent() {
       <div className="header">
         <div className="header-content">
           <div>
-            <h1>AI Creator Vault</h1>
-            <p>管理你的 AI 创作资产</p>
+            <h1>{t('app.title')}</h1>
+            <p>{t('app.subtitle')}</p>
           </div>
           <div className="user-info">
+            <button onClick={toggleLanguage} className="lang-toggle-button" title="Toggle language">
+              🌐 {language === 'zh' ? 'EN' : '中'}
+            </button>
             <span>{user?.username || user?.email}</span>
             <button onClick={handleLogout} className="logout-button">
-              退出
+              {t('app.logout')}
             </button>
           </div>
         </div>
       </div>
 
       <div className="nav">
-        <button onClick={() => setActiveTab('prompts')}>提示词管理</button>
-        <button onClick={() => setActiveTab('images')}>图片管理</button>
-        <button onClick={() => setActiveTab('themes')}>主题管理</button>
-        <button onClick={() => setActiveTab('search')}>检索参考</button>
-        <button onClick={() => setActiveTab('reference-search')}>🌐 参考图搜索</button>
-        <button onClick={() => setActiveTab('graph')}>知识图谱</button>
+        <button onClick={() => setActiveTab('prompts')}>{t('nav.prompts')}</button>
+        <button onClick={() => setActiveTab('images')}>{t('nav.images')}</button>
+        <button onClick={() => setActiveTab('themes')}>{t('nav.themes')}</button>
+        <button onClick={() => setActiveTab('search')}>{t('nav.search')}</button>
+        <button onClick={() => setActiveTab('reference-search')}>🌐 {t('nav.referenceSearch')}</button>
+        <button onClick={() => setActiveTab('graph')}>{t('nav.knowledgeGraph')}</button>
       </div>
 
       {activeTab === 'prompts' && (

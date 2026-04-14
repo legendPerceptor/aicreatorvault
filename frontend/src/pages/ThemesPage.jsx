@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SimpleImageCard } from '../components/ImageCard';
+import { useTranslation } from '../i18n/useTranslation';
 
 function ThemesPage({
   themes,
@@ -11,6 +12,7 @@ function ThemesPage({
   onRemoveImageFromTheme,
 }) {
   const [newTheme, setNewTheme] = useState({ name: '', description: '' });
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,39 +27,39 @@ function ThemesPage({
 
   return (
     <div className="section">
-      <h2>主题管理</h2>
+      <h2>{t('themes.title')}</h2>
       <form onSubmit={handleSubmit} className="form-group">
-        <label htmlFor="themeName">主题名称：</label>
+        <label htmlFor="themeName">{t('themes.themeName')}</label>
         <input
           type="text"
           id="themeName"
           value={newTheme.name}
           onChange={(e) => setNewTheme({ ...newTheme, name: e.target.value })}
         />
-        <label htmlFor="themeDescription">主题描述：</label>
+        <label htmlFor="themeDescription">{t('themes.themeDescription')}</label>
         <textarea
           id="themeDescription"
           value={newTheme.description}
           onChange={(e) => setNewTheme({ ...newTheme, description: e.target.value })}
-          placeholder="输入主题描述..."
+          placeholder={t('themes.themeDescPlaceholder')}
         />
-        <button type="submit">创建主题</button>
+        <button type="submit">{t('themes.createTheme')}</button>
       </form>
       <div className="themes-list">
         {themes.map((theme) => (
           <div key={theme.id} className="theme-card">
             <h3>{theme.name}</h3>
             <p className="description">{theme.description}</p>
-            <button onClick={() => onSelectTheme(theme)}>查看详情</button>
+            <button onClick={() => onSelectTheme(theme)}>{t('themes.viewDetails')}</button>
           </div>
         ))}
       </div>
       {selectedTheme && (
         <div className="theme-images">
           <div className="theme-header">
-            <h3>{selectedTheme.name} - 主题内包含图片</h3>
+            <h3>{t('themes.themeImages', { name: selectedTheme.name })}</h3>
             <button className="close-btn" onClick={handleCloseTheme}>
-              关闭
+              {t('themes.close')}
             </button>
           </div>
           <div className="images-grid">
@@ -70,7 +72,7 @@ function ThemesPage({
                 />
               ))}
           </div>
-          <h4>从下方图片选择添加到主题</h4>
+          <h4>{t('themes.selectToAdd')}</h4>
           <div className="images-grid">
             {images
               .filter((image) => {

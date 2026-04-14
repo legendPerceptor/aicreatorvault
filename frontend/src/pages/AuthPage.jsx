@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../i18n/useTranslation';
 
 function AuthPage() {
   const { login, register } = useAuth();
+  const { t } = useTranslation();
   const [mode, setMode] = useState('login'); // 'login' or 'register'
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -61,17 +63,17 @@ function AuthPage() {
     <div className="auth-page">
       <div className="auth-container">
         <h1>AI Creator Vault</h1>
-        <p className="auth-subtitle">管理你的 AI 创作资产</p>
+        <p className="auth-subtitle">{t('auth.subtitle')}</p>
 
         <div className="auth-tabs">
           <button className={mode === 'login' ? 'active' : ''} onClick={() => switchMode('login')}>
-            登录
+            {t('auth.login')}
           </button>
           <button
             className={mode === 'register' ? 'active' : ''}
             onClick={() => switchMode('register')}
           >
-            注册
+            {t('auth.register')}
           </button>
         </div>
 
@@ -80,20 +82,20 @@ function AuthPage() {
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="username">用户名</label>
+              <label htmlFor="username">{t('auth.username')}</label>
               <input
                 type="text"
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="3-30个字符"
+                placeholder={t('auth.usernamePlaceholder')}
                 required
               />
             </div>
           )}
 
           <div className="form-group">
-            <label htmlFor="email">邮箱</label>
+            <label htmlFor="email">{t('auth.email')}</label>
             <input
               type="email"
               id="email"
@@ -105,33 +107,33 @@ function AuthPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">密码</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少6个字符"
+              placeholder={t('auth.passwordPlaceholder')}
               required
             />
           </div>
 
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="confirmPassword">确认密码</label>
+              <label htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
               <input
                 type="password"
                 id="confirmPassword"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="再次输入密码"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 required
               />
             </div>
           )}
 
           <button type="submit" className="auth-submit" disabled={isLoading}>
-            {isLoading ? '处理中...' : mode === 'login' ? '登录' : '注册'}
+            {isLoading ? t('auth.processing') : mode === 'login' ? t('auth.login') : t('auth.register')}
           </button>
         </form>
 
@@ -139,16 +141,16 @@ function AuthPage() {
           <p>
             {mode === 'login' ? (
               <>
-                还没有账号？{' '}
+                {t('auth.noAccount')}{' '}
                 <button className="link-button" onClick={() => switchMode('register')}>
-                  立即注册
+                  {t('auth.registerNow')}
                 </button>
               </>
             ) : (
               <>
-                已有账号？{' '}
+                {t('auth.hasAccount')}{' '}
                 <button className="link-button" onClick={() => switchMode('login')}>
-                  立即登录
+                  {t('auth.loginNow')}
                 </button>
               </>
             )}

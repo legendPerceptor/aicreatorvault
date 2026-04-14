@@ -1,5 +1,8 @@
 # AI 智能检索模块改进方案 v2
 
+> [English](../en/AI_SEARCH_IMPROVEMENT.md)
+
+
 **更新日期：** 2026-03-16
 **状态：** 分析完成，等待实施
 

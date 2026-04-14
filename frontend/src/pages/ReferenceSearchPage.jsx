@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReferenceSearchBox from '../components/reference/ReferenceSearchBox';
 import ReferenceSearchResults from '../components/reference/ReferenceSearchResults';
 import BatchAddModal from '../components/reference/BatchAddModal';
+import { useTranslation } from '../i18n/useTranslation';
 import './ReferenceSearchPage.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
@@ -13,6 +14,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState(new Set());
   const [error, setError] = useState(null);
+  const { t } = useTranslation();
 
   // 搜索参考图
   const handleSearch = async (query) => {
@@ -34,10 +36,10 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       if (data.success) {
         setSearchResults(data.results);
       } else {
-        setError(data.error || '搜索失败');
+        setError(data.error || t('referenceSearch.searchFailed'));
       }
     } catch (err) {
-      setError('网络错误，请检查服务是否正常运行');
+      setError(t('referenceSearch.networkError'));
       console.error('Search error:', err);
     } finally {
       setIsSearching(false);
@@ -83,13 +85,13 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       const data = await response.json();
 
       if (data.success) {
-        alert(`✓ 图片已添加到数据库`);
+        alert(t('referenceSearch.imageAdded'));
         if (onImagesAdded) onImagesAdded();
       } else {
-        alert(`下载失败: ${data.error}`);
+        alert(t('referenceSearch.downloadFailed', { error: data.error }));
       }
     } catch (err) {
-      alert('下载失败，请重试');
+      alert(t('referenceSearch.downloadFailedRetry'));
       console.error('Download error:', err);
     } finally {
       setDownloadingIds((prev) => {
@@ -131,7 +133,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       }
     }
 
-    alert(`批量下载完成\n成功: ${success} 张\n失败: ${failed} 张`);
+    alert(t('referenceSearch.batchComplete', { success, failed }));
     setSelectedImages([]);
     if (onImagesAdded) onImagesAdded();
   };
@@ -139,8 +141,8 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
   return (
     <div className="reference-search-page">
       <div className="page-header">
-        <h1>🌐 参考图搜索</h1>
-        <p className="page-description">从网络搜索参考图片，一键添加到你的素材库</p>
+        <h1>🌐 {t('referenceSearch.title')}</h1>
+        <p className="page-description">{t('referenceSearch.description')}</p>
       </div>
 
       <ReferenceSearchBox onSearch={handleSearch} isSearching={isSearching} />
@@ -148,24 +150,24 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       {error && (
         <div className="error-banner">
           <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)}>关闭</button>
+          <button onClick={() => setError(null)}>{t('common.close')}</button>
         </div>
       )}
 
       {searchResults.length > 0 && (
         <div className="results-toolbar">
           <div className="toolbar-left">
-            <span className="results-count">找到 {searchResults.length} 张图片</span>
+            <span className="results-count">{t('referenceSearch.foundImages', { count: searchResults.length })}</span>
             <button className="btn-select-all" onClick={toggleSelectAll}>
-              {selectedImages.length === searchResults.length ? '取消全选' : '全选'}
+              {selectedImages.length === searchResults.length ? t('referenceSearch.deselectAll') : t('common.selectAll')}
             </button>
           </div>
           <div className="toolbar-right">
             {selectedImages.length > 0 && (
               <>
-                <span className="selected-count">已选: {selectedImages.length} 张</span>
+                <span className="selected-count">{t('referenceSearch.selectedCount', { count: selectedImages.length })}</span>
                 <button className="btn-batch-add" onClick={() => setShowBatchModal(true)}>
-                  批量添加
+                  {t('referenceSearch.batchAdd')}
                 </button>
               </>
             )}

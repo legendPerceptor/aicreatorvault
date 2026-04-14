@@ -556,6 +556,38 @@ body {
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 16px;
+}
+
+.file-input-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.file-input-label {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: normal;
+  transition: background-color 0.2s;
+}
+
+.file-input-label:hover {
+  background-color: #45a049;
+}
   margin-bottom: 10px;
 }
 

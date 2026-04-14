@@ -4,9 +4,11 @@ import GraphControls from '../components/graph/GraphControls';
 import GraphLegend from '../components/graph/GraphLegend';
 import { useGraph, useGraphTraversal } from '../hooks/useGraph';
 import { filterOptions } from '../utils/graphConfig';
+import { useTranslation } from '../i18n/useTranslation';
 import './KnowledgeGraphPage.css';
 
 function KnowledgeGraphPage() {
+  const { t } = useTranslation();
   const [assetTypes, setAssetTypes] = useState(filterOptions.assetTypes.map((opt) => opt.value));
   const [relationshipTypes, setRelationshipTypes] = useState(
     filterOptions.relationshipTypes.map((opt) => opt.value)
@@ -80,7 +82,7 @@ function KnowledgeGraphPage() {
   return (
     <div className="knowledge-graph-page">
       <div className="graph-header">
-        <h2>知识图谱</h2>
+        <h2>{t('nav.knowledgeGraph')}</h2>
         <p>Visualize relationships between your creative assets</p>
         <div className="graph-stats">
           <span className="stat">

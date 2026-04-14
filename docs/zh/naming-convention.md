@@ -1,5 +1,8 @@
 # 数据库命名约定迁移说明
 
+> [English](../en/naming-convention.md)
+
+
 ## 概述
 
 本文档说明了项目从驼峰格式（camelCase）迁移到蛇形命名格式（snake_case）的完整过程。

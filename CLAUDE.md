@@ -176,7 +176,7 @@ The application includes an interactive knowledge graph for visualizing relation
 node backend/migrations/migrateToAssets.js
 ```
 
-See `KNOWLEDGE_GRAPH.md` for detailed documentation.
+See `docs/en/KNOWLEDGE_GRAPH.md` for detailed documentation.
 
 ## Testing APIs
 
@@ -185,4 +185,4 @@ Use `http://localhost:3001/api` for backend endpoints:
 - `/images` - CRUD + search + analyze endpoints
 - `/themes` - CRUD + image association
 
-See `developers.md` for detailed curl command examples.
+See `docs/en/developers.md` for detailed curl command examples.

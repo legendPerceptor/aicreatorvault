@@ -1,5 +1,8 @@
 # Multi-User Authentication System - Implementation Summary
 
+> [中文版](../zh/MULTI_USER_AUTHENTICATION.md)
+
+
 ## Overview
 
 This document describes the multi-user authentication system implemented for AIGC Assistant.

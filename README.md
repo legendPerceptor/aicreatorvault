@@ -1,101 +1,103 @@
 # AI Creator Vault
 
-一个服务于 AI 创作者的资产管理平台，帮助你安全地存储、组织和检索 AI 生成的图片、提示词等创作资产。通过知识图谱技术，可视化探索资产之间的关系，追踪创作演化路径。
+English | [中文版](docs/zh/README.md)
+
+An asset management platform for AI creators, helping you securely store, organize, and retrieve AI-generated images, prompts, and other creative assets. Through knowledge graph technology, visually explore relationships between assets and trace creative evolution paths.
 
 <p align="center">
-  <img src="images/aicreator-vault-image-page.png" alt="AI Creator Vault UI" width="800">
+  <img src="images/ai-creator-page-english.png" alt="AI Creator Vault UI" width="800">
 </p>
 
-## 功能特点
+## Features
 
-### 核心功能
-- **多用户认证**：完整的用户注册、登录、登出系统，支持 JWT + Refresh Token 双令牌机制
-- **提示词管理**：存储和管理 AI 创作提示词，支持评分和关联图片
-- **图片管理**：上传和管理 AI 生成的图片，支持评分和关联提示词
-- **AI 图片生成**：使用 MiniMax API 直接生成图片，支持多图生成、多种宽高比
-- **主题管理**：围绕主题组织参考图片，支持拖拽上传和灵活分类
-- **参考图搜索**：搜索网络参考图，一键下载添加到本地库
-- **用户隔离**：文件和数据按用户隔离，确保隐私安全
+### Core Features
+- **Multi-user Authentication**: Complete user registration, login, and logout system with JWT + Refresh Token dual-token mechanism
+- **Prompt Management**: Store and manage AI creative prompts with scoring and image association
+- **Image Management**: Upload and manage AI-generated images with scoring and prompt association
+- **AI Image Generation**: Generate images directly using the MiniMax API, supporting multi-image generation and various aspect ratios
+- **Theme Management**: Organize reference images around themes with drag-and-drop upload and flexible categorization
+- **Reference Image Search**: Search web reference images and download them to your local library with one click
+- **User Isolation**: Files and data are isolated by user, ensuring privacy and security
 
-### 智能搜索
-- **AI 图片分析**：自动分析图片内容并生成描述和嵌入向量
-- **向量搜索**：基于 Qdrant 的高性能语义搜索
-- **混合检索**：结合关键词和语义搜索，使用 RRF 算法智能排序
-- **以图搜图**：上传图片搜索视觉相似的内容
+### Intelligent Search
+- **AI Image Analysis**: Automatically analyze image content and generate descriptions and embedding vectors
+- **Vector Search**: High-performance semantic search powered by Qdrant
+- **Hybrid Retrieval**: Combines keyword and semantic search with RRF algorithm for intelligent ranking
+- **Image-to-Image Search**: Upload an image to search for visually similar content
 
-### 知识图谱 🌟
-- **可视化图谱**：交互式图形界面展示资产及其关系
-- **关系追踪**：追踪提示词、图片、衍生版本之间的关系链
-- **路径发现**：查找资产间的最短关联路径
-- **衍生管理**：支持编辑、变体、放大、裁剪等多种衍生类型
-- **图谱遍历**：广度优先搜索邻居节点，发现创作网络
+### Knowledge Graph
+- **Visual Graph**: Interactive graphical interface displaying assets and their relationships
+- **Relationship Tracking**: Track chains of relationships between prompts, images, and derived versions
+- **Path Discovery**: Find the shortest association path between assets
+- **Derivative Management**: Support for various derivative types including edit, variant, upscale, and crop
+- **Graph Traversal**: Breadth-first search for neighbor nodes to discover creative networks
 
-## 技术栈
+## Tech Stack
 
-- **后端**：Node.js + Express.js + Sequelize
-- **数据库**：PostgreSQL + pgvector（生产环境）/ SQLite（开发环境）
-- **缓存**：Redis
-- **向量数据库**：Qdrant
-- **前端**：React + Vite + Nginx
-- **AI 服务**：Python + FastAPI + OpenAI API
-- **容器化**：Docker + Docker Compose
+- **Backend**: Node.js + Express.js + Sequelize
+- **Database**: PostgreSQL + pgvector (production) / SQLite (development)
+- **Cache**: Redis
+- **Vector Database**: Qdrant
+- **Frontend**: React + Vite + Nginx
+- **AI Service**: Python + FastAPI + OpenAI API
+- **Containerization**: Docker + Docker Compose
 
-## 快速开始
+## Quick Start
 
-### Docker 部署（推荐）
+### Docker Deployment (Recommended)
 
-#### 1. 克隆项目
+#### 1. Clone the Project
 
 ```bash
 git clone https://github.com/legendPerceptor/aicreatorvault.git
 cd aicreatorvault
 ```
 
-#### 2. 配置环境变量
+#### 2. Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件：
+Edit the `.env` file:
 
 ```env
-# 数据库配置
+# Database configuration
 DB_NAME=aicreatorvault
 DB_USER=aicreator
 DB_PASSWORD=your_secure_password
 
-# 上传文件存储路径（宿主机目录）
-# NAS 部署建议使用绝对路径，例如：
+# Upload file storage path (host directory)
+# For NAS deployment, use absolute paths, e.g.:
 # Synology: /volume1/docker/aicreatorvault/uploads
-# 本地开发: ./uploads
+# Local development: ./uploads
 UPLOADS_PATH=./uploads
 
-# JWT 认证配置
+# JWT authentication configuration
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
-AUTH_COOKIE_SECURE=false  # 生产环境设为 true（HTTPS）
+AUTH_COOKIE_SECURE=false  # Set to true in production (HTTPS)
 
 # OpenAI API
 OPENAI_API_KEY=sk-your-api-key
 OPENAI_VISION_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
-# Xray 代理配置（必填，用于访问 OpenAI API）
+# Xray proxy configuration (required for accessing OpenAI API)
 XRAY_CONFIG_PATH=./xray/config.json
 
-# Brave Search API（可选，用于参考图搜索）
+# Brave Search API (optional, for reference image search)
 BRAVE_API_KEY=your_brave_api_key
 
-# MiniMax API（用于 AI 图片生成）
+# MiniMax API (for AI image generation)
 IMAGE_GEN_API_URL=https://api.minimaxi.com/v1/image_generation
 IMAGE_GEN_API_KEY=your_minimax_api_key
 ```
 
-#### 3. 配置代理
+#### 3. Configure Proxy
 
-编辑 `xray/config.json` 配置代理（用于访问 OpenAI API）：
+Edit `xray/config.json` to configure the proxy (for accessing OpenAI API):
 
 ```json
 {
@@ -115,66 +117,66 @@ IMAGE_GEN_API_KEY=your_minimax_api_key
 }
 ```
 
-#### 4. 创建上传目录
+#### 4. Create Upload Directory
 
 ```bash
-# 根据你的 UPLOADS_PATH 创建目录
+# Create the directory based on your UPLOADS_PATH
 mkdir -p ./uploads
 ```
 
-#### 5. 启动服务
+#### 5. Start Services
 
 ```bash
 docker compose up -d
 ```
 
-#### 6. 访问应用
+#### 6. Access the Application
 
-- **前端**：http://localhost:5173
-- **后端 API**：http://localhost:3001/api
-- **AI 服务**：http://localhost:8001
-- **Qdrant 控制台**：http://localhost:6333/dashboard
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001/api
+- **AI Service**: http://localhost:8001
+- **Qdrant Console**: http://localhost:6333/dashboard
 
-### Docker 服务说明
+### Docker Service Overview
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| frontend | 5173 | React 前端（Nginx） |
-| backend | 3001 | Node.js 后端 API |
-| image-service | 8001 | Python AI 图片分析服务 |
+| Service | Port | Description |
+|---------|------|-------------|
+| frontend | 5173 | React frontend (Nginx) |
+| backend | 3001 | Node.js backend API |
+| image-service | 8001 | Python AI image analysis service |
 | postgres | 5432 | PostgreSQL + pgvector |
-| redis | 6379 | Redis 缓存 |
-| qdrant | 6333/6334 | Qdrant 向量数据库 |
-| aigc-xray | 8107 | Xray 代理服务 |
+| redis | 6379 | Redis cache |
+| qdrant | 6333/6334 | Qdrant vector database |
+| aigc-xray | 8107 | Xray proxy service |
 
-### 常用命令
+### Common Commands
 
 ```bash
-# 查看服务状态
+# View service status
 docker compose ps
 
-# 查看日志
+# View logs
 docker compose logs -f backend
 docker compose logs -f image-service
 
-# 停止服务
+# Stop services
 docker compose down
 
-# 重新构建
+# Rebuild
 docker compose up -d --build
 
-# 进入容器
+# Enter container
 docker compose exec backend sh
 docker compose exec image-service bash
 ```
 
 ---
 
-## 本地开发（非 Docker）
+## Local Development (Non-Docker)
 
-如果不使用 Docker，可以手动安装各服务：
+If not using Docker, you can manually install each service:
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
 npm install
@@ -182,53 +184,53 @@ cd frontend && npm install && cd ..
 cd image-service && pip install -r requirements.txt && cd ..
 ```
 
-### 2. 配置环境变量
+### 2. Configure Environment Variables
 
 ```bash
 cp .env.example .env
 cp image-service/.env.example image-service/.env
 ```
 
-### 3. 启动依赖服务
+### 3. Start Dependency Services
 
-需要手动启动 PostgreSQL、Redis、Qdrant：
+You need to manually start PostgreSQL, Redis, and Qdrant:
 
 ```bash
-# PostgreSQL (需要安装 pgvector 扩展)
+# PostgreSQL (requires pgvector extension)
 # Redis
 # Qdrant: docker run -p 6333:6333 qdrant/qdrant
 ```
 
-### 4. 启动服务
+### 4. Start Services
 
 ```bash
-npm run start:backend       # 后端 (3001)
-npm run start:frontend      # 前端 (5173)
-cd image-service && python main.py  # AI 服务 (8001)
+npm run start:backend       # Backend (3001)
+npm run start:frontend      # Frontend (5173)
+cd image-service && python main.py  # AI service (8001)
 ```
 
 ---
 
-## 数据库支持
+## Database Support
 
-项目支持两种数据库：
+The project supports two databases:
 
-| 数据库 | 适用场景 | 向量支持 |
-|--------|----------|----------|
-| SQLite | 开发、测试、小型部署 | JSON 存储 |
-| PostgreSQL | 生产环境、大数据量 | pgvector 原生向量类型 |
+| Database | Use Case | Vector Support |
+|----------|----------|----------------|
+| SQLite | Development, testing, small deployments | JSON storage |
+| PostgreSQL | Production, large datasets | pgvector native vector type |
 
-Docker 部署默认使用 PostgreSQL + pgvector。
+Docker deployment uses PostgreSQL + pgvector by default.
 
-### 配置方式
+### Configuration
 
-在 `.env` 文件中设置：
+Set in the `.env` file:
 
 ```env
-# 数据库类型：sqlite 或 postgres
+# Database type: sqlite or postgres
 DB_TYPE=postgres
 
-# PostgreSQL 配置
+# PostgreSQL configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=aicreatorvault
@@ -238,284 +240,296 @@ DB_PASSWORD=your_password
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
 aicreatorvault/
 ├── backend/
 │   ├── config/
-│   │   └── database.js          # 数据库配置工厂
+│   │   └── database.js          # Database config factory
 │   ├── models/
-│   │   ├── index.js             # 数据库连接和模型导出
-│   │   ├── Prompt.js            # 提示词模型
-│   │   ├── Image.js             # 图片模型（含向量字段）
-│   │   ├── Theme.js             # 主题模型
-│   │   ├── ThemeImage.js        # 主题-图片关联模型
-│   │   ├── Asset.js             # 统一资产模型（知识图谱）
-│   │   ├── AssetRelationship.js # 资产关系模型（知识图谱）
-│   │   └── User.js             # 用户模型
+│   │   ├── index.js             # Database connection and model exports
+│   │   ├── Prompt.js            # Prompt model
+│   │   ├── Image.js             # Image model (with vector fields)
+│   │   ├── Theme.js             # Theme model
+│   │   ├── ThemeImage.js        # Theme-image association model
+│   │   ├── Asset.js             # Unified asset model (knowledge graph)
+│   │   ├── AssetRelationship.js # Asset relationship model (knowledge graph)
+│   │   └── User.js             # User model
 │   ├── routes/
-│   │   ├── prompts.js           # 提示词 API
-│   │   ├── images.js            # 图片 API
-│   │   ├── themes.js            # 主题 API
-│   │   ├── assets.js            # 资产管理 API（含衍生版本）
-│   │   ├── graph.js             # 知识图谱 API
-│   │   ├── auth.js              # 认证 API
-│   │   ├── files.js             # 受保护的文件服务
-│   │   └── referenceSearch.js   # 参考图搜索 API
+│   │   ├── prompts.js           # Prompt API
+│   │   ├── images.js            # Image API
+│   │   ├── themes.js            # Theme API
+│   │   ├── assets.js            # Asset management API (with derivative versions)
+│   │   ├── graph.js             # Knowledge graph API
+│   │   ├── auth.js              # Authentication API
+│   │   ├── files.js             # Protected file service
+│   │   └── referenceSearch.js   # Reference image search API
 │   ├── middleware/
-│   │   └── auth.js              # 认证中间件
+│   │   └── auth.js              # Authentication middleware
 │   ├── utils/
-│   │   ├── vectorSearch.js      # 向量搜索工具
-│   │   └── auth.js              # JWT 认证工具
+│   │   ├── vectorSearch.js      # Vector search utilities
+│   │   └── auth.js              # JWT authentication utilities
 │   ├── services/
-│   │   ├── imageServiceClient.js      # AI 服务客户端（图片分析）
-│   │   ├── imageGenerationClient.js    # MiniMax 图片生成客户端
-│   │   ├── graphService.js            # 图谱遍历服务
-│   │   └── retrievalService.js        # 检索服务（混合检索）
-│   ├── migrations/              # 数据库迁移脚本
-│   │   ├── migrateToAssets.js   # 迁移到知识图谱
-│   │   └── addUsers.js         # 多用户迁移
-│   ├── uploads/                 # 上传的图片
-│   ├── temp/                    # 生成的临时图片
-│   ├── server.js                # 后端服务器
-│   └── Dockerfile               # 后端容器配置
+│   │   ├── imageServiceClient.js      # AI service client (image analysis)
+│   │   ├── imageGenerationClient.js    # MiniMax image generation client
+│   │   ├── graphService.js            # Graph traversal service
+│   │   └── retrievalService.js        # Retrieval service (hybrid retrieval)
+│   ├── migrations/              # Database migration scripts
+│   │   ├── migrateToAssets.js   # Migrate to knowledge graph
+│   │   └── addUsers.js         # Multi-user migration
+│   ├── uploads/                 # Uploaded images
+│   ├── temp/                    # Generated temporary images
+│   ├── server.js                # Backend server
+│   └── Dockerfile               # Backend container configuration
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── StarRating.jsx   # 评分组件
-│   │   │   ├── ImageCard.jsx    # 图片卡片
-│   │   │   ├── ImagePreviewModal.jsx  # 图片预览
-│   │   │   └── graph/           # 知识图谱组件
-│   │   │       ├── GraphCanvas.jsx    # 图谱画布
-│   │   │       ├── GraphControls.jsx  # 图谱控制面板
-│   │   │       └── GraphNodeDetails.jsx # 节点详情
+│   │   │   ├── StarRating.jsx   # Rating component
+│   │   │   ├── ImageCard.jsx    # Image card
+│   │   │   ├── ImagePreviewModal.jsx  # Image preview
+│   │   │   └── graph/           # Knowledge graph components
+│   │   │       ├── GraphCanvas.jsx    # Graph canvas
+│   │   │       ├── GraphControls.jsx  # Graph control panel
+│   │   │       └── GraphNodeDetails.jsx # Node details
 │   │   ├── pages/
-│   │   │   ├── PromptsPage.jsx       # 提示词管理
-│   │   │   ├── ImagesPage.jsx        # 图片管理
-│   │   │   ├── SearchPage.jsx        # 搜索页面
-│   │   │   ├── ThemesPage.jsx        # 主题管理
-│   │   │   ├── ReferenceSearchPage.jsx # 参考图搜索
-│   │   │   └── KnowledgeGraphPage.jsx # 知识图谱
+│   │   │   ├── PromptsPage.jsx       # Prompt management
+│   │   │   ├── ImagesPage.jsx        # Image management
+│   │   │   ├── SearchPage.jsx        # Search page
+│   │   │   ├── ThemesPage.jsx        # Theme management
+│   │   │   ├── ReferenceSearchPage.jsx # Reference image search
+│   │   │   └── KnowledgeGraphPage.jsx # Knowledge graph
 │   │   ├── hooks/
-│   │   │   ├── usePrompts.js         # 提示词数据钩子
-│   │   │   ├── useImages.js          # 图片数据钩子
-│   │   │   ├── useThemes.js          # 主题数据钩子
-│   │   │   ├── useAssets.js          # 资产数据钩子
-│   │   │   ├── useGraph.js           # 图谱数据钩子
-│   │   │   └── useAuth.js           # 认证状态钩子
+│   │   │   ├── usePrompts.js         # Prompt data hook
+│   │   │   ├── useImages.js          # Image data hook
+│   │   │   ├── useThemes.js          # Theme data hook
+│   │   │   ├── useAssets.js          # Asset data hook
+│   │   │   ├── useGraph.js           # Graph data hook
+│   │   │   └── useAuth.js           # Auth state hook
 │   │   ├── pages/
-│   │   │   ├── PromptsPage.jsx       # 提示词管理
-│   │   │   ├── ImagesPage.jsx        # 图片管理
-│   │   │   ├── SearchPage.jsx        # 搜索页面
-│   │   │   ├── ThemesPage.jsx        # 主题管理
-│   │   │   ├── ReferenceSearchPage.jsx # 参考图搜索
-│   │   │   ├── KnowledgeGraphPage.jsx # 知识图谱
-│   │   │   └── AuthPage.jsx         # 认证页面（登录/注册）
-│   │   ├── App.jsx              # 主应用组件
-│   │   ├── main.jsx             # 入口文件
-│   │   └── index.css            # 样式文件
-│   ├── public/                  # 前端静态文件
-│   ├── Dockerfile               # 前端容器配置
+│   │   │   ├── PromptsPage.jsx       # Prompt management
+│   │   │   ├── ImagesPage.jsx        # Image management
+│   │   │   ├── SearchPage.jsx        # Search page
+│   │   │   ├── ThemesPage.jsx        # Theme management
+│   │   │   ├── ReferenceSearchPage.jsx # Reference image search
+│   │   │   ├── KnowledgeGraphPage.jsx # Knowledge graph
+│   │   │   └── AuthPage.jsx         # Authentication page (login/register)
+│   │   ├── App.jsx              # Main application component
+│   │   ├── main.jsx             # Entry file
+│   │   └── index.css            # Stylesheet
+│   ├── public/                  # Frontend static files
+│   ├── Dockerfile               # Frontend container configuration
 │   └── docker/
-│       └── nginx.conf           # Nginx 配置
+│       └── nginx.conf           # Nginx configuration
 ├── image-service/
-│   ├── main.py                  # AI 服务入口
-│   ├── image_processor.py       # 图片处理和嵌入生成
-│   ├── requirements.txt         # Python 依赖
-│   ├── pyproject.toml           # 项目配置
-│   ├── .env                     # AI 服务环境变量
-│   ├── .env.example             # 环境变量模板
-│   └── Dockerfile               # AI 服务容器配置
+│   ├── main.py                  # AI service entry point
+│   ├── image_processor.py       # Image processing and embedding generation
+│   ├── requirements.txt         # Python dependencies
+│   ├── pyproject.toml           # Project configuration
+│   ├── .env                     # AI service environment variables
+│   ├── .env.example             # Environment variable template
+│   └── Dockerfile               # AI service container configuration
 ├── docker/
-│   ├── README.md                # Docker 部署详细文档
-│   └── init-pgvector.sql        # PostgreSQL pgvector 初始化
+│   ├── README.md                # Docker deployment detailed documentation
+│   └── init-pgvector.sql        # PostgreSQL pgvector initialization
 ├── xray/
-│   ├── config.json              # Xray 代理配置（gitignored）
-│   └── config-example.json      # 代理配置示例
-├── docker-compose.yml           # Docker Compose 编排
-├── .dockerignore                # Docker 忽略文件
-├── .env.example                 # 环境变量模板
-├── stop.sh                      # 停止服务脚本
-├── start.sh                     # 启动服务脚本
-├── package.json                 # 项目配置
-├── CLAUDE.md                    # Claude Code 项目指南
-├── KNOWLEDGE_GRAPH.md           # 知识图谱详细文档
-├── RETRIEVAL_GUIDE.md           # 检索系统设计文档
-├── REFERENCE_SEARCH_DESIGN.md   # 参考图搜索设计文档
-├── QDRANT_INTEGRATION.md        # Qdrant 集成文档
-├── developers.md                # 开发者指南
-└── README.md                    # 项目说明
+│   ├── config.json              # Xray proxy configuration (gitignored)
+│   └── config-example.json      # Proxy configuration example
+├── docker-compose.yml           # Docker Compose orchestration
+├── .dockerignore                # Docker ignore file
+├── .env.example                 # Environment variable template
+├── stop.sh                      # Stop services script
+├── start.sh                     # Start services script
+├── package.json                 # Project configuration
+├── CLAUDE.md                    # Claude Code project guide
+├── KNOWLEDGE_GRAPH.md           # Knowledge graph detailed documentation
+├── RETRIEVAL_GUIDE.md           # Retrieval system design documentation
+├── REFERENCE_SEARCH_DESIGN.md   # Reference image search design document
+├── QDRANT_INTEGRATION.md        # Qdrant integration documentation
+├── developers.md                # Developer guide
+└── README.md                    # Project README
 ```
 
-## API 端点
+## API Endpoints
 
-> **注意**：除认证 API 外，大多数 API 端点需要认证。请求时需在 Header 中包含 Access Token：
+> **Note**: Most API endpoints require authentication (except auth APIs). Include the Access Token in the request header:
 > ```bash
 > -H "Authorization: Bearer <access_token>"
 > ```
 
-### 认证 API（无需认证）
+### Authentication API (No Auth Required)
 
-- `POST /api/auth/register` - 注册新用户
-- `POST /api/auth/login` - 用户登录
-- `POST /api/auth/logout` - 用户登出
-- `POST /api/auth/refresh` - 刷新 Access Token
-- `GET /api/auth/me` - 获取当前用户信息
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/refresh` - Refresh Access Token
+- `GET /api/auth/me` - Get current user info
 
-#### 获取 Access Token 示例
+#### Get Access Token Example
 
 ```bash
-# 1. 登录获取 Token
+# 1. Login to get token
 curl -X POST -H "Content-Type: application/json" \
   -d '{"email":"your@email.com","password":"yourpassword"}' \
   -c cookies.txt \
   http://localhost:3001/api/auth/login
 
-# 2. 使用 Access Token 访问需要认证的 API
+# 2. Use Access Token to access protected APIs
 curl -H "Authorization: Bearer <access_token>" \
   http://localhost:3001/api/prompts
 ```
 
-### 提示词 API（需要认证）
+### Prompt API (Authentication Required)
 
-- `GET /api/prompts` - 获取所有提示词
-- `GET /api/prompts/unused` - 获取未使用的提示词
-- `POST /api/prompts` - 创建新提示词
-- `PUT /api/prompts/:id/score` - 更新提示词评分
-- `DELETE /api/prompts/:id` - 删除提示词
+- `GET /api/prompts` - Get all prompts
+- `GET /api/prompts/unused` - Get unused prompts
+- `POST /api/prompts` - Create a new prompt
+- `PUT /api/prompts/:id/score` - Update prompt score
+- `DELETE /api/prompts/:id` - Delete a prompt
 
-### 图片 API
+### Image API
 
-- `GET /api/images` - 获取所有图片
-- `POST /api/images` - 上传图片（自动分析）
-- `POST /api/images/generate` - AI 生成图片（MiniMax）
-- `POST /api/images/:id/analyze` - 分析图片
-- `POST /api/images/batch-analyze` - 批量分析图片
-- `PUT /api/images/:id/score` - 更新图片评分
-- `PUT /api/images/:id/prompt` - 更新图片关联的提示词
-- `DELETE /api/images/:id` - 删除图片
-- `POST /api/images/search` - 文本搜索图片
-- `POST /api/images/search-by-image` - 以图搜图
-- `POST /api/images/search/hybrid` - 混合检索（关键词 + 语义）
+- `GET /api/images` - Get all images
+- `POST /api/images` - Upload an image (auto-analyze)
+- `POST /api/images/generate` - AI generate image (MiniMax)
+- `POST /api/images/:id/analyze` - Analyze an image
+- `POST /api/images/batch-analyze` - Batch analyze images
+- `PUT /api/images/:id/score` - Update image score
+- `PUT /api/images/:id/prompt` - Update associated prompt
+- `DELETE /api/images/:id` - Delete an image
+- `POST /api/images/search` - Text-to-image search
+- `POST /api/images/search-by-image` - Image-to-image search
+- `POST /api/images/search/hybrid` - Hybrid retrieval (keyword + semantic)
 
-### 主题 API
+### Theme API
 
-- `GET /api/themes` - 获取所有主题
-- `POST /api/themes` - 创建新主题
-- `POST /api/themes/:id/images` - 为主题添加图片
-- `DELETE /api/themes/:id/images/:imageId` - 从主题中移除图片
+- `GET /api/themes` - Get all themes
+- `POST /api/themes` - Create a new theme
+- `POST /api/themes/:id/images` - Add image to theme
+- `DELETE /api/themes/:id/images/:imageId` - Remove image from theme
 
-### 参考图搜索 API
+### Reference Image Search API
 
-- `POST /api/reference-search/search` - 搜索网络参考图
-- `POST /api/reference-search/download` - 下载并添加参考图
-- `POST /api/reference-search/batch-download` - 批量下载参考图
+- `POST /api/reference-search/search` - Search web reference images
+- `POST /api/reference-search/download` - Download and add a reference image
+- `POST /api/reference-search/batch-download` - Batch download reference images
 
-### 资产管理 API（知识图谱）
+### Asset Management API (Knowledge Graph)
 
-- `GET /api/assets` - 获取所有资产
-- `GET /api/assets/:id` - 获取单个资产详情
-- `POST /api/assets` - 创建新资产
-- `POST /api/assets/:id/derived` - 创建衍生版本（编辑/变体/放大/裁剪）
-- `PUT /api/assets/:id` - 更新资产信息
-- `DELETE /api/assets/:id` - 删除资产
-- `GET /api/assets/:id/versions` - 获取资产的所有衍生版本
+- `GET /api/assets` - Get all assets
+- `GET /api/assets/:id` - Get single asset details
+- `POST /api/assets` - Create a new asset
+- `POST /api/assets/:id/derived` - Create a derived version (edit/variant/upscale/crop)
+- `PUT /api/assets/:id` - Update asset info
+- `DELETE /api/assets/:id` - Delete an asset
+- `GET /api/assets/:id/versions` - Get all derived versions of an asset
 
-### 知识图谱 API
+### Knowledge Graph API
 
-- `GET /api/graph/nodes` - 获取图谱所有节点
-- `GET /api/graph/edges` - 获取图谱所有边
-- `GET /api/graph/neighbors/:id` - 获取节点的邻居
-- `GET /api/graph/path/:fromId/:toId` - 查找两节点间最短路径
-- `GET /api/graph/traverse/:id` - 广度优先遍历图谱
-- `GET /api/graph/components` - 获取连通组件
-- `POST /api/graph/relationship` - 创建资产关系
-- `DELETE /api/graph/relationship/:id` - 删除资产关系
+- `GET /api/graph/nodes` - Get all graph nodes
+- `GET /api/graph/edges` - Get all graph edges
+- `GET /api/graph/neighbors/:id` - Get neighbors of a node
+- `GET /api/graph/path/:fromId/:toId` - Find shortest path between two nodes
+- `GET /api/graph/traverse/:id` - Breadth-first graph traversal
+- `GET /api/graph/components` - Get connected components
+- `POST /api/graph/relationship` - Create an asset relationship
+- `DELETE /api/graph/relationship/:id` - Delete an asset relationship
 
-## 开发指南
+## Development Guide
 
-### 代码规范
+### Code Standards
 
-项目使用 Prettier 进行代码格式化，并通过 pre-commit 在提交前自动格式化代码。
+The project uses Prettier for code formatting and pre-commit to automatically format code before commits.
 
 ```bash
-# 手动格式化代码
+# Manually format code
 npx prettier --write "**/*.js"
 ```
 
-### 架构说明
+### Architecture Overview
 
-- **组件化设计**：将 UI 拆分为可复用的组件（StarRating、ImageCard、GraphCanvas）
-- **页面分离**：每个功能模块独立为页面组件
-- **状态管理**：使用自定义 Hooks 封装数据获取和状态逻辑
-- **单一职责**：每个文件只负责一个功能，便于维护和测试
-- **数据库抽象**：通过 Sequelize ORM 支持多种数据库
-- **向量搜索**：Qdrant 向量数据库 + pgvector 双重支持
-- **混合检索**：RRF 算法融合关键词和语义搜索结果
-- **统一资产模型**：提示词、图片、衍生图片统一为 Asset，便于关系管理
-- **图谱服务**：独立的图遍历服务，支持 BFS、最短路径等算法
-- **关系追踪**：记录资产间的生成、衍生、版本、灵感等关系类型
+- **Component-based Design**: Split UI into reusable components (StarRating, ImageCard, GraphCanvas)
+- **Page Separation**: Each functional module is an independent page component
+- **State Management**: Use custom Hooks to encapsulate data fetching and state logic
+- **Single Responsibility**: Each file is responsible for one function, making it easy to maintain and test
+- **Database Abstraction**: Support multiple databases through Sequelize ORM
+- **Vector Search**: Dual support with Qdrant vector database + pgvector
+- **Hybrid Retrieval**: RRF algorithm fuses keyword and semantic search results
+- **Unified Asset Model**: Prompts, images, and derived images are unified as Assets for easy relationship management
+- **Graph Service**: Independent graph traversal service supporting BFS, shortest path, and other algorithms
+- **Relationship Tracking**: Records generation, derivation, versioning, and inspiration relationship types between assets
 
-## 知识图谱
+## Knowledge Graph
 
-AI Creator Vault 引入了知识图谱功能，将所有创作资产（提示词、图片、衍生版本）统一管理，并追踪它们之间的关系。
+AI Creator Vault introduces a knowledge graph feature that unifies all creative assets (prompts, images, derived versions) and tracks their relationships.
 
-### 核心概念
+### Core Concepts
 
-- **资产类型**：
-  - `prompt` - AI 创作提示词
-  - `image` - AI 生成的原始图片
-  - `derived_image` - 衍生图片（编辑、变体、放大、裁剪）
+- **Asset Types**:
+  - `prompt` - AI creative prompt
+  - `image` - AI-generated original image
+  - `derived_image` - Derived image (edit, variant, upscale, crop)
 
-- **关系类型**：
-  - `generated` - 提示词生成图片
-  - `derived_from` - 从原始资产衍生
-  - `version_of` - 版本关系
-  - `inspired_by` - 灵感来源
+- **Relationship Types**:
+  - `generated` - Prompt generates image
+  - `derived_from` - Derived from original asset
+  - `version_of` - Version relationship
+  - `inspired_by` - Inspiration source
 
-- **衍生类型**：
-  - `edit` - 编辑修改
-  - `variant` - 风格变体
-  - `upscale` - 放大增强
-  - `crop` - 裁剪
+- **Derivative Types**:
+  - `edit` - Edit modification
+  - `variant` - Style variant
+  - `upscale` - Upscale enhancement
+  - `crop` - Crop
 
-### 数据迁移
+### Data Migration
 
-如果你已经在使用旧版本的提示词和图片管理，可以运行迁移脚本将数据导入知识图谱：
+If you are already using the legacy prompt and image management, you can run a migration script to import data into the knowledge graph:
 
 ```bash
 node backend/migrations/migrateToAssets.js
 ```
 
-## 多用户数据迁移
+## Multi-User Data Migration
 
-升级到多用户版本后，需要运行用户迁移脚本将现有数据迁移到多用户体系：
+After upgrading to the multi-user version, you need to run a user migration script to migrate existing data to the multi-user system:
 
 ```bash
-# 本地环境
+# Local environment
 node backend/migrations/addUsers.js
 
-# Docker 环境
+# Docker environment
 docker exec -it <container_name> node backend/migrations/addUsers.js
 
-# 预览模式（不执行实际更改）
+# Preview mode (no actual changes)
 node backend/migrations/addUsers.js --dry-run
 ```
 
-迁移脚本功能：
-- 创建默认用户 `legacy@local`（ID=1）
-- 为所有现有数据添加 `user_id=1`
-- 将上传文件从 `uploads/` 迁移到 `uploads/users/1/images/`
-- 支持多次运行（幂等操作）
+Migration script features:
+- Creates a default user `legacy@local` (ID=1)
+- Adds `user_id=1` to all existing data
+- Migrates uploaded files from `uploads/` to `uploads/users/1/images/`
+- Supports multiple runs (idempotent operations)
 
-**注意**：迁移前请备份数据库和上传文件。
+**Note**: Please backup your database and uploaded files before migration.
 
-## 更多文档
+## More Documentation
 
-- [Docker 部署指南](docker/README.md) - 详细的 Docker 部署说明
-- [知识图谱文档](KNOWLEDGE_GRAPH.md) - 知识图谱的详细使用方法和 API 示例
-- [检索系统设计](RETRIEVAL_GUIDE.md) - 混合检索和 RRF 算法说明
-- [参考图搜索设计](REFERENCE_SEARCH_DESIGN.md) - 参考图搜索功能设计文档
-- [Qdrant 集成文档](QDRANT_INTEGRATION.md) - Qdrant 向量数据库集成指南
-- [开发者指南](developers.md) - 测试方法和数据库查询命令
+All documentation is available in both [English](docs/en/) and [中文](docs/zh/).
+
+- [Docker Deployment Guide](docs/en/docker-deployment.md) - Detailed Docker deployment instructions
+- [Knowledge Graph Documentation](docs/en/KNOWLEDGE_GRAPH.md) - Detailed usage and API examples for the knowledge graph
+- [Retrieval System Design](docs/en/RETRIEVAL_GUIDE.md) - Hybrid retrieval and RRF algorithm documentation
+- [Reference Image Search Design](docs/en/REFERENCE_SEARCH_DESIGN.md) - Reference image search feature design document
+- [Qdrant Integration Documentation](docs/en/QDRANT_INTEGRATION.md) - Qdrant vector database integration guide
+- [Qdrant Quick Start](docs/en/QDRANT_QUICKSTART.md) - Quick start guide for Qdrant integration
+- [AI Search Improvement Plan](docs/en/AI_SEARCH_IMPROVEMENT.md) - AI intelligent retrieval module improvement plan
+- [Qdrant Integration Report](docs/en/QDRANT_DELIVERY.md) - Qdrant integration completion report
+- [Developer Guide](docs/en/developers.md) - Testing methods and database query commands
+- [API Test Commands](docs/en/API_TEST_COMMANDS.md) - API testing curl commands
+- [PostgreSQL Support](docs/en/postgres-support.md) - PostgreSQL installation and configuration
+- [Pre-commit Configuration](docs/en/PRE-COMMIT-README.md) - Pre-commit code quality setup
+- [Migration Guide](docs/en/migrations-guide.md) - Database migration for reference image fields
+- [Naming Convention](docs/en/naming-convention.md) - Database naming convention migration guide
+- [Image Service](docs/en/image-service.md) - Python AI image analysis service
+- [Multi-User Authentication](docs/en/MULTI_USER_AUTHENTICATION.md) - Authentication system documentation

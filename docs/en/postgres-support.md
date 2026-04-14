@@ -1,8 +1,11 @@
-# 支持Postgres数据库
+# PostgreSQL Database Support
 
-## 安装postgres
+> [中文版](../zh/postgres-support.md)
 
-假设在Ubuntu系统上，可以用下面的命令快速安装postgres 16发行版。
+
+## Install PostgreSQL
+
+Assuming you're on an Ubuntu system, you can quickly install PostgreSQL 16 with the following commands.
 
 ```bash
 sudo apt update
@@ -10,36 +13,36 @@ sudo apt install postgresql postgresql-contrib
 sudo apt install postgresql-16-pgvector
 ```
 
-## 配置postgres数据库
+## Configure PostgreSQL Database
 
-为了使用Postgres数据库，我们需要手工运行下列命令。
+To use PostgreSQL, we need to manually run the following commands.
 
 ```bash
-# 切换到 postgres 用户并创建数据库和用户
+# Switch to postgres user and create database and user
 sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
 sudo -u postgres psql -c "CREATE DATABASE aigc_assistant OWNER postgres;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aigc_assistant TO postgres;"
 ```
 
-可以用下面的方式连接到Postgres数据库
+You can connect to the PostgreSQL database with:
 
 ```bash
 sudo -u postgres psql -d aigc_assistant
 ```
 
-用下面的SQL语句修改密码
+Change the password with the following SQL:
 
 ```sql
 ALTER USER postgres PASSWORD 'Your_password';
 ```
 
-可以用下面的方式登录，方便脚本运行。
+You can log in this way for easy script execution:
 
 ```bash
 PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "SELECT version();"
 ```
 
-使用下面的命令启用vector扩展。
+Enable the vector extension with the following command:
 
 ```bash
 PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"

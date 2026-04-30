@@ -47,3 +47,16 @@ Enable the vector extension with the following command:
 ```bash
 PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"
 ```
+
+## Change a user's password
+
+To change the password of a user (in case you forget the password).
+
+```bash
+node -e "const bcrypt = require('bcryptjs'); const hash = bcrypt.hashSync('your_new_password', 10); console.log(hash);"
+```
+
+```bash
+docker exec -it aicreatorvault-postgres-1 psql -U aicreator -d aicreatorvault
+UPDATE "Users" SET password_hash = '<paste_the_hash_here>' WHERE email = '<your_email@example.com>';
+```

@@ -168,9 +168,14 @@ function SearchPage({
         const response = await fetch(`${API_BASE}/lightrag/search`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, mode: 'hybrid' }),
+          body: JSON.stringify({ query, mode: 'hybrid', onlyNeedContext: true }),
         });
         const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data.error || data.detail || t('search.searchFailed', { error: 'Unknown error' })
+          );
+        }
         setSmartSearchResult(data);
         setActiveSearchType('smart');
         setIsSearching(false);
@@ -277,7 +282,8 @@ function SearchPage({
         <SmartSearchResults result={smartSearchResult} />
       )}
 
-      {(searchResults.length > 0 || (activeSearchType !== 'none' && activeSearchType !== 'smart')) && (
+      {(searchResults.length > 0 ||
+        (activeSearchType !== 'none' && activeSearchType !== 'smart')) && (
         <div className="search-results-section">
           {/* 工具栏 */}
           <SearchResultsToolbar

@@ -40,6 +40,13 @@ class LightRAGService {
   }
 
   /**
+   * Delete an indexed document from LightRAG.
+   */
+  async deleteIndex(docId) {
+    return await imageServiceClient.lightragDelete(String(docId));
+  }
+
+  /**
    * Smart search via LightRAG knowledge graph.
    */
   async smartSearch(query, options = {}) {

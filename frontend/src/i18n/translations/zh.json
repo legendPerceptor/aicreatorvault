@@ -185,7 +185,9 @@
     "keywordBadge": "关键词",
     "semanticBadge": "AI 语义",
     "imageBadge": "以图搜图",
-    "hybridBadge": "混合检索"
+    "hybridBadge": "混合检索",
+    "knowledgeGraph": "知识图谱",
+    "knowledgeGraphBadge": "知识图谱"
   },
   "searchFilters": {
     "filterConditions": "筛选条件",

@@ -4,11 +4,12 @@ import './SmartSearchResults.css';
 function SmartSearchResults({ result }) {
   if (!result) return null;
 
-  const { data, response, mode } = result;
-  const entities = data?.data?.entities || [];
-  const relationships = data?.data?.relationships || [];
-  const chunks = data?.data?.chunks || [];
-  const llmResponse = response || data?.llm_response;
+  const { response, mode } = result;
+  const contextData = result.data || {};
+  const entities = contextData.entities || [];
+  const relationships = contextData.relationships || [];
+  const chunks = contextData.chunks || [];
+  const llmResponse = response;
 
   return (
     <div className="smart-search-results">

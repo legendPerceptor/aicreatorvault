@@ -21,6 +21,9 @@ class Settings:
     qdrant_host: str = os.environ.get("QDRANT_HOST", "localhost")
     qdrant_port: int = int(os.environ.get("QDRANT_PORT", "6333"))
 
+    # LightRAG 配置
+    lightrag_working_dir: str = os.environ.get("LIGHTRAG_WORKING_DIR", "/app/lightrag_data")
+
 
 @lru_cache()
 def get_settings() -> Settings:

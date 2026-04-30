@@ -3,6 +3,7 @@ import ImageCard from '../components/ImageCard';
 import SmartSearchBox from '../components/search/SmartSearchBox';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchResultsToolbar from '../components/search/SearchResultsToolbar';
+import SmartSearchResults from '../components/search/SmartSearchResults';
 import { useTranslation } from '../i18n/useTranslation';
 import './SearchPage.css';
 
@@ -28,9 +29,10 @@ function SearchPage({
   const [sortBy, setSortBy] = useState('similarity');
   const [viewMode, setViewMode] = useState('grid');
   const [filters, setFilters] = useState({});
-  const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image | hybrid
+  const [activeSearchType, setActiveSearchType] = useState('none'); // none | keyword | semantic | image | hybrid | smart
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [smartSearchResult, setSmartSearchResult] = useState(null);
   const { t } = useTranslation();
   const checkServiceStatus = async () => {
     try {
@@ -161,6 +163,23 @@ function SearchPage({
         const data = await response.json();
         results = data.results || [];
         setActiveSearchType('hybrid');
+      } else if (mode === 'smart') {
+        // LightRAG Knowledge Graph search
+        const response = await fetch(`${API_BASE}/lightrag/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, mode: 'hybrid', onlyNeedContext: true }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data.error || data.detail || t('search.searchFailed', { error: 'Unknown error' })
+          );
+        }
+        setSmartSearchResult(data);
+        setActiveSearchType('smart');
+        setIsSearching(false);
+        return;
       }
 
       // 应用过滤器和排序
@@ -234,6 +253,7 @@ function SearchPage({
     setSearchResults([]);
     setActiveSearchType('none');
     setFilters({});
+    setSmartSearchResult(null);
   };
 
   return (
@@ -258,7 +278,12 @@ function SearchPage({
       <SearchFilters themes={themes} initialFilters={filters} onFilterChange={handleFilterChange} />
 
       {/* 搜索结果 */}
-      {(searchResults.length > 0 || activeSearchType !== 'none') && (
+      {activeSearchType === 'smart' && smartSearchResult && (
+        <SmartSearchResults result={smartSearchResult} />
+      )}
+
+      {(searchResults.length > 0 ||
+        (activeSearchType !== 'none' && activeSearchType !== 'smart')) && (
         <div className="search-results-section">
           {/* 工具栏 */}
           <SearchResultsToolbar

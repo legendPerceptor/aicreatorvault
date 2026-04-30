@@ -132,6 +132,16 @@ router.post('/', authenticate, async (req, res) => {
       // 不影响主流程，只记录错误
     }
 
+    // 异步索引到 LightRAG 知识图谱（非阻塞）
+    try {
+      const lightragService = require('../services/lightragService');
+      lightragService.indexPrompt(prompt.id).catch((err) => {
+        console.error('[Prompt] LightRAG indexing failed (non-blocking):', err.message);
+      });
+    } catch (_) {
+      // LightRAG service unavailable, skip indexing
+    }
+
     res.status(201).json(prompt);
   } catch (error) {
     // 处理数据库唯一约束冲突
@@ -230,6 +240,16 @@ router.delete('/:id', authenticate, async (req, res) => {
     } catch (assetError) {
       console.error('[Prompt] Failed to delete Asset:', assetError.message);
       // 不影响主流程
+    }
+
+    // 异步删除 LightRAG 索引（非阻塞）
+    try {
+      const lightragService = require('../services/lightragService');
+      lightragService.deleteIndex(prompt.id).catch((err) => {
+        console.error('[Prompt] LightRAG deletion failed (non-blocking):', err.message);
+      });
+    } catch (_) {
+      // LightRAG service unavailable, skip indexing
     }
 
     // 从数据库中删除提示词记录

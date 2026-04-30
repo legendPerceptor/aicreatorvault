@@ -87,7 +87,9 @@ services:
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - QDRANT_URL=http://qdrant:6333
       - SERVICE_PORT=8001
+      - LIGHTRAG_WORKING_DIR=/app/lightrag_data
       # 通过 aigc-xray 代理访问 OpenAI API
       - HTTP_PROXY=http://aigc-xray:1087
       - HTTPS_PROXY=http://aigc-xray:1087
@@ -95,6 +97,8 @@ services:
     volumes:
       # 共享 uploads 目录（只读），用于分析图片
       - ${UPLOADS_PATH:-./uploads}:/app/uploads:ro
+      # LightRAG 持久化存储（知识图谱、KV 缓存）
+      - lightrag_data:/app/lightrag_data
     depends_on:
       - qdrant
       - aigc-xray
@@ -147,8 +151,8 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -176,6 +180,7 @@ volumes:
   postgres_data:
   redis_data:
   qdrant_data:
+  lightrag_data:
 
 networks:
   aicreatorvault-net:

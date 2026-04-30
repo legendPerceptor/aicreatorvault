@@ -123,6 +123,16 @@ router.post(
             console.error('[Image] Qdrant 写入失败:', qdrantError.message);
             // 不影响主流程
           }
+
+          // 异步索引到 LightRAG 知识图谱（非阻塞）
+          try {
+            const lightragService = require('../services/lightragService');
+            lightragService.indexImage(image.id).catch((err) => {
+              console.error('[Image] LightRAG indexing failed (non-blocking):', err.message);
+            });
+          } catch (_) {
+            // LightRAG 索引是可选功能，不影响主流程
+          }
         } catch (analyzeError) {
           console.error('AI分析失败，但图片已保存:', analyzeError.message);
         }
@@ -318,6 +328,16 @@ router.delete('/:id', authenticate, async (req, res) => {
       console.error('[Image] Failed to delete from Qdrant:', qdrantError.message);
     }
 
+    // 异步删除 LightRAG 索引（非阻塞）
+    try {
+      const lightragService = require('../services/lightragService');
+      lightragService.deleteIndex(image.id).catch((err) => {
+        console.error('[Image] LightRAG deletion failed (non-blocking):', err.message);
+      });
+    } catch (_) {
+      // LightRAG service unavailable, skip indexing
+    }
+
     await image.destroy();
     res.json({ message: 'Image deleted successfully' });
   } catch (error) {
@@ -367,6 +387,16 @@ router.post('/:id/analyze', authenticate, async (req, res) => {
       console.log(`[Image] 已写入 Qdrant: Image #${image.id}`);
     } catch (qdrantError) {
       console.error('[Image] Qdrant 写入失败:', qdrantError.message);
+    }
+
+    // 异步索引到 LightRAG 知识图谱（非阻塞）
+    try {
+      const lightragService = require('../services/lightragService');
+      lightragService.indexImage(image.id).catch((err) => {
+        console.error('[Image] LightRAG indexing failed (non-blocking):', err.message);
+      });
+    } catch (_) {
+      // LightRAG service unavailable, skip indexing
     }
 
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
@@ -599,6 +629,15 @@ router.post('/batch-analyze', authenticate, async (req, res) => {
               });
             } catch (qdrantError) {
               console.error('[Image] Qdrant 写入失败:', qdrantError.message);
+            }
+            // 异步索引到 LightRAG 知识图谱（非阻塞）
+            try {
+              const lightragService = require('../services/lightragService');
+              lightragService.indexImage(image.id).catch((err) => {
+                console.error('[Image] LightRAG indexing failed (non-blocking):', err.message);
+              });
+            } catch (_) {
+              // LightRAG service unavailable, skip indexing
             }
             updated++;
           }

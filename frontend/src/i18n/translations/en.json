@@ -185,7 +185,9 @@
     "keywordBadge": "Keyword",
     "semanticBadge": "AI Semantic",
     "imageBadge": "Image Search",
-    "hybridBadge": "Hybrid"
+    "hybridBadge": "Hybrid",
+    "knowledgeGraph": "Knowledge Graph",
+    "knowledgeGraphBadge": "Knowledge Graph"
   },
   "searchFilters": {
     "filterConditions": "Filter Conditions",

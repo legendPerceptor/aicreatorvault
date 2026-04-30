@@ -1,0 +1,128 @@
+.smart-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.smart-answer-card,
+.smart-entities-card,
+.smart-relationships-card,
+.smart-chunks-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.smart-answer-card h3,
+.smart-entities-card h3,
+.smart-relationships-card h3,
+.smart-chunks-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.smart-answer-text {
+  line-height: 1.7;
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+
+.smart-entity-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.smart-entity-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  font-size: 13px;
+  cursor: default;
+}
+
+.entity-type {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #06b6d4;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.entity-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.smart-relationship-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smart-relationship-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 13px;
+}
+
+.rel-node {
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.rel-arrow {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.rel-desc {
+  color: #6b7280;
+  flex: 1;
+}
+
+.smart-chunk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smart-chunk-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border-left: 3px solid #06b6d4;
+}
+
+.chunk-content {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.chunk-link {
+  font-size: 12px;
+  color: #06b6d4;
+  text-decoration: none;
+}
+
+.chunk-link:hover {
+  text-decoration: underline;
+}

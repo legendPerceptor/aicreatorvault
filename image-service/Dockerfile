@@ -39,7 +39,8 @@ RUN pip install --no-cache-dir \
     numpy>=1.24.0 \
     pillow>=10.0.0 \
     python-dotenv>=1.0.0 \
-    qdrant-client>=1.7.0
+    qdrant-client>=1.7.0 \
+    lightrag-hku>=0.1.0
 
 # Copy source code
 COPY . .

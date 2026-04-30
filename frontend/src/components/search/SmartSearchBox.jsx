@@ -58,6 +58,8 @@ function SmartSearchBox({
 
     if (intent === 'image' && uploadedImage) {
       onSearch?.(uploadedImage, 'image');
+    } else if (intent === 'smart' && value.trim()) {
+      onSearch?.(value.trim(), 'smart');
     } else if (value.trim()) {
       onSearch?.(value.trim(), intent === 'semantic' ? 'semantic' : 'keyword');
     }
@@ -144,6 +146,7 @@ function SmartSearchBox({
       semantic: { text: t('searchBox.semanticBadge'), icon: '🧠', color: '#8b5cf6' },
       image: { text: t('searchBox.imageBadge'), icon: '🖼️', color: '#ec4899' },
       hybrid: { text: t('searchBox.hybridBadge'), icon: '🔗', color: '#f59e0b' },
+      smart: { text: 'Knowledge Graph', icon: '🕸️', color: '#06b6d4' },
     };
 
     const badge = badges[intent];
@@ -261,6 +264,13 @@ function SmartSearchBox({
               onClick={() => setSearchMode('hybrid')}
             >
               🔗 {t('searchBox.hybrid')}
+            </button>
+            <button
+              type="button"
+              className={`mode-option ${searchMode === 'smart' ? 'active' : ''}`}
+              onClick={() => setSearchMode('smart')}
+            >
+              🕸️ Knowledge Graph
             </button>
             <button
               type="button"

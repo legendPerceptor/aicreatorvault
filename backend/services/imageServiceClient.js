@@ -234,6 +234,81 @@ class ImageServiceClient {
       return null;
     }
   }
+
+  // ============= LightRAG Knowledge Graph 方法 =============
+
+  /**
+   * Index content into LightRAG knowledge graph
+   */
+  async lightragIndex(content, assetId, assetType, metadata = null) {
+    try {
+      const response = await this.client.post('/lightrag/index', {
+        content,
+        asset_id: String(assetId),
+        asset_type: assetType,
+        metadata,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[LightRAG] Index failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Batch-index assets into LightRAG
+   */
+  async lightragBatchIndex(items) {
+    try {
+      const response = await this.client.post('/lightrag/batch-index', { items });
+      return response.data;
+    } catch (error) {
+      console.error('[LightRAG] Batch index failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Smart search via LightRAG knowledge graph
+   */
+  async lightragQuery(query, mode = 'hybrid', onlyNeedContext = false) {
+    try {
+      const response = await this.client.post('/lightrag/query', {
+        query,
+        mode,
+        only_need_context: onlyNeedContext,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[LightRAG] Query failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an indexed document from LightRAG
+   */
+  async lightragDelete(docId) {
+    try {
+      const response = await this.client.delete(`/lightrag/index/${docId}`);
+      return response.data;
+    } catch (error) {
+      console.error('[LightRAG] Delete failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Check LightRAG status
+   */
+  async lightragStatus() {
+    try {
+      const response = await this.client.get('/lightrag/status');
+      return response.data;
+    } catch (error) {
+      return { initialized: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new ImageServiceClient();

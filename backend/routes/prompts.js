@@ -132,6 +132,14 @@ router.post('/', authenticate, async (req, res) => {
       // 不影响主流程，只记录错误
     }
 
+    // 异步索引到 LightRAG 知识图谱（非阻塞）
+    try {
+      const lightragService = require('../services/lightragService');
+      lightragService.indexPrompt(prompt.id).catch((err) => {
+        console.error('[Prompt] LightRAG indexing failed (non-blocking):', err.message);
+      });
+    } catch (_) {}
+
     res.status(201).json(prompt);
   } catch (error) {
     // 处理数据库唯一约束冲突

@@ -20,7 +20,10 @@ const ThemeImage = (sequelize) => {
     },
     {
       tableName: 'ThemeImages',
+      underscored: true,
       timestamps: false,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     }
   );
 };

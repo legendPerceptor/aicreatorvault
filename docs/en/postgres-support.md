@@ -20,14 +20,14 @@ To use PostgreSQL, we need to manually run the following commands.
 ```bash
 # Switch to postgres user and create database and user
 sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
-sudo -u postgres psql -c "CREATE DATABASE aigc_assistant OWNER postgres;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aigc_assistant TO postgres;"
+sudo -u postgres psql -c "CREATE DATABASE aicreatorvault OWNER postgres;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aicreatorvault TO postgres;"
 ```
 
 You can connect to the PostgreSQL database with:
 
 ```bash
-sudo -u postgres psql -d aigc_assistant
+sudo -u postgres psql -d aicreatorvault
 ```
 
 Change the password with the following SQL:
@@ -39,13 +39,13 @@ ALTER USER postgres PASSWORD 'Your_password';
 You can log in this way for easy script execution:
 
 ```bash
-PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "SELECT version();"
+PGPASSWORD='Your_password' psql -h localhost -U aicreator -d aicreatorvault -c "SELECT version();"
 ```
 
 Enable the vector extension with the following command:
 
 ```bash
-PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"
+PGPASSWORD='Your_password' psql -h localhost -U aicreator -d aicreatorvault -c "CREATE EXTENSION vector;"
 ```
 
 ## Change a user's password

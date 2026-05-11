@@ -9,18 +9,21 @@ const ThemeImage = (sequelize) => {
         primaryKey: true,
         autoIncrement: true,
       },
-      theme_id: {
+      themeId: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      image_id: {
+      imageId: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
     },
     {
       tableName: 'ThemeImages',
+      underscored: true,
       timestamps: false,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     }
   );
 };

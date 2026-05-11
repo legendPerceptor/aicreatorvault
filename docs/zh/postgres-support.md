@@ -20,14 +20,14 @@ sudo apt install postgresql-16-pgvector
 ```bash
 # 切换到 postgres 用户并创建数据库和用户
 sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
-sudo -u postgres psql -c "CREATE DATABASE aigc_assistant OWNER postgres;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aigc_assistant TO postgres;"
+sudo -u postgres psql -c "CREATE DATABASE aicreatorvault OWNER postgres;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE aicreatorvault TO postgres;"
 ```
 
 可以用下面的方式连接到Postgres数据库
 
 ```bash
-sudo -u postgres psql -d aigc_assistant
+sudo -u postgres psql -d aicreatorvault
 ```
 
 用下面的SQL语句修改密码
@@ -39,13 +39,13 @@ ALTER USER postgres PASSWORD 'Your_password';
 可以用下面的方式登录，方便脚本运行。
 
 ```bash
-PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "SELECT version();"
+PGPASSWORD='Your_password' psql -h localhost -U aicreator -d aicreatorvault -c "SELECT version();"
 ```
 
 使用下面的命令启用vector扩展。
 
 ```bash
-PGPASSWORD='Your_password' psql -h localhost -U postgres -d aigc_assistant -c "CREATE EXTENSION vector;"
+PGPASSWORD='Your_password' psql -h localhost -U aicreator -d aicreatorvault -c "CREATE EXTENSION vector;"
 ```
 
 ## 修改用户密码

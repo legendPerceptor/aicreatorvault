@@ -388,8 +388,8 @@ function AppContent() {
         <ReferenceSearchPage
           themes={themes}
           onImagesAdded={() => {
-            // 刷新图片列表
-            window.location.reload();
+            // 刷新图片列表而不是刷新整个页面
+            fetchImages();
           }}
           searchResults={referenceSearchResults}
           onSearchResultsChange={setReferenceSearchResults}

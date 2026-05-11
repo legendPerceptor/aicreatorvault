@@ -76,14 +76,16 @@ function ReferenceSearchPage({
 
   // 下载单张图片
   const handleDownload = async (image) => {
-    onDownloadingIdsChange((prev) => new Set([...prev, image.url]));
+    // 优先使用 properties.url（原始图片直链），否则使用 url
+    const imageUrl = image.properties?.url || image.url;
+    onDownloadingIdsChange((prev) => new Set([...prev, imageUrl]));
 
     try {
       const response = await fetch(`${API_BASE}/reference-search/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: image.url,
+          url: imageUrl,
           title: image.title,
           source: image.source,
         }),
@@ -103,7 +105,7 @@ function ReferenceSearchPage({
     } finally {
       onDownloadingIdsChange((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(image.url);
+        newSet.delete(imageUrl);
         return newSet;
       });
     }
@@ -117,15 +119,17 @@ function ReferenceSearchPage({
     let failed = 0;
 
     for (const image of selectedImages) {
+      // 优先使用 properties.url（原始图片直链），否则使用 url
+      const imageUrl = image.properties?.url || image.url;
       try {
         const response = await fetch(`${API_BASE}/reference-search/download`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            url: image.url,
+            url: imageUrl,
             title: image.title,
             source: image.source,
-            themeId: themeId || null,
+            theme_id: themeId || null,
           }),
         });
 

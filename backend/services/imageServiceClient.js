@@ -16,7 +16,7 @@ class ImageServiceClient {
         image_path: imagePath,
       });
       return response.data;
-    } catch (_error) {
+    } catch (error) {
       console.error('分析图片失败:', error.message);
       throw error;
     }
@@ -34,7 +34,7 @@ class ImageServiceClient {
         },
       });
       return response.data;
-    } catch (_error) {
+    } catch (error) {
       console.error('分析上传图片失败:', error.message);
       throw error;
     }
@@ -48,7 +48,7 @@ class ImageServiceClient {
         top_k: topK,
       });
       return response.data.results;
-    } catch (_error) {
+    } catch (error) {
       console.error('文本搜索失败:', error.message);
       throw error;
     }
@@ -68,7 +68,7 @@ class ImageServiceClient {
         },
       });
       return response.data.results;
-    } catch (_error) {
+    } catch (error) {
       console.error('图片搜索失败:', error.message);
       throw error;
     }
@@ -80,7 +80,7 @@ class ImageServiceClient {
         params: { text },
       });
       return response.data;
-    } catch (_error) {
+    } catch (error) {
       console.error('生成嵌入失败:', error.message);
       throw error;
     }
@@ -93,7 +93,7 @@ class ImageServiceClient {
         extensions,
       });
       return response.data.results;
-    } catch (_error) {
+    } catch (error) {
       console.error('批量处理失败:', error.message);
       throw error;
     }
@@ -105,7 +105,7 @@ class ImageServiceClient {
         image_paths: imagePaths,
       });
       return response.data.results;
-    } catch (_error) {
+    } catch (error) {
       console.error('批量处理路径失败:', error.message);
       throw error;
     }

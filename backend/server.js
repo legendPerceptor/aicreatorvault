@@ -31,8 +31,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// 静态文件服务 - 移除，使用受保护的 /api/files 路由
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 静态文件服务
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/temp', express.static(path.join(__dirname, 'temp')));
 
 // 路由

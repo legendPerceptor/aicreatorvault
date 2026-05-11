@@ -70,6 +70,11 @@ function AppContent() {
     removeImageFromTheme,
   } = useThemes(isAuthenticated);
 
+  // Reference search state - persists across tab navigation
+  const [referenceSearchResults, setReferenceSearchResults] = useState([]);
+  const [referenceSearchSelected, setReferenceSearchSelected] = useState([]);
+  const [referenceSearchDownloading, setReferenceSearchDownloading] = useState(new Set());
+
   const handleScoreEdit = (type, id) => {
     const currentScore =
       type === 'prompts'
@@ -298,7 +303,9 @@ function AppContent() {
         <button onClick={() => setActiveTab('images')}>{t('nav.images')}</button>
         <button onClick={() => setActiveTab('themes')}>{t('nav.themes')}</button>
         <button onClick={() => setActiveTab('search')}>{t('nav.search')}</button>
-        <button onClick={() => setActiveTab('reference-search')}>🌐 {t('nav.referenceSearch')}</button>
+        <button onClick={() => setActiveTab('reference-search')}>
+          🌐 {t('nav.referenceSearch')}
+        </button>
         <button onClick={() => setActiveTab('graph')}>{t('nav.knowledgeGraph')}</button>
       </div>
 
@@ -384,6 +391,12 @@ function AppContent() {
             // 刷新图片列表
             window.location.reload();
           }}
+          searchResults={referenceSearchResults}
+          onSearchResultsChange={setReferenceSearchResults}
+          selectedImages={referenceSearchSelected}
+          onSelectedImagesChange={setReferenceSearchSelected}
+          downloadingIds={referenceSearchDownloading}
+          onDownloadingIdsChange={setReferenceSearchDownloading}
         />
       )}
 

@@ -7,12 +7,19 @@ import './ReferenceSearchPage.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
 
-function ReferenceSearchPage({ themes = [], onImagesAdded }) {
-  const [searchResults, setSearchResults] = useState([]);
+function ReferenceSearchPage({
+  themes = [],
+  onImagesAdded,
+  // 从 App 传入的持久化状态
+  searchResults,
+  onSearchResultsChange,
+  selectedImages,
+  onSelectedImagesChange,
+  downloadingIds,
+  onDownloadingIdsChange,
+}) {
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedImages, setSelectedImages] = useState([]);
   const [showBatchModal, setShowBatchModal] = useState(false);
-  const [downloadingIds, setDownloadingIds] = useState(new Set());
   const [error, setError] = useState(null);
   const { t } = useTranslation();
 
@@ -22,7 +29,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
 
     setIsSearching(true);
     setError(null);
-    setSelectedImages([]);
+    onSelectedImagesChange([]);
 
     try {
       const response = await fetch(`${API_BASE}/reference-search/search`, {
@@ -34,7 +41,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       const data = await response.json();
 
       if (data.success) {
-        setSearchResults(data.results);
+        onSearchResultsChange(data.results);
       } else {
         setError(data.error || t('referenceSearch.searchFailed'));
       }
@@ -48,7 +55,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
 
   // 选择/取消选择图片
   const toggleSelect = (image) => {
-    setSelectedImages((prev) => {
+    onSelectedImagesChange((prev) => {
       const exists = prev.find((img) => img.url === image.url);
       if (exists) {
         return prev.filter((img) => img.url !== image.url);
@@ -61,15 +68,15 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
   // 全选/取消全选
   const toggleSelectAll = () => {
     if (selectedImages.length === searchResults.length) {
-      setSelectedImages([]);
+      onSelectedImagesChange([]);
     } else {
-      setSelectedImages([...searchResults]);
+      onSelectedImagesChange([...searchResults]);
     }
   };
 
   // 下载单张图片
   const handleDownload = async (image) => {
-    setDownloadingIds((prev) => new Set([...prev, image.url]));
+    onDownloadingIdsChange((prev) => new Set([...prev, image.url]));
 
     try {
       const response = await fetch(`${API_BASE}/reference-search/download`, {
@@ -94,7 +101,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       alert(t('referenceSearch.downloadFailedRetry'));
       console.error('Download error:', err);
     } finally {
-      setDownloadingIds((prev) => {
+      onDownloadingIdsChange((prev) => {
         const newSet = new Set(prev);
         newSet.delete(image.url);
         return newSet;
@@ -134,7 +141,7 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
     }
 
     alert(t('referenceSearch.batchComplete', { success, failed }));
-    setSelectedImages([]);
+    onSelectedImagesChange([]);
     if (onImagesAdded) onImagesAdded();
   };
 
@@ -157,15 +164,21 @@ function ReferenceSearchPage({ themes = [], onImagesAdded }) {
       {searchResults.length > 0 && (
         <div className="results-toolbar">
           <div className="toolbar-left">
-            <span className="results-count">{t('referenceSearch.foundImages', { count: searchResults.length })}</span>
+            <span className="results-count">
+              {t('referenceSearch.foundImages', { count: searchResults.length })}
+            </span>
             <button className="btn-select-all" onClick={toggleSelectAll}>
-              {selectedImages.length === searchResults.length ? t('referenceSearch.deselectAll') : t('common.selectAll')}
+              {selectedImages.length === searchResults.length
+                ? t('referenceSearch.deselectAll')
+                : t('common.selectAll')}
             </button>
           </div>
           <div className="toolbar-right">
             {selectedImages.length > 0 && (
               <>
-                <span className="selected-count">{t('referenceSearch.selectedCount', { count: selectedImages.length })}</span>
+                <span className="selected-count">
+                  {t('referenceSearch.selectedCount', { count: selectedImages.length })}
+                </span>
                 <button className="btn-batch-add" onClick={() => setShowBatchModal(true)}>
                   {t('referenceSearch.batchAdd')}
                 </button>

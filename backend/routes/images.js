@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { Image, Prompt, DB_TYPE, supportsVector } = require('../models');
+const { Op } = require('sequelize');
 const imageServiceClient = require('../services/imageServiceClient');
 const imageGenerationClient = require('../services/imageGenerationClient');
 const { saveEmbeddingVector } = require('../utils/vectorSearch');
@@ -292,8 +293,6 @@ router.delete('/:id', authenticate, async (req, res) => {
     // 删除关联的 Asset（知识图谱）
     try {
       const { Asset, AssetRelationship } = require('../models');
-      // Op unused
-
       const asset = await Asset.findOne({
         where: {
           user_id: req.user.id,

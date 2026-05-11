@@ -14,6 +14,36 @@ const UPLOADS_DIR =
 const LEGACY_USER_ID = 1;
 
 /**
+ * GET /api/files/reference/:filename
+ * Serve reference images downloaded from web
+ * 重要：这个路由必须放在 /:userId/* 之前，否则 /reference/xxx 会被错误匹配为 userId=reference
+ */
+router.get('/reference/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Validate filename to prevent path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`[Files] Reference image not found: ${filePath}`);
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Send the file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('[Files] Error serving reference image:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/files/:userId/:filename
  * Serve user files with authorization check
  * Legacy user (id=1) files are publicly accessible

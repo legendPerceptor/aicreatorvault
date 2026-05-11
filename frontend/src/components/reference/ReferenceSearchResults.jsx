@@ -35,7 +35,8 @@ function ReferenceSearchResults({
   };
 
   const isDownloading = (image) => {
-    return downloadingIds.has(image.url);
+    const imageUrl = image.properties?.url || image.url;
+    return downloadingIds.has(imageUrl);
   };
 
   return (

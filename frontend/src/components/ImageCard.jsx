@@ -37,6 +37,14 @@ function ImageCard({
     return `${(sim * 100).toFixed(1)}%`;
   };
 
+  // 获取图片 URL：参考图使用 /api/files/reference/，普通图使用 /api/files/userId/images/
+  const getImageUrl = (img) => {
+    if (img.is_reference) {
+      return `/api/files/reference/${img.filename}`;
+    }
+    return `/api/files/${img.user_id}/images/${img.filename}`;
+  };
+
   const isAnalyzed = !!image.description;
 
   return (
@@ -44,7 +52,7 @@ function ImageCard({
       <div className={`image-card ${isAnalyzed ? 'analyzed' : ''} view-${viewMode}`}>
         <div className="image-header">
           <img
-            src={`/api/files/${image.user_id}/images/${image.filename}`}
+            src={getImageUrl(image)}
             alt={t('imageCard.aiGenerated')}
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}
@@ -74,7 +82,9 @@ function ImageCard({
               </p>
               {image.analyzedAt && (
                 <span className="analyzed-time">
-                  {t('imageCard.analyzedAt', { date: new Date(image.analyzedAt).toLocaleDateString() })}
+                  {t('imageCard.analyzedAt', {
+                    date: new Date(image.analyzedAt).toLocaleDateString(),
+                  })}
                 </span>
               )}
             </div>
@@ -139,7 +149,9 @@ function ImageCard({
                 onClick={() => onAnalyzeSingle(image.id)}
                 disabled={analyzingImageId === image.id}
               >
-                {analyzingImageId === image.id ? t('imageCard.analyzing') : t('imageCard.analyzeImage')}
+                {analyzingImageId === image.id
+                  ? t('imageCard.analyzing')
+                  : t('imageCard.analyzeImage')}
               </button>
             </div>
           )}
@@ -156,13 +168,21 @@ function ImageCard({
                     onScoreChange={onScoreChange}
                   />
                   <div className="score-actions">
-                    <button onClick={() => onScoreConfirm('images', image.id)}>{t('common.confirm')}</button>
-                    <button onClick={() => onScoreCancel('images', image.id)}>{t('common.cancel')}</button>
+                    <button onClick={() => onScoreConfirm('images', image.id)}>
+                      {t('common.confirm')}
+                    </button>
+                    <button onClick={() => onScoreCancel('images', image.id)}>
+                      {t('common.cancel')}
+                    </button>
                   </div>
                 </div>
               ) : (
                 <span className="score-value" onClick={() => onScoreEdit('images', image.id)}>
-                  {image.score ? <StaticStarRating score={image.score} /> : t('imageCard.clickToScore')}
+                  {image.score ? (
+                    <StaticStarRating score={image.score} />
+                  ) : (
+                    t('imageCard.clickToScore')
+                  )}
                 </span>
               )}
             </div>
@@ -183,7 +203,7 @@ export function SimpleImageCard({ image, onDelete, onAddToTheme }) {
       <div className="image-card">
         <div className="image-header">
           <img
-            src={`/api/files/${image.user_id}/images/${image.filename}`}
+            src={getImageUrl(image)}
             alt={t('imageCard.aiGenerated')}
             onClick={() => setShowPreview(true)}
             style={{ cursor: 'pointer' }}

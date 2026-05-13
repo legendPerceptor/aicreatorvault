@@ -1,12 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import GraphVisualization from '../components/graph/GraphVisualization';
 import GraphControls from '../components/graph/GraphControls';
 import GraphLegend from '../components/graph/GraphLegend';
 import ImagePreviewModal from '../components/ImagePreviewModal';
 import { useGraph, useGraphTraversal, useGraphRebuild } from '../hooks/useGraph';
-import { filterOptions, getEntityTypeConfig } from '../utils/graphConfig';
+import { filterOptions, getEntityTypeConfig, entityTypeConfig } from '../utils/graphConfig';
 import { useTranslation } from '../i18n/useTranslation';
+import { authFetch } from '../utils/authFetch';
 import './KnowledgeGraphPage.css';
+
+const API_BASE = '/api';
 
 function KnowledgeGraphPage() {
   const { t } = useTranslation();
@@ -20,6 +23,13 @@ function KnowledgeGraphPage() {
   const [layout, setLayout] = useState('dagre');
   const [showControls, setShowControls] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(null); // 'web_link' | 'youtube' | null
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [urlValue, setUrlValue] = useState('');
+  const fileInputRef = useRef(null);
 
   const { nodes, edges, loading, error, refetch } = useGraph({
     entityTypes,
@@ -49,10 +59,6 @@ function KnowledgeGraphPage() {
     if (!selectedNode || selectedNode.entityType !== 'image') return;
     setPreviewImage(selectedNode.entity);
   }, [selectedNode]);
-
-  const handleFilterChange = useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   const handleReset = useCallback(() => {
     setSelectedNode(null);
@@ -89,12 +95,97 @@ function KnowledgeGraphPage() {
     }
   }, [selectedNode, nodes, findPath]);
 
+  // Resource import handlers
+  const handleAddNote = useCallback(async () => {
+    if (!noteTitle.trim() && !noteContent.trim()) return;
+    try {
+      const res = await authFetch(`${API_BASE}/resources`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resource_type: 'note',
+          title: noteTitle || 'Untitled Note',
+          content: noteContent,
+        }),
+      });
+      if (res.ok) {
+        setNoteTitle('');
+        setNoteContent('');
+        setShowNoteEditor(false);
+        refetch();
+      }
+    } catch (err) {
+      console.error('Failed to create note:', err);
+    }
+  }, [noteTitle, noteContent, refetch]);
+
+  const handleAddUrl = useCallback(async () => {
+    if (!urlValue.trim()) return;
+    try {
+      const res = await authFetch(`${API_BASE}/resources`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resource_type: showUrlInput,
+          title: urlValue,
+          url: urlValue,
+        }),
+      });
+      if (res.ok) {
+        setUrlValue('');
+        setShowUrlInput(null);
+        refetch();
+      }
+    } catch (err) {
+      console.error('Failed to add URL:', err);
+    }
+  }, [urlValue, showUrlInput, refetch]);
+
+  const handleFileUpload = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      const resourceType = file.type === 'application/pdf' ? 'pdf' : 'file';
+      formData.append('resource_type', resourceType);
+      try {
+        const res = await authFetch(`${API_BASE}/resources/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          refetch();
+        }
+      } catch (err) {
+        console.error('Failed to upload file:', err);
+      }
+      e.target.value = '';
+    },
+    [refetch]
+  );
+
   const selectedNodeConfig = selectedNode
     ? getEntityTypeConfig(selectedNode.entityType || selectedNode.type)
     : null;
 
+  // Resolve resource sub-type config for display
+  const resolvedNodeConfig = (() => {
+    if (!selectedNode || selectedNode.entityType !== 'resource') return selectedNodeConfig;
+    const subType = selectedNode.entity?.resource_type;
+    const subConfig = entityTypeConfig.resource?.subTypes?.[subType];
+    return subConfig || selectedNodeConfig;
+  })();
+
   return (
     <div className="knowledge-graph-page">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.txt,.md,.doc,.docx"
+        style={{ display: 'none' }}
+        onChange={handleFileUpload}
+      />
       <div className="graph-header">
         <h2>{t('nav.knowledgeGraph')}</h2>
         <p>Visualize relationships between your creative assets</p>
@@ -107,6 +198,47 @@ function KnowledgeGraphPage() {
           </span>
         </div>
         <div className="graph-actions">
+          <div className="add-resource-wrapper">
+            <button onClick={() => setShowAddMenu(!showAddMenu)} className="action-button primary">
+              + Add Asset
+            </button>
+            {showAddMenu && (
+              <div className="add-resource-menu">
+                <button
+                  onClick={() => {
+                    setShowNoteEditor(true);
+                    setShowAddMenu(false);
+                  }}
+                >
+                  {'\u{1F4DD}'} Note
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUrlInput('web_link');
+                    setShowAddMenu(false);
+                  }}
+                >
+                  {'\u{1F310}'} Web Link
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUrlInput('youtube');
+                    setShowAddMenu(false);
+                  }}
+                >
+                  {'\u{25B6}'} YouTube
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    setTimeout(() => fileInputRef.current?.click(), 50);
+                  }}
+                >
+                  {'\u{1F4C1}'} Upload File
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={() => setShowControls(!showControls)} className="action-button">
             {showControls ? 'Hide' : 'Show'} Controls
           </button>
@@ -126,6 +258,64 @@ function KnowledgeGraphPage() {
           </button>
         </div>
       </div>
+
+      {/* Note Editor Modal */}
+      {showNoteEditor && (
+        <div className="resource-modal" onClick={() => setShowNoteEditor(false)}>
+          <div className="resource-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>New Note</h3>
+            <input
+              type="text"
+              placeholder="Title"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              className="resource-input"
+            />
+            <textarea
+              placeholder="Write your note..."
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              className="resource-textarea"
+              rows={6}
+            />
+            <div className="resource-modal-actions">
+              <button onClick={() => setShowNoteEditor(false)} className="action-button">
+                Cancel
+              </button>
+              <button onClick={handleAddNote} className="action-button primary">
+                Create Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* URL Input Modal */}
+      {showUrlInput && (
+        <div className="resource-modal" onClick={() => setShowUrlInput(null)}>
+          <div className="resource-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>{showUrlInput === 'youtube' ? 'Add YouTube Video' : 'Add Web Link'}</h3>
+            <input
+              type="url"
+              placeholder={
+                showUrlInput === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://...'
+              }
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              className="resource-input"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+            />
+            <div className="resource-modal-actions">
+              <button onClick={() => setShowUrlInput(null)} className="action-button">
+                Cancel
+              </button>
+              <button onClick={handleAddUrl} className="action-button primary">
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="graph-content">
         {showControls && (
@@ -190,7 +380,7 @@ function KnowledgeGraphPage() {
             <div className="detail-row">
               <span className="detail-label">Type:</span>
               <span className="detail-value">
-                {selectedNodeConfig?.label || selectedNode.entityType}
+                {resolvedNodeConfig?.label || selectedNode.entityType}
               </span>
             </div>
             <div className="detail-row">
@@ -242,6 +432,42 @@ function KnowledgeGraphPage() {
               <div className="detail-row detail-description">
                 <span className="detail-label">Prompt:</span>
                 <span className="detail-value">{selectedNode.entity.content}</span>
+              </div>
+            )}
+
+            {/* Resource detail display */}
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.url && (
+              <div className="detail-row">
+                <span className="detail-label">URL:</span>
+                <a
+                  href={selectedNode.entity.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="detail-value detail-link"
+                >
+                  {selectedNode.entity.url}
+                </a>
+              </div>
+            )}
+
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.content && (
+              <div className="detail-row detail-description">
+                <span className="detail-label">Content:</span>
+                <span className="detail-value">{selectedNode.entity.content}</span>
+              </div>
+            )}
+
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.file_path && (
+              <div className="detail-row">
+                <span className="detail-label">File:</span>
+                <a
+                  href={`${API_BASE}/resources/${selectedNode.entityId}/file`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="detail-value detail-link"
+                >
+                  Download
+                </a>
               </div>
             )}
           </div>

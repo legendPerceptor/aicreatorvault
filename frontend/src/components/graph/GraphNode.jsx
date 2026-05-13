@@ -1,12 +1,18 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { getEntityTypeConfig } from '../../utils/graphConfig';
+import { getEntityTypeConfig, entityTypeConfig } from '../../utils/graphConfig';
 import './GraphNode.css';
 
 const GraphNode = memo(({ data = {}, selected }) => {
   const entityType = data.entityType || data.type || 'unknown';
-  const config = getEntityTypeConfig(entityType);
   const entity = data.entity || {};
+
+  // For resource type, resolve sub-type config (pdf, web_link, youtube, note, file)
+  let config = getEntityTypeConfig(entityType);
+  if (entityType === 'resource' && entity.resource_type) {
+    const subConfig = entityTypeConfig.resource?.subTypes?.[entity.resource_type];
+    if (subConfig) config = subConfig;
+  }
 
   return (
     <div

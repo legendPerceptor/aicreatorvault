@@ -154,70 +154,59 @@ function useImages(
 
   const batchAnalyze = async (forceAll = false) => {
     setBatchAnalyzing(true);
+
+    let imagesToAnalyze;
+    if (forceAll) {
+      imagesToAnalyze = images;
+    } else {
+      imagesToAnalyze = images.filter((img) => !img.description);
+    }
+
+    if (imagesToAnalyze.length === 0) {
+      setBatchAnalyzing(false);
+      return { total: 0, updated: 0, failed: 0, skipped: 0 };
+    }
+
+    setBatchProgress({ current: 0, total: imagesToAnalyze.length });
+
+    let updated = 0;
+    let failed = 0;
+
+    for (let i = 0; i < imagesToAnalyze.length; i++) {
+      const img = imagesToAnalyze[i];
+      try {
+        const token = sessionStorage.getItem(TOKEN_KEY);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const response = await fetch(`/api/images/${img.id}/analyze`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || '分析失败');
+        }
+
+        const updatedImage = await response.json();
+        setImages((prev) => prev.map((image) => (image.id === img.id ? updatedImage : image)));
+        updated++;
+      } catch (error) {
+        console.error(`分析图片 ${img.id} 失败:`, error.message);
+        failed++;
+      }
+
+      setBatchProgress({ current: i + 1, total: imagesToAnalyze.length });
+    }
+
+    setBatchAnalyzing(false);
     setBatchProgress({ current: 0, total: 0 });
 
-    try {
-      // 先获取需要分析的图片数量
-      let imagesToAnalyze;
-      if (forceAll) {
-        imagesToAnalyze = images;
-      } else {
-        imagesToAnalyze = images.filter((img) => !img.description);
-      }
-
-      setBatchProgress({ current: 0, total: imagesToAnalyze.length });
-
-      const token = sessionStorage.getItem(TOKEN_KEY);
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-      const response = await fetch('/api/images/batch-analyze', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ forceAll }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '批量分析失败');
-      }
-
-      const result = await response.json();
-
-      // 模拟进度更新
-      if (result.total > 0) {
-        const progressInterval = setInterval(() => {
-          setBatchProgress((prev) => {
-            if (prev.current >= result.total) {
-              clearInterval(progressInterval);
-              return { current: result.total, total: result.total };
-            }
-            return { ...prev, current: prev.current + 1 };
-          });
-        }, 300);
-
-        // 等待进度完成
-        await new Promise((resolve) => setTimeout(resolve, result.total * 300 + 500));
-      }
-
-      fetchImages();
-
-      if (result.failed > 0) {
-        alert(`批量分析完成: 成功 ${result.updated} 张，失败 ${result.failed} 张`);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('批量分析失败:', error);
-      alert(`批量分析失败: ${error.message}`);
-      fetchImages();
-      return { success: false, error: error.message };
-    } finally {
-      setBatchAnalyzing(false);
-      setBatchProgress({ current: 0, total: 0 });
+    const result = { total: imagesToAnalyze.length, updated, failed, skipped: 0 };
+    if (failed > 0) {
+      alert(`批量分析完成: 成功 ${updated} 张，失败 ${failed} 张`);
     }
+    return result;
   };
 
   return {

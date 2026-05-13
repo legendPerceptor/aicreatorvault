@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { computeClusterLayout } from '../utils/clusterLayout';
 
 const API_BASE = '/api';
 
@@ -33,17 +34,18 @@ export function useGraph(filters = {}) {
 
       const data = await response.json();
 
-      // Transform to React Flow format with simple layout
-      const flowNodes = data.nodes.map((node, index) => {
-        const col = index % 4;
-        const row = Math.floor(index / 4);
-        const x = col * 300 + 50;
-        const y = row * 150 + 50;
+      // Compute relationship-aware cluster layout
+      const layoutPositions = computeClusterLayout(data.nodes, data.edges);
 
+      const flowNodes = data.nodes.map((node) => {
+        const pos = layoutPositions.get(String(node.id)) || {
+          x: Math.random() * 500,
+          y: Math.random() * 500,
+        };
         return {
           id: String(node.id),
           type: 'custom',
-          position: { x, y },
+          position: pos,
           data: node,
         };
       });
@@ -111,16 +113,17 @@ export function useGraphTraversal() {
 
       const data = await response.json();
 
-      const flowNodes = data.nodes.map((node, index) => {
-        const col = index % 4;
-        const row = Math.floor(index / 4);
-        const x = col * 300 + 50;
-        const y = row * 150 + 50;
+      const layoutPositions = computeClusterLayout(data.nodes, data.edges);
 
+      const flowNodes = data.nodes.map((node) => {
+        const pos = layoutPositions.get(String(node.id)) || {
+          x: Math.random() * 500,
+          y: Math.random() * 500,
+        };
         return {
           id: String(node.id),
           type: 'custom',
-          position: { x, y },
+          position: pos,
           data: node,
         };
       });

@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 
-const AssetRelationship = (sequelize, dbType = 'sqlite') => {
+const GraphEdge = (sequelize, dbType = 'sqlite') => {
   const isPostgres = dbType === 'postgres';
 
   const schema = {
@@ -18,33 +18,29 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
     source_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: 'Source asset ID',
       field: 'source_id',
       references: {
-        model: 'Assets',
+        model: 'GraphNodes',
         key: 'id',
       },
     },
     target_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: 'Target asset ID',
       field: 'target_id',
       references: {
-        model: 'Assets',
+        model: 'GraphNodes',
         key: 'id',
       },
     },
     relationship_type: {
-      type: DataTypes.ENUM('generated', 'derived_from', 'version_of', 'inspired_by'),
+      type: DataTypes.ENUM('generated', 'derived_from', 'version_of', 'inspired_by', 'contains'),
       allowNull: false,
-      comment: 'Type of relationship between assets',
       field: 'relationship_type',
     },
     properties: {
       type: isPostgres ? DataTypes.JSONB : DataTypes.JSON,
       allowNull: true,
-      comment: 'Relationship metadata (edit timestamp, similarity score, etc.)',
       defaultValue: {},
     },
     created_at: {
@@ -54,8 +50,8 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
     },
   };
 
-  const model = sequelize.define('AssetRelationship', schema, {
-    tableName: 'AssetRelationships',
+  const model = sequelize.define('GraphEdge', schema, {
+    tableName: 'GraphEdges',
     underscored: true,
     timestamps: true,
     createdAt: 'created_at',
@@ -67,7 +63,7 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
       {
         unique: true,
         fields: ['source_id', 'target_id', 'relationship_type'],
-        name: 'unique_relationship',
+        name: 'unique_graph_edge',
       },
     ],
   });
@@ -75,4 +71,4 @@ const AssetRelationship = (sequelize, dbType = 'sqlite') => {
   return model;
 };
 
-module.exports = AssetRelationship;
+module.exports = GraphEdge;

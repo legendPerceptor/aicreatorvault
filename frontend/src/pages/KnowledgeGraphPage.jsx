@@ -2,30 +2,33 @@ import React, { useState, useCallback } from 'react';
 import GraphVisualization from '../components/graph/GraphVisualization';
 import GraphControls from '../components/graph/GraphControls';
 import GraphLegend from '../components/graph/GraphLegend';
-import { useGraph, useGraphTraversal } from '../hooks/useGraph';
-import { filterOptions } from '../utils/graphConfig';
+import ImagePreviewModal from '../components/ImagePreviewModal';
+import { useGraph, useGraphTraversal, useGraphRebuild } from '../hooks/useGraph';
+import { filterOptions, getEntityTypeConfig } from '../utils/graphConfig';
 import { useTranslation } from '../i18n/useTranslation';
 import './KnowledgeGraphPage.css';
 
 function KnowledgeGraphPage() {
   const { t } = useTranslation();
-  const [assetTypes, setAssetTypes] = useState(filterOptions.assetTypes.map((opt) => opt.value));
+  const [entityTypes, setEntityTypes] = useState(filterOptions.entityTypes.map((opt) => opt.value));
   const [relationshipTypes, setRelationshipTypes] = useState(
     filterOptions.relationshipTypes.map((opt) => opt.value)
   );
   const [selectedNode, setSelectedNode] = useState(null);
   const [highlightedPath, setHighlightedPath] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
   const [layout, setLayout] = useState('dagre');
   const [showControls, setShowControls] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
 
   const { nodes, edges, loading, error, refetch } = useGraph({
-    assetTypes,
+    entityTypes,
     relationshipTypes,
     limit: 1000,
   });
 
-  const { traverse, findPath, getNeighbors } = useGraphTraversal();
+  const { traverse, findPath } = useGraphTraversal();
+  const { rebuild: rebuildGraph, loading: rebuildLoading } = useGraphRebuild();
 
   const handleNodeClick = useCallback((nodeData) => {
     setSelectedNode(nodeData);
@@ -34,15 +37,18 @@ function KnowledgeGraphPage() {
 
   const handleNodeDoubleClick = useCallback(
     async (nodeData) => {
-      // Expand neighbors on double-click
       const result = await traverse(nodeData.id, 1, relationshipTypes);
       if (result) {
-        // The graph will auto-update through the useGraph hook
         console.log('Expanded neighbors:', result);
       }
     },
     [traverse, relationshipTypes]
   );
+
+  const handleImagePreview = useCallback(() => {
+    if (!selectedNode || selectedNode.entityType !== 'image') return;
+    setPreviewImage(selectedNode.entity);
+  }, [selectedNode]);
 
   const handleFilterChange = useCallback(() => {
     refetch();
@@ -58,15 +64,19 @@ function KnowledgeGraphPage() {
     setLayout(newLayout);
   }, []);
 
+  const handleRebuild = useCallback(async () => {
+    const result = await rebuildGraph();
+    if (result) {
+      refetch();
+    }
+  }, [rebuildGraph, refetch]);
+
   const handleFindPath = useCallback(async () => {
     if (!selectedNode) return;
-
-    // For demo, find path from selected node to the first node
     if (nodes.length > 0) {
       const targetId = nodes[0].data.id;
       const result = await findPath(selectedNode.id, targetId);
       if (result && result.path) {
-        // Convert path to edges for highlighting
         const pathEdges = [];
         for (let i = 0; i < result.path.length - 1; i++) {
           pathEdges.push({
@@ -78,6 +88,10 @@ function KnowledgeGraphPage() {
       }
     }
   }, [selectedNode, nodes, findPath]);
+
+  const selectedNodeConfig = selectedNode
+    ? getEntityTypeConfig(selectedNode.entityType || selectedNode.type)
+    : null;
 
   return (
     <div className="knowledge-graph-page">
@@ -104,6 +118,9 @@ function KnowledgeGraphPage() {
               Find Path
             </button>
           )}
+          <button onClick={handleRebuild} className="action-button" disabled={rebuildLoading}>
+            {rebuildLoading ? 'Rebuilding...' : 'Rebuild Graph'}
+          </button>
           <button onClick={handleReset} className="action-button">
             Reset View
           </button>
@@ -114,9 +131,9 @@ function KnowledgeGraphPage() {
         {showControls && (
           <div className="graph-sidebar">
             <GraphControls
-              assetTypes={assetTypes}
+              entityTypes={entityTypes}
               relationshipTypes={relationshipTypes}
-              onAssetTypeChange={setAssetTypes}
+              onEntityTypeChange={setEntityTypes}
               onRelationshipTypeChange={setRelationshipTypes}
               onReset={handleReset}
               onLayoutChange={handleLayoutChange}
@@ -166,38 +183,73 @@ function KnowledgeGraphPage() {
           <div className="panel-header">
             <h3>Node Details</h3>
             <button onClick={() => setSelectedNode(null)} className="close-button">
-              ×
+              {'×'}
             </button>
           </div>
           <div className="panel-content">
             <div className="detail-row">
               <span className="detail-label">Type:</span>
-              <span className="detail-value">{selectedNode.type}</span>
+              <span className="detail-value">
+                {selectedNodeConfig?.label || selectedNode.entityType}
+              </span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Label:</span>
               <span className="detail-value">{selectedNode.label}</span>
             </div>
-            {selectedNode.data?.score !== undefined && (
+
+            {selectedNode.entityType === 'image' && selectedNode.imageUrl && (
+              <div className="detail-row">
+                <div className="detail-image-preview">
+                  <img
+                    src={selectedNode.imageUrl}
+                    alt={selectedNode.label}
+                    className="detail-thumbnail"
+                    onClick={handleImagePreview}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <button onClick={handleImagePreview} className="preview-button">
+                    View Full Image
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedNode.entity?.score != null && (
               <div className="detail-row">
                 <span className="detail-label">Score:</span>
-                <span className="detail-value">★ {selectedNode.data.score}</span>
+                <span className="detail-value">
+                  {'★'} {selectedNode.entity.score}
+                </span>
               </div>
             )}
-            {selectedNode.data?.description && (
-              <div className="detail-row">
-                <span className="detail-label">Description:</span>
-                <span className="detail-value">{selectedNode.data.description}</span>
+
+            {selectedNode.entity?.description && (
+              <div className="detail-row detail-description">
+                <span className="detail-label">AI Description:</span>
+                <span className="detail-value">{selectedNode.entity.description}</span>
               </div>
             )}
-            {selectedNode.data?.path && (
+
+            {selectedNode.entityType === 'theme' && selectedNode.entity?.name && (
               <div className="detail-row">
-                <span className="detail-label">Path:</span>
-                <span className="detail-value">{selectedNode.data.path}</span>
+                <span className="detail-label">Theme:</span>
+                <span className="detail-value">{selectedNode.entity.name}</span>
+              </div>
+            )}
+
+            {selectedNode.entityType === 'prompt' && selectedNode.entity?.content && (
+              <div className="detail-row detail-description">
+                <span className="detail-label">Prompt:</span>
+                <span className="detail-value">{selectedNode.entity.content}</span>
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {previewImage && (
+        <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
       )}
     </div>
   );

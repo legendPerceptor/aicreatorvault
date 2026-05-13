@@ -10,7 +10,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import GraphNode from './GraphNode';
-import { assetTypeConfig, relationshipTypeConfig } from '../../utils/graphConfig';
+import { entityTypeConfig, relationshipTypeConfig } from '../../utils/graphConfig';
 import './GraphVisualization.css';
 
 const nodeTypes = {
@@ -32,12 +32,10 @@ function GraphVisualization({
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
 
-  // Update nodes when initialNodes change
   React.useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
-  // Update edges when initialEdges change
   React.useEffect(() => {
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
@@ -75,7 +73,7 @@ function GraphVisualization({
   const handleNodeClickHandler = useCallback(
     (event, node) => {
       if (onNodeClick) {
-        onNodeClick(node.data);
+        onNodeClick(node.data || {});
       }
     },
     [onNodeClick]
@@ -90,19 +88,17 @@ function GraphVisualization({
     [onNodeDoubleClick]
   );
 
-  // Enhance nodes with handlers
   const enhancedNodes = useMemo(() => {
     return nodes.map((node) => ({
       ...node,
       data: {
-        ...node.data,
+        ...(node.data || {}),
         onNodeClick: handleNodeClickHandler,
         onNodeDoubleClick: handleNodeDoubleClickHandler,
       },
     }));
   }, [nodes, handleNodeClickHandler, handleNodeDoubleClickHandler]);
 
-  // Enhance edges with styles
   const enhancedEdges = useMemo(() => {
     return edges.map((edge) => {
       const config = relationshipTypeConfig[edge.data?.type];
@@ -154,7 +150,8 @@ function GraphVisualization({
         <Controls />
         <MiniMap
           nodeColor={(node) => {
-            const config = assetTypeConfig[node.data?.type];
+            const et = node.data?.entityType || node.data?.type;
+            const config = entityTypeConfig[et];
             return config?.bgColor || '#e5e7eb';
           }}
           maskColor="rgba(0, 0, 0, 0.1)"

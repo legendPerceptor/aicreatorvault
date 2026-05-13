@@ -3,19 +3,23 @@ import { filterOptions } from '../../utils/graphConfig';
 import './GraphControls.css';
 
 function GraphControls({
-  assetTypes,
+  entityTypes,
   relationshipTypes,
-  onAssetTypeChange,
+  onEntityTypeChange,
   onRelationshipTypeChange,
   onReset,
   onLayoutChange,
   layout,
+  // Backward compat aliases
+  assetTypes,
+  onAssetTypeChange,
 }) {
-  const handleAssetTypeToggle = (type) => {
-    const newTypes = assetTypes.includes(type)
-      ? assetTypes.filter((t) => t !== type)
-      : [...assetTypes, type];
-    onAssetTypeChange(newTypes);
+  const types = entityTypes || assetTypes || [];
+  const handleTypeChange = onEntityTypeChange || onAssetTypeChange;
+
+  const handleEntityTypeToggle = (type) => {
+    const newTypes = types.includes(type) ? types.filter((t) => t !== type) : [...types, type];
+    handleTypeChange(newTypes);
   };
 
   const handleRelationshipTypeToggle = (type) => {
@@ -26,7 +30,7 @@ function GraphControls({
   };
 
   const handleResetFilters = () => {
-    onAssetTypeChange(filterOptions.assetTypes.map((opt) => opt.value));
+    handleTypeChange(filterOptions.entityTypes.map((opt) => opt.value));
     onRelationshipTypeChange(filterOptions.relationshipTypes.map((opt) => opt.value));
     if (onReset) onReset();
   };
@@ -34,14 +38,14 @@ function GraphControls({
   return (
     <div className="graph-controls">
       <div className="control-section">
-        <h3>Asset Types</h3>
+        <h3>Entity Types</h3>
         <div className="filter-options">
-          {filterOptions.assetTypes.map((option) => (
+          {filterOptions.entityTypes.map((option) => (
             <label key={option.value} className="filter-option">
               <input
                 type="checkbox"
-                checked={assetTypes.includes(option.value)}
-                onChange={() => handleAssetTypeToggle(option.value)}
+                checked={types.includes(option.value)}
+                onChange={() => handleEntityTypeToggle(option.value)}
               />
               <span>{option.label}</span>
             </label>

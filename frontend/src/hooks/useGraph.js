@@ -14,8 +14,10 @@ export function useGraph(filters = {}) {
 
     try {
       const params = new URLSearchParams();
-      if (filters.assetTypes) {
-        params.append('assetTypes', filters.assetTypes.join(','));
+      // Accept both entityTypes and assetTypes (backward compat)
+      const entityTypes = filters.entityTypes || filters.assetTypes;
+      if (entityTypes) {
+        params.append('entityTypes', entityTypes.join(','));
       }
       if (filters.relationshipTypes) {
         params.append('relationshipTypes', filters.relationshipTypes.join(','));
@@ -33,7 +35,6 @@ export function useGraph(filters = {}) {
 
       // Transform to React Flow format with simple layout
       const flowNodes = data.nodes.map((node, index) => {
-        // Simple grid layout
         const col = index % 4;
         const row = Math.floor(index / 4);
         const x = col * 300 + 50;
@@ -69,7 +70,11 @@ export function useGraph(filters = {}) {
   useEffect(() => {
     fetchGraphData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.assetTypes?.join(','), filters.relationshipTypes?.join(','), filters.limit]);
+  }, [
+    (filters.entityTypes || filters.assetTypes)?.join(','),
+    filters.relationshipTypes?.join(','),
+    filters.limit,
+  ]);
 
   return {
     nodes,
@@ -106,9 +111,7 @@ export function useGraphTraversal() {
 
       const data = await response.json();
 
-      // Transform to React Flow format with simple layout
       const flowNodes = data.nodes.map((node, index) => {
-        // Simple grid layout
         const col = index % 4;
         const row = Math.floor(index / 4);
         const x = col * 300 + 50;
@@ -236,4 +239,35 @@ export function useGraphStats() {
   }, [fetchStats]);
 
   return { stats, loading, error, refetch: fetchStats };
+}
+
+export function useGraphRebuild() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const rebuild = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/graph/rebuild`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      setError(err.message);
+      console.error('Error rebuilding graph:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { rebuild, loading, error };
 }

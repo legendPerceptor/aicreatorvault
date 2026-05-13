@@ -17,16 +17,16 @@ const Prompt = require('./Prompt');
 const Image = require('./Image');
 const Theme = require('./Theme');
 const ThemeImage = require('./ThemeImage');
-const Asset = require('./Asset');
-const AssetRelationship = require('./AssetRelationship');
+const GraphNode = require('./GraphNode');
+const GraphEdge = require('./GraphEdge');
 
 const UserModel = User(sequelize);
 const PromptModel = Prompt(sequelize);
 const ImageModel = Image(sequelize, DB_TYPE);
 const ThemeModel = Theme(sequelize);
 const ThemeImageModel = ThemeImage(sequelize);
-const AssetModel = Asset(sequelize, DB_TYPE);
-const AssetRelationshipModel = AssetRelationship(sequelize, DB_TYPE);
+const GraphNodeModel = GraphNode(sequelize);
+const GraphEdgeModel = GraphEdge(sequelize, DB_TYPE);
 
 // User associations
 UserModel.hasMany(PromptModel, { foreignKey: 'userId' });
@@ -38,8 +38,8 @@ ImageModel.belongsTo(UserModel, { foreignKey: 'userId' });
 UserModel.hasMany(ThemeModel, { foreignKey: 'userId' });
 ThemeModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
-UserModel.hasMany(AssetModel, { foreignKey: 'userId' });
-AssetModel.belongsTo(UserModel, { foreignKey: 'userId' });
+UserModel.hasMany(GraphNodeModel, { foreignKey: 'userId' });
+GraphNodeModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
 // Legacy Prompt-Image relationships (kept for backward compatibility)
 PromptModel.hasMany(ImageModel, { foreignKey: 'promptId' });
@@ -49,16 +49,11 @@ ImageModel.belongsTo(PromptModel, { foreignKey: 'promptId' });
 ThemeModel.belongsToMany(ImageModel, { through: ThemeImageModel, foreignKey: 'themeId' });
 ImageModel.belongsToMany(ThemeModel, { through: ThemeImageModel, foreignKey: 'imageId' });
 
-// New Asset relationships
-// Self-referential relationship for parent-child (derived assets)
-AssetModel.belongsTo(AssetModel, { foreignKey: 'parentId', as: 'parent' });
-AssetModel.hasMany(AssetModel, { foreignKey: 'parentId', as: 'children' });
-
-// Asset relationships
-AssetModel.hasMany(AssetRelationshipModel, { foreignKey: 'sourceId', as: 'outgoingRelationships' });
-AssetModel.hasMany(AssetRelationshipModel, { foreignKey: 'targetId', as: 'incomingRelationships' });
-AssetRelationshipModel.belongsTo(AssetModel, { foreignKey: 'sourceId', as: 'source' });
-AssetRelationshipModel.belongsTo(AssetModel, { foreignKey: 'targetId', as: 'target' });
+// Graph node-edge relationships
+GraphNodeModel.hasMany(GraphEdgeModel, { foreignKey: 'sourceId', as: 'outgoingEdges' });
+GraphNodeModel.hasMany(GraphEdgeModel, { foreignKey: 'targetId', as: 'incomingEdges' });
+GraphEdgeModel.belongsTo(GraphNodeModel, { foreignKey: 'sourceId', as: 'source' });
+GraphEdgeModel.belongsTo(GraphNodeModel, { foreignKey: 'targetId', as: 'target' });
 
 async function initializeDatabase() {
   try {
@@ -96,8 +91,8 @@ module.exports = {
   Image: ImageModel,
   Theme: ThemeModel,
   ThemeImage: ThemeImageModel,
-  Asset: AssetModel,
-  AssetRelationship: AssetRelationshipModel,
+  GraphNode: GraphNodeModel,
+  GraphEdge: GraphEdgeModel,
   DB_TYPE,
   supportsVector,
 };

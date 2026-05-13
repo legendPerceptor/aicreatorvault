@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const graphService = require('../services/graphService');
+const { GraphEdge } = require('../models');
 const { authenticate } = require('../middleware/auth');
 
 // Create a new relationship
@@ -8,15 +9,13 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const { sourceId, targetId, relationshipType, properties } = req.body;
 
-    // Validate required fields
     if (!sourceId || !targetId || !relationshipType) {
       return res.status(400).json({
         error: 'Missing required fields: sourceId, targetId, relationshipType',
       });
     }
 
-    // Validate relationship type
-    const validTypes = ['generated', 'derived_from', 'version_of', 'inspired_by'];
+    const validTypes = ['generated', 'derived_from', 'version_of', 'inspired_by', 'contains'];
     if (!validTypes.includes(relationshipType)) {
       return res.status(400).json({
         error: `Invalid relationshipType. Must be one of: ${validTypes.join(', ')}`,
@@ -45,8 +44,7 @@ router.post('/', authenticate, async (req, res) => {
 // Delete a relationship
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
-    await graphService.deleteRelationship(parseInt(id, 10));
+    await graphService.deleteRelationship(parseInt(req.params.id, 10));
     res.json({ message: 'Relationship deleted successfully' });
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -60,22 +58,20 @@ router.delete('/:id', authenticate, async (req, res) => {
 // Update relationship properties
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const { AssetRelationship } = require('../models');
     const { id } = req.params;
     const { properties } = req.body;
 
-    const relationship = await AssetRelationship.findByPk(id);
+    const relationship = await GraphEdge.findByPk(id);
     if (!relationship) {
       return res.status(404).json({ error: 'Relationship not found' });
     }
 
-    // Check ownership
     if (relationship.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     await relationship.update({ properties });
-    res.json(graphService.relationshipToGraphEdge(relationship));
+    res.json(graphService.edgeToGraphEdge(relationship));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

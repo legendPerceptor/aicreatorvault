@@ -139,59 +139,12 @@ router.post(
         }
       }
 
-      // 自动同步到 Asset 表（知识图谱）
+      // 同步到知识图谱
       try {
-        const { Asset, AssetRelationship } = require('../models');
-        // Op unused
-
-        const asset = await Asset.create({
-          user_id: userId,
-          asset_type: 'image',
-          filename: image.filename,
-          path: image.path,
-          score: image.score,
-          description: image.description,
-          metadata: {
-            legacy_image_id: image.id,
-            originalName: req.file.originalname,
-            size: req.file.size,
-            mimetype: req.file.mimetype,
-          },
-        });
-
-        // 如果有关联的 promptId，创建 GENERATED 关系
-        if (req.body.promptId || req.body.prompt_id) {
-          // 查找 prompt 对应的 Asset
-          const promptAsset = await Asset.findOne({
-            where: {
-              user_id: userId,
-              asset_type: 'prompt',
-              metadata: {
-                legacy_prompt_id: parseInt(req.body.promptId || req.body.prompt_id),
-              },
-            },
-          });
-
-          if (promptAsset) {
-            await AssetRelationship.create({
-              user_id: userId,
-              source_id: promptAsset.id,
-              target_id: asset.id,
-              relationship_type: 'generated',
-              properties: {
-                createdAt: new Date().toISOString(),
-              },
-            });
-            console.log(
-              `[Image] Created GENERATED relationship: Asset #${promptAsset.id} -> Asset #${asset.id}`
-            );
-          }
-        }
-
-        console.log(`[Image] Created Asset #${asset.id} for Image #${image.id}`);
-      } catch (assetError) {
-        console.error('[Image] Failed to create Asset:', assetError.message);
-        // 不影响主流程，只记录错误
+        const graphSyncService = require('../services/graphSyncService');
+        await graphSyncService.syncCreateEntity('image', image.id, userId);
+      } catch (graphError) {
+        console.error('[Image] Graph sync failed:', graphError.message);
       }
 
       const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
@@ -264,6 +217,18 @@ router.put('/:id/prompt', authenticate, async (req, res) => {
     }
 
     await image.update({ prompt_id: req.body.promptId || req.body.prompt_id });
+
+    // 同步知识图谱关系
+    try {
+      const graphSyncService = require('../services/graphSyncService');
+      const newPromptId = req.body.promptId || req.body.prompt_id;
+      if (newPromptId) {
+        await graphSyncService.syncPromptImage(image.id, newPromptId, 'add');
+      }
+    } catch (graphError) {
+      console.error('[Image] Graph prompt sync failed:', graphError.message);
+    }
+
     const imageWithPrompt = await Image.findByPk(image.id, { include: Prompt });
     res.json(imageWithPrompt);
   } catch (error) {
@@ -290,33 +255,12 @@ router.delete('/:id', authenticate, async (req, res) => {
       fs.unlinkSync(filePath);
     }
 
-    // 删除关联的 Asset（知识图谱）
+    // 删除关联的知识图谱节点
     try {
-      const { Asset, AssetRelationship } = require('../models');
-      const asset = await Asset.findOne({
-        where: {
-          user_id: req.user.id,
-          asset_type: 'image',
-          metadata: {
-            legacy_image_id: image.id,
-          },
-        },
-      });
-
-      if (asset) {
-        // 删除关联的关系
-        await AssetRelationship.destroy({
-          where: {
-            [Op.or]: [{ source_id: asset.id }, { target_id: asset.id }],
-          },
-        });
-        // 删除 Asset
-        await asset.destroy();
-        console.log(`[Image] Deleted Asset #${asset.id} for Image #${image.id}`);
-      }
-    } catch (assetError) {
-      console.error('[Image] Failed to delete Asset:', assetError.message);
-      // 不影响主流程
+      const graphSyncService = require('../services/graphSyncService');
+      await graphSyncService.syncDeleteEntity('image', image.id);
+    } catch (graphError) {
+      console.error('[Image] Graph sync delete failed:', graphError.message);
     }
 
     // 删除 Qdrant 向量

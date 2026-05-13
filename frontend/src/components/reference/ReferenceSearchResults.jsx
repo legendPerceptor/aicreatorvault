@@ -5,6 +5,7 @@ function ReferenceSearchResults({
   results,
   selectedImages,
   downloadingIds,
+  addedImageUrls = new Set(),
   onToggleSelect,
   onDownload,
   isSearching,
@@ -37,6 +38,11 @@ function ReferenceSearchResults({
   const isDownloading = (image) => {
     const imageUrl = image.properties?.url || image.url;
     return downloadingIds.has(imageUrl);
+  };
+
+  const isAdded = (image) => {
+    const imageUrl = image.properties?.url || image.url;
+    return addedImageUrls.has(imageUrl);
   };
 
   return (
@@ -84,9 +90,13 @@ function ReferenceSearchResults({
               <button
                 className="btn-download"
                 onClick={() => onDownload(image)}
-                disabled={isDownloading(image)}
+                disabled={isDownloading(image) || isAdded(image)}
               >
-                {isDownloading(image) ? t('referenceSearch.downloading') : t('referenceSearch.add')}
+                {isAdded(image)
+                  ? t('referenceSearch.added')
+                  : isDownloading(image)
+                    ? t('referenceSearch.downloading')
+                    : t('referenceSearch.add')}
               </button>
             </div>
           </div>

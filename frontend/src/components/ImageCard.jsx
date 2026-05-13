@@ -3,6 +3,7 @@ import StarRating, { StaticStarRating } from './StarRating';
 import ImagePreviewModal from './ImagePreviewModal';
 import { SimilarityBadge, MatchReason } from './search/SimilarityRadar';
 import { useTranslation } from '../i18n/useTranslation';
+import { getImageUrl } from '../utils/imageUrl';
 
 function ImageCard({
   image,
@@ -35,14 +36,6 @@ function ImageCard({
   const formatSimilarity = (sim) => {
     if (sim === null || sim === undefined) return null;
     return `${(sim * 100).toFixed(1)}%`;
-  };
-
-  // 获取图片 URL：参考图使用 /api/files/reference/，普通图使用 /api/files/userId/images/
-  const getImageUrl = (img) => {
-    if (img.is_reference) {
-      return `/api/files/reference/${img.filename}`;
-    }
-    return `/api/files/${img.user_id}/images/${img.filename}`;
   };
 
   const isAnalyzed = !!image.description;

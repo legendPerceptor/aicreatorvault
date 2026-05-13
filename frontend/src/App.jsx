@@ -51,6 +51,7 @@ function AppContent() {
     analyzedFilter,
     setAnalyzedFilter,
     generateImages,
+    fetchImages,
   } = useImages(
     prompts,
     {
@@ -74,6 +75,7 @@ function AppContent() {
   const [referenceSearchResults, setReferenceSearchResults] = useState([]);
   const [referenceSearchSelected, setReferenceSearchSelected] = useState([]);
   const [referenceSearchDownloading, setReferenceSearchDownloading] = useState(new Set());
+  const [addedImageUrls, setAddedImageUrls] = useState(new Set());
 
   const handleScoreEdit = (type, id) => {
     const currentScore =
@@ -300,7 +302,14 @@ function AppContent() {
 
       <div className="nav">
         <button onClick={() => setActiveTab('prompts')}>{t('nav.prompts')}</button>
-        <button onClick={() => setActiveTab('images')}>{t('nav.images')}</button>
+        <button
+          onClick={() => {
+            setActiveTab('images');
+            fetchImages();
+          }}
+        >
+          {t('nav.images')}
+        </button>
         <button onClick={() => setActiveTab('themes')}>{t('nav.themes')}</button>
         <button onClick={() => setActiveTab('search')}>{t('nav.search')}</button>
         <button onClick={() => setActiveTab('reference-search')}>
@@ -387,10 +396,9 @@ function AppContent() {
       {activeTab === 'reference-search' && (
         <ReferenceSearchPage
           themes={themes}
-          onImagesAdded={() => {
-            // 刷新图片列表而不是刷新整个页面
-            fetchImages();
-          }}
+          onImagesAdded={() => {}}
+          addedImageUrls={addedImageUrls}
+          onAddedImageUrlsChange={setAddedImageUrls}
           searchResults={referenceSearchResults}
           onSearchResultsChange={setReferenceSearchResults}
           selectedImages={referenceSearchSelected}

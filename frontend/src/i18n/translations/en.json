@@ -44,7 +44,7 @@
     "prompts": "Prompts",
     "images": "Images",
     "themes": "Themes",
-    "search": "Search & Reference",
+    "search": "In-database Search",
     "referenceSearch": "Reference Search",
     "knowledgeGraph": "Knowledge Graph"
   },
@@ -152,13 +152,13 @@
     "selectToAdd": "Select images below to add to theme"
   },
   "search": {
-    "title": "Search & Reference",
+    "title": "In-database Search",
     "description": "Use keywords, AI semantics, or upload an image to search for similar creative references",
     "placeholder": "Describe what you're looking for, or drag in an image...",
     "noResults": "No matching results found",
     "tryAdjusting": "Try adjusting your search terms or lowering the similarity threshold",
     "clearSearch": "Clear Search",
-    "startSearch": "Start searching for your creative references",
+    "startSearch": "Start searching for your creative assets",
     "keywordSearch": "Keyword Search",
     "keywordSearchDesc": "Enter simple keywords to search quickly",
     "semanticSearch": "AI Semantic Search",
@@ -244,6 +244,7 @@
     "select": "Select",
     "selected": "✓ Selected",
     "add": "Add",
+    "added": "Added",
     "downloading": "Downloading...",
     "foundImages": "Found {count} images",
     "deselectAll": "Deselect All",

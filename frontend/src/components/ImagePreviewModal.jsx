@@ -1,17 +1,10 @@
 import React from 'react';
 import { useTranslation } from '../i18n/useTranslation';
+import { getImageUrl } from '../utils/imageUrl';
 
 function ImagePreviewModal({ image, onClose }) {
   const { t } = useTranslation();
   if (!image) return null;
-
-  // 获取图片 URL：参考图使用 /api/files/reference/，普通图使用 /api/files/userId/images/
-  const getImageUrl = (img) => {
-    if (img.is_reference) {
-      return `/api/files/reference/${img.filename}`;
-    }
-    return `/api/files/${img.user_id}/images/${img.filename}`;
-  };
 
   const imageUrl = getImageUrl(image);
 

@@ -11,6 +11,8 @@ function ReferenceSearchPage({
   themes = [],
   onImagesAdded,
   // 从 App 传入的持久化状态
+  addedImageUrls = new Set(),
+  onAddedImageUrlsChange,
   searchResults,
   onSearchResultsChange,
   selectedImages,
@@ -94,8 +96,9 @@ function ReferenceSearchPage({
       const data = await response.json();
 
       if (data.success) {
-        alert(t('referenceSearch.imageAdded'));
-        if (onImagesAdded) onImagesAdded();
+        // 将图片 URL 添加到已添加集合，不刷新页面
+        onAddedImageUrlsChange((prev) => new Set([...prev, imageUrl]));
+        onImagesAdded?.();
       } else {
         alert(t('referenceSearch.downloadFailed', { error: data.error }));
       }
@@ -117,6 +120,7 @@ function ReferenceSearchPage({
 
     let success = 0;
     let failed = 0;
+    const newlyAddedUrls = [];
 
     for (const image of selectedImages) {
       // 优先使用 properties.url（原始图片直链），否则使用 url
@@ -136,6 +140,7 @@ function ReferenceSearchPage({
         const data = await response.json();
         if (data.success) {
           success++;
+          newlyAddedUrls.push(imageUrl);
         } else {
           failed++;
         }
@@ -146,7 +151,16 @@ function ReferenceSearchPage({
 
     alert(t('referenceSearch.batchComplete', { success, failed }));
     onSelectedImagesChange([]);
-    if (onImagesAdded) onImagesAdded();
+    // 刷新图片列表
+    onImagesAdded?.();
+    // 将批量添加的图片 URL 也加入已添加集合，不刷新页面
+    if (newlyAddedUrls.length > 0) {
+      onAddedImageUrlsChange((prev) => {
+        const newSet = new Set(prev);
+        newlyAddedUrls.forEach((url) => newSet.add(url));
+        return newSet;
+      });
+    }
   };
 
   return (
@@ -196,6 +210,7 @@ function ReferenceSearchPage({
         results={searchResults}
         selectedImages={selectedImages}
         downloadingIds={downloadingIds}
+        addedImageUrls={addedImageUrls}
         onToggleSelect={toggleSelect}
         onDownload={handleDownload}
         isSearching={isSearching}

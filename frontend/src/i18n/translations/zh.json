@@ -44,7 +44,7 @@
     "prompts": "提示词管理",
     "images": "图片管理",
     "themes": "主题管理",
-    "search": "检索参考",
+    "search": "库内检索",
     "referenceSearch": "参考图搜索",
     "knowledgeGraph": "知识图谱"
   },
@@ -152,13 +152,13 @@
     "selectToAdd": "从下方图片选择添加到主题"
   },
   "search": {
-    "title": "检索参考",
+    "title": "库内检索",
     "description": "使用关键词、AI 语义或上传图片来搜索相似的创作参考",
     "placeholder": "描述你想要找的内容，或拖入图片...",
     "noResults": "未找到匹配的结果",
     "tryAdjusting": "尝试调整搜索词或降低相似度阈值",
     "clearSearch": "清空搜索",
-    "startSearch": "开始搜索你的创作参考",
+    "startSearch": "开始搜索你的创作资产",
     "keywordSearch": "关键词搜索",
     "keywordSearchDesc": "输入简单的关键词快速查找",
     "semanticSearch": "AI 语义搜索",

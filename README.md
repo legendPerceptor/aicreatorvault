@@ -5,7 +5,7 @@ English | [中文版](docs/zh/README.md)
 An asset management platform for AI creators, helping you securely store, organize, and retrieve AI-generated images, prompts, and other creative assets. Through knowledge graph technology, visually explore relationships between assets and trace creative evolution paths.
 
 <p align="center">
-  <img src="images/ai-creator-page-english.png" alt="AI Creator Vault UI" width="800">
+  <img src="images/ai-creator-page-english-v2.png" alt="AI Creator Vault UI" width="800">
 </p>
 
 ## Features

@@ -244,6 +244,7 @@
     "select": "选择",
     "selected": "✓ 已选",
     "add": "添加",
+    "added": "已添加",
     "downloading": "下载中...",
     "foundImages": "找到 {count} 张图片",
     "deselectAll": "取消全选",

@@ -93,7 +93,7 @@ function ReferenceSearchResults({
                 disabled={isDownloading(image) || isAdded(image)}
               >
                 {isAdded(image)
-                  ? t('referenceSearch.added') || '已添加'
+                  ? t('referenceSearch.added')
                   : isDownloading(image)
                     ? t('referenceSearch.downloading')
                     : t('referenceSearch.add')}

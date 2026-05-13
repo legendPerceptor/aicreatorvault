@@ -244,6 +244,7 @@
     "select": "Select",
     "selected": "✓ Selected",
     "add": "Add",
+    "added": "Added",
     "downloading": "Downloading...",
     "foundImages": "Found {count} images",
     "deselectAll": "Deselect All",

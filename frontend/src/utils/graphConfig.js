@@ -1,26 +1,26 @@
 // Graph configuration for styling and behavior
 
-export const assetTypeConfig = {
+export const entityTypeConfig = {
   prompt: {
     label: 'Prompt',
-    icon: '📝',
+    icon: '\u{1F4DD}',
     color: '#3b82f6', // Blue
     bgColor: '#dbeafe',
     borderColor: '#2563eb',
   },
   image: {
     label: 'Image',
-    icon: '🖼️',
+    icon: '\u{1F5BC}\u{FE0F}',
     color: '#10b981', // Green
     bgColor: '#d1fae5',
     borderColor: '#059669',
   },
-  derived_image: {
-    label: 'Derived',
-    icon: '🔧',
-    color: '#f59e0b', // Amber
-    bgColor: '#fef3c7',
-    borderColor: '#d97706',
+  theme: {
+    label: 'Theme',
+    icon: '\u{1F3A8}',
+    color: '#8b5cf6', // Purple
+    bgColor: '#ede9fe',
+    borderColor: '#7c3aed',
   },
 };
 
@@ -49,10 +49,16 @@ export const relationshipTypeConfig = {
     animated: true,
     style: 'solid',
   },
+  contains: {
+    label: 'Contains',
+    color: '#8b5cf6', // Purple
+    animated: false,
+    style: 'solid',
+  },
 };
 
 export const graphLayoutConfig = {
-  defaultNodeWidth: 180,
+  defaultNodeWidth: 200,
   defaultNodeHeight: 80,
   nodeSpacing: 100,
   levelSpacing: 150,
@@ -70,17 +76,20 @@ export const graphBehaviorConfig = {
   defaultZoom: 1,
 };
 
-export const getAssetTypeConfig = (type) => {
+export const getEntityTypeConfig = (type) => {
   return (
-    assetTypeConfig[type] || {
+    entityTypeConfig[type] || {
       label: 'Unknown',
-      icon: '❓',
+      icon: '\u{2753}',
       color: '#6b7280',
       bgColor: '#f3f4f6',
       borderColor: '#4b5563',
     }
   );
 };
+
+// Backward compat alias
+export const getAssetTypeConfig = getEntityTypeConfig;
 
 export const getRelationshipTypeConfig = (type) => {
   return (
@@ -94,7 +103,7 @@ export const getRelationshipTypeConfig = (type) => {
 };
 
 export const getNodeStyle = (type) => {
-  const config = getAssetTypeConfig(type);
+  const config = getEntityTypeConfig(type);
   return {
     backgroundColor: config.bgColor,
     border: `2px solid ${config.borderColor}`,
@@ -123,15 +132,20 @@ export const getEdgeStyle = (type) => {
 };
 
 export const filterOptions = {
-  assetTypes: [
+  entityTypes: [
     { value: 'prompt', label: 'Prompts' },
     { value: 'image', label: 'Images' },
-    { value: 'derived_image', label: 'Derived Images' },
+    { value: 'theme', label: 'Themes' },
   ],
+  // Backward compat alias
+  get assetTypes() {
+    return this.entityTypes;
+  },
   relationshipTypes: [
     { value: 'generated', label: 'Generated' },
     { value: 'derived_from', label: 'Derived From' },
     { value: 'version_of', label: 'Version Of' },
     { value: 'inspired_by', label: 'Inspired By' },
+    { value: 'contains', label: 'Theme Contains' },
   ],
 };

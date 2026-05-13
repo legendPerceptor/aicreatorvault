@@ -1,14 +1,14 @@
 import React from 'react';
-import { assetTypeConfig, relationshipTypeConfig } from '../../utils/graphConfig';
+import { entityTypeConfig, relationshipTypeConfig } from '../../utils/graphConfig';
 import './GraphLegend.css';
 
 function GraphLegend() {
   return (
     <div className="graph-legend">
       <div className="legend-section">
-        <h4>Asset Types</h4>
+        <h4>Entity Types</h4>
         <div className="legend-items">
-          {Object.entries(assetTypeConfig).map(([type, config]) => (
+          {Object.entries(entityTypeConfig).map(([type, config]) => (
             <div key={type} className="legend-item">
               <span
                 className="legend-color"

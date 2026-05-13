@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Theme, Image, ThemeImage } = require('../models');
 const { authenticate, optionalAuth } = require('../middleware/auth');
+const graphSyncService = require('../services/graphSyncService');
 
 // 获取所有主题
 router.get('/', optionalAuth, async (req, res) => {
@@ -32,7 +33,44 @@ router.post('/', authenticate, async (req, res) => {
       ...req.body,
       user_id: req.user.id,
     });
+
+    // 同步到知识图谱
+    try {
+      await graphSyncService.syncCreateEntity('theme', theme.id, req.user.id);
+    } catch (graphError) {
+      console.error('[Theme] Graph sync failed:', graphError.message);
+    }
+
     res.json(theme);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 删除主题
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const theme = await Theme.findByPk(req.params.id);
+    if (!theme) {
+      return res.status(404).json({ error: 'Theme not found' });
+    }
+
+    if (theme.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // 删除关联的 ThemeImage 记录
+    await ThemeImage.destroy({ where: { themeId: theme.id } });
+
+    // 删除关联的知识图谱节点
+    try {
+      await graphSyncService.syncDeleteEntity('theme', theme.id);
+    } catch (graphError) {
+      console.error('[Theme] Graph sync delete failed:', graphError.message);
+    }
+
+    await theme.destroy();
+    res.json({ message: 'Theme deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -55,6 +93,14 @@ router.post('/:id/images', authenticate, async (req, res) => {
       themeId: req.params.id,
       imageId: req.body.imageId,
     });
+
+    // 同步到知识图谱
+    try {
+      await graphSyncService.syncThemeImage(req.params.id, req.body.imageId, 'add');
+    } catch (graphError) {
+      console.error('[Theme] Graph sync failed:', graphError.message);
+    }
+
     res.json(themeImage);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -106,6 +152,14 @@ router.delete('/:id/images/:imageId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'ThemeImage not found' });
     }
     await themeImage.destroy();
+
+    // 同步到知识图谱
+    try {
+      await graphSyncService.syncThemeImage(req.params.id, req.params.imageId, 'remove');
+    } catch (graphError) {
+      console.error('[Theme] Graph sync failed:', graphError.message);
+    }
+
     res.json({ message: 'Image removed from theme successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { Prompt, Image, Asset, AssetRelationship } = require('../models');
-const { Op } = require('sequelize');
+const { Prompt, Image } = require('../models');
 const { authenticate, optionalAuth } = require('../middleware/auth');
+const graphSyncService = require('../services/graphSyncService');
 
 // 获取所有提示词
 router.get('/', optionalAuth, async (req, res) => {
@@ -113,23 +113,11 @@ router.post('/', authenticate, async (req, res) => {
       user_id: req.user.id,
     });
 
-    // 自动同步到 Asset 表（知识图谱）
+    // 同步到知识图谱
     try {
-      const asset = await Asset.create({
-        user_id: req.user.id,
-        asset_type: 'prompt',
-        content: prompt.content,
-        score: prompt.score,
-        metadata: {
-          legacy_prompt_id: prompt.id,
-          type: prompt.type || 'text2image',
-        },
-      });
-
-      console.log(`[Prompt] Created Asset #${asset.id} for Prompt #${prompt.id}`);
-    } catch (assetError) {
-      console.error('[Prompt] Failed to create Asset:', assetError.message);
-      // 不影响主流程，只记录错误
+      await graphSyncService.syncCreateEntity('prompt', prompt.id, req.user.id);
+    } catch (graphError) {
+      console.error('[Prompt] Graph sync failed:', graphError.message);
     }
 
     // 异步索引到 LightRAG 知识图谱（非阻塞）
@@ -214,32 +202,11 @@ router.delete('/:id', authenticate, async (req, res) => {
       }
     }
 
-    // 删除关联的 Asset（知识图谱）
+    // 删除关联的知识图谱节点
     try {
-      const asset = await Asset.findOne({
-        where: {
-          user_id: req.user.id,
-          asset_type: 'prompt',
-          metadata: {
-            legacy_prompt_id: prompt.id,
-          },
-        },
-      });
-
-      if (asset) {
-        // 删除关联的关系
-        await AssetRelationship.destroy({
-          where: {
-            [Op.or]: [{ source_id: asset.id }, { target_id: asset.id }],
-          },
-        });
-        // 删除 Asset
-        await asset.destroy();
-        console.log(`[Prompt] Deleted Asset #${asset.id} for Prompt #${prompt.id}`);
-      }
-    } catch (assetError) {
-      console.error('[Prompt] Failed to delete Asset:', assetError.message);
-      // 不影响主流程
+      await graphSyncService.syncDeleteEntity('prompt', prompt.id);
+    } catch (graphError) {
+      console.error('[Prompt] Graph sync delete failed:', graphError.message);
     }
 
     // 异步删除 LightRAG 索引（非阻塞）

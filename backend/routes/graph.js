@@ -1,29 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const graphService = require('../services/graphService');
-const { optionalAuth } = require('../middleware/auth');
+const graphSyncService = require('../services/graphSyncService');
+const { optionalAuth, authenticate } = require('../middleware/auth');
 
 // Get graph data (nodes and edges)
 router.get('/data', optionalAuth, async (req, res) => {
   try {
-    const { assetTypes, relationshipTypes, limit } = req.query;
+    const { entityTypes, assetTypes, relationshipTypes, limit } = req.query;
 
+    // Accept both entityTypes and assetTypes (backward compat)
+    const types = entityTypes || assetTypes;
     const filters = {};
-    if (assetTypes) {
-      filters.assetTypes = Array.isArray(assetTypes) ? assetTypes : assetTypes.split(',');
+    if (types) {
+      filters.entity_types = Array.isArray(types) ? types : types.split(',');
     }
     if (relationshipTypes) {
-      filters.relationshipTypes = Array.isArray(relationshipTypes)
+      filters.relationship_types = Array.isArray(relationshipTypes)
         ? relationshipTypes
         : relationshipTypes.split(',');
     }
     if (limit) {
       filters.limit = parseInt(limit, 10);
-    }
-
-    // Filter by user if authenticated
-    if (req.user) {
-      filters.userId = req.user.id;
     }
 
     const data = await graphService.getGraphData(filters);
@@ -33,22 +31,17 @@ router.get('/data', optionalAuth, async (req, res) => {
   }
 });
 
-// Get all nodes (assets)
+// Get all nodes
 router.get('/nodes', optionalAuth, async (req, res) => {
   try {
     const { types, limit } = req.query;
 
     const filters = {};
     if (types) {
-      filters.assetTypes = Array.isArray(types) ? types : types.split(',');
+      filters.entity_types = Array.isArray(types) ? types : types.split(',');
     }
     if (limit) {
       filters.limit = parseInt(limit, 10);
-    }
-
-    // Filter by user if authenticated
-    if (req.user) {
-      filters.userId = req.user.id;
     }
 
     const { nodes } = await graphService.getGraphData(filters);
@@ -58,19 +51,14 @@ router.get('/nodes', optionalAuth, async (req, res) => {
   }
 });
 
-// Get all edges (relationships)
+// Get all edges
 router.get('/edges', optionalAuth, async (req, res) => {
   try {
     const { types } = req.query;
 
     const filters = {};
     if (types) {
-      filters.relationshipTypes = Array.isArray(types) ? types : types.split(',');
-    }
-
-    // Filter by user if authenticated
-    if (req.user) {
-      filters.userId = req.user.id;
+      filters.relationship_types = Array.isArray(types) ? types : types.split(',');
     }
 
     const { edges } = await graphService.getGraphData(filters);
@@ -93,7 +81,7 @@ router.get('/traverse/:id', optionalAuth, async (req, res) => {
         : relationshipTypes.split(',')
       : null;
 
-    const result = await graphService.traverse(id, traverseDepth, types);
+    const result = await graphService.traverse(parseInt(id, 10), traverseDepth, types);
     res.json(result);
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -125,16 +113,13 @@ router.get('/paths/:sourceId/:targetId', optionalAuth, async (req, res) => {
     if (!path) {
       res.json({ path: null, message: 'No path found between nodes' });
     } else {
-      // Fetch full node data for the path
-      const { Asset } = require('../models');
-      const nodes = await Asset.findAll({
-        where: { id: path },
+      // Hydrate path nodes
+      const graphNodes = await require('../models').GraphNode.findAll({
+        where: { id: { [require('sequelize').Op.in]: path } },
       });
+      const hydrated = await graphService.hydrateNodes(graphNodes);
 
-      res.json({
-        path,
-        nodes: nodes.map((node) => graphService.assetToGraphNode(node)),
-      });
+      res.json({ path, nodes: hydrated });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -153,7 +138,7 @@ router.get('/neighbors/:id', optionalAuth, async (req, res) => {
         : relationshipTypes.split(',')
       : null;
 
-    const result = await graphService.getNeighbors(id, types);
+    const result = await graphService.getNeighbors(parseInt(id, 10), types);
     res.json(result);
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -167,12 +152,7 @@ router.get('/neighbors/:id', optionalAuth, async (req, res) => {
 // Get connected components
 router.get('/components', optionalAuth, async (req, res) => {
   try {
-    const filters = {};
-    if (req.user) {
-      filters.userId = req.user.id;
-    }
-
-    const components = await graphService.getConnectedComponents(filters);
+    const components = await graphService.getConnectedComponents();
     res.json(components);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -183,7 +163,7 @@ router.get('/components', optionalAuth, async (req, res) => {
 router.get('/nodes/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const details = await graphService.getNodeDetails(id);
+    const details = await graphService.getNodeDetails(parseInt(id, 10));
     res.json(details);
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -197,13 +177,18 @@ router.get('/nodes/:id', optionalAuth, async (req, res) => {
 // Get graph statistics
 router.get('/stats', optionalAuth, async (req, res) => {
   try {
-    const filters = {};
-    if (req.user) {
-      filters.userId = req.user.id;
-    }
-
-    const stats = await graphService.getGraphStats(filters);
+    const stats = await graphService.getGraphStats();
     res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rebuild graph from entities
+router.post('/rebuild', authenticate, async (req, res) => {
+  try {
+    const result = await graphSyncService.fullRebuild(req.user.id);
+    res.json({ message: 'Graph rebuilt successfully', ...result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

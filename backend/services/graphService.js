@@ -1,141 +1,100 @@
-const { Asset, AssetRelationship, sequelize } = require('../models');
+const { GraphNode, GraphEdge, Image, Prompt, Theme, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 class GraphService {
-  /**
-   * Get all nodes and edges for the graph visualization
-   * @param {Object} filters - Filters for asset types and relationship types
-   * @returns {Object} - { nodes: [], edges: [] }
-   */
   async getGraphData(filters = {}) {
-    const { asset_types, relationship_types, limit = 1000 } = filters;
+    const { entity_types, relationship_types, limit = 1000 } = filters;
 
-    // Build where clause for assets
-    const assetWhere = {};
-    if (asset_types && asset_types.length > 0) {
-      assetWhere.asset_type = { [Op.in]: asset_types };
+    const nodeWhere = {};
+    if (entity_types && entity_types.length > 0) {
+      nodeWhere.entity_type = { [Op.in]: entity_types };
     }
 
-    // Fetch assets (nodes)
-    const assets = await Asset.findAll({
-      where: assetWhere,
+    const nodes = await GraphNode.findAll({
+      where: nodeWhere,
       limit,
       order: [['created_at', 'DESC']],
     });
 
-    // Build map for quick lookups
-    const assetMap = new Map();
-    assets.forEach((asset) => {
-      assetMap.set(asset.id, asset);
-    });
-
-    // Fetch relationships
-    const relationshipWhere = {};
-    if (relationship_types && relationship_types.length > 0) {
-      relationshipWhere.relationship_type = { [Op.in]: relationship_types };
-    }
-
-    // Only include relationships where both assets exist
-    const assetIds = Array.from(assetMap.keys());
-    if (assetIds.length === 0) {
+    if (nodes.length === 0) {
       return { nodes: [], edges: [] };
     }
 
-    const relationships = await AssetRelationship.findAll({
-      where: {
-        ...relationshipWhere,
-        [Op.or]: [{ source_id: { [Op.in]: assetIds } }, { target_id: { [Op.in]: assetIds } }],
-      },
-    });
+    const nodeIds = nodes.map((n) => n.id);
 
-    // Transform to graph format
-    const nodes = assets.map((asset) => this.assetToGraphNode(asset));
-    const edges = relationships
-      .filter((rel) => assetMap.has(rel.source_id) && assetMap.has(rel.target_id))
-      .map((rel) => this.relationshipToGraphEdge(rel));
+    const edgeWhere = {};
+    if (relationship_types && relationship_types.length > 0) {
+      edgeWhere.relationship_type = { [Op.in]: relationship_types };
+    }
+    edgeWhere[Op.or] = [{ source_id: { [Op.in]: nodeIds } }, { target_id: { [Op.in]: nodeIds } }];
 
-    return { nodes, edges };
+    const edges = await GraphEdge.findAll({ where: edgeWhere });
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const hydratedNodes = await this.hydrateNodes(nodes);
+
+    const filteredEdges = edges
+      .filter((e) => nodeMap.has(e.source_id) && nodeMap.has(e.target_id))
+      .map((e) => this.edgeToGraphEdge(e));
+
+    return { nodes: hydratedNodes, edges: filteredEdges };
   }
 
-  /**
-   * Traverse the graph from a starting node using BFS
-   * @param {number} fromId - Starting asset ID
-   * @param {number} depth - Maximum depth to traverse (default: 2)
-   * @param {Array} relationship_types - Filter by relationship types
-   * @returns {Object} - { nodes: [], edges: [], visited: Set }
-   */
   async traverse(fromId, depth = 2, relationship_types = null) {
     const visited = new Set();
     const queue = [{ nodeId: fromId, currentDepth: 0 }];
-    const nodes = new Map();
+    const nodeMap = new Map();
     const edges = [];
 
-    // Get starting node
-    const startNode = await Asset.findByPk(fromId);
+    const startNode = await GraphNode.findByPk(fromId);
     if (!startNode) {
-      throw new Error(`Asset with ID ${fromId} not found`);
+      throw new Error(`GraphNode with ID ${fromId} not found`);
     }
-    nodes.set(fromId, this.assetToGraphNode(startNode));
+    nodeMap.set(fromId, startNode);
     visited.add(fromId);
 
     while (queue.length > 0) {
       const { nodeId, currentDepth } = queue.shift();
-
       if (currentDepth >= depth) continue;
 
-      // Get neighbors
       const whereClause = {
         [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
       };
-
       if (relationship_types && relationship_types.length > 0) {
         whereClause.relationship_type = { [Op.in]: relationship_types };
       }
 
-      const relationships = await AssetRelationship.findAll({
-        where: whereClause,
-        include: [
-          { model: Asset, as: 'source' },
-          { model: Asset, as: 'target' },
-        ],
-      });
+      const rels = await GraphEdge.findAll({ where: whereClause });
 
-      for (const rel of relationships) {
+      for (const rel of rels) {
         const neighborId = rel.source_id === nodeId ? rel.target_id : rel.source_id;
-        const neighbor = rel.source_id === nodeId ? rel.target : rel.source;
 
-        if (neighbor && !visited.has(neighborId)) {
-          visited.add(neighborId);
-          nodes.set(neighborId, this.assetToGraphNode(neighbor));
-          queue.push({ nodeId: neighborId, currentDepth: currentDepth + 1 });
+        if (!visited.has(neighborId)) {
+          const neighbor = await GraphNode.findByPk(neighborId);
+          if (neighbor) {
+            visited.add(neighborId);
+            nodeMap.set(neighborId, neighbor);
+            queue.push({ nodeId: neighborId, currentDepth: currentDepth + 1 });
+          }
         }
 
-        // Add edge if not already added
         const edgeKey = `${rel.source_id}-${rel.target_id}`;
         if (!edges.some((e) => e.key === edgeKey)) {
-          edges.push(this.relationshipToGraphEdge(rel));
+          edges.push(this.edgeToGraphEdge(rel));
         }
       }
     }
 
+    const hydratedNodes = await this.hydrateNodes(Array.from(nodeMap.values()));
     return {
-      nodes: Array.from(nodes.values()),
+      nodes: hydratedNodes,
       edges,
       visited: Array.from(visited),
     };
   }
 
-  /**
-   * Find shortest path between two assets using BFS
-   * @param {number} source_id - Source asset ID
-   * @param {number} target_id - Target asset ID
-   * @param {Array} relationship_types - Filter by relationship types
-   * @returns {Array} - Array of asset IDs representing the path
-   */
   async findShortestPath(source_id, target_id, relationship_types = null) {
-    if (source_id === target_id) {
-      return [source_id];
-    }
+    if (source_id === target_id) return [source_id];
 
     const visited = new Set();
     const queue = [[source_id]];
@@ -145,26 +104,19 @@ class GraphService {
       const path = queue.shift();
       const currentNode = path[path.length - 1];
 
-      // Get neighbors
       const whereClause = {
         [Op.or]: [{ source_id: currentNode }, { target_id: currentNode }],
       };
-
       if (relationship_types && relationship_types.length > 0) {
         whereClause.relationship_type = { [Op.in]: relationship_types };
       }
 
-      const relationships = await AssetRelationship.findAll({
-        where: whereClause,
-      });
+      const rels = await GraphEdge.findAll({ where: whereClause });
 
-      for (const rel of relationships) {
+      for (const rel of rels) {
         const neighborId = rel.source_id === currentNode ? rel.target_id : rel.source_id;
 
-        if (neighborId === target_id) {
-          return [...path, neighborId];
-        }
-
+        if (neighborId === target_id) return [...path, neighborId];
         if (!visited.has(neighborId)) {
           visited.add(neighborId);
           queue.push([...path, neighborId]);
@@ -172,88 +124,60 @@ class GraphService {
       }
     }
 
-    return null; // No path found
+    return null;
   }
 
-  /**
-   * Get direct neighbors of a node
-   * @param {number} nodeId - Asset ID
-   * @param {Array} relationship_types - Filter by relationship types
-   * @returns {Object} - { incoming: [], outgoing: [], all: [] }
-   */
   async getNeighbors(nodeId, relationship_types = null) {
     const whereClause = {
       [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
     };
-
     if (relationship_types && relationship_types.length > 0) {
       whereClause.relationship_type = { [Op.in]: relationship_types };
     }
 
-    const relationships = await AssetRelationship.findAll({
-      where: whereClause,
-      include: [
-        { model: Asset, as: 'source' },
-        { model: Asset, as: 'target' },
-      ],
-    });
+    const edges = await GraphEdge.findAll({ where: whereClause });
 
     const incoming = [];
     const outgoing = [];
 
-    for (const rel of relationships) {
-      const neighbor = rel.source_id === nodeId ? rel.target : rel.source;
-      const neighborData = this.assetToGraphNode(neighbor);
+    for (const edge of edges) {
+      const neighborId = edge.source_id === nodeId ? edge.target_id : edge.source_id;
+      const neighbor = await GraphNode.findByPk(neighborId);
+      if (!neighbor) continue;
 
-      if (rel.target_id === nodeId) {
-        incoming.push({
-          node: neighborData,
-          relationship: this.relationshipToGraphEdge(rel),
-        });
+      const hydrated = (await this.hydrateNodes([neighbor]))[0];
+
+      if (edge.target_id === nodeId) {
+        incoming.push({ node: hydrated, relationship: this.edgeToGraphEdge(edge) });
       } else {
-        outgoing.push({
-          node: neighborData,
-          relationship: this.relationshipToGraphEdge(rel),
-        });
+        outgoing.push({ node: hydrated, relationship: this.edgeToGraphEdge(edge) });
       }
     }
 
-    return {
-      incoming,
-      outgoing,
-      all: [...incoming, ...outgoing],
-    };
+    return { incoming, outgoing, all: [...incoming, ...outgoing] };
   }
 
-  /**
-   * Get connected components in the graph
-   * @returns {Array} - Array of components, each containing node IDs
-   */
   async getConnectedComponents() {
-    const allAssets = await Asset.findAll();
+    const allNodes = await GraphNode.findAll();
     const visited = new Set();
     const components = [];
 
-    for (const asset of allAssets) {
-      if (visited.has(asset.id)) continue;
+    for (const node of allNodes) {
+      if (visited.has(node.id)) continue;
 
-      // Start a new component with BFS
       const component = [];
-      const queue = [asset.id];
-      visited.add(asset.id);
+      const queue = [node.id];
+      visited.add(node.id);
 
       while (queue.length > 0) {
         const nodeId = queue.shift();
         component.push(nodeId);
 
-        // Get neighbors
-        const relationships = await AssetRelationship.findAll({
-          where: {
-            [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
-          },
+        const rels = await GraphEdge.findAll({
+          where: { [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }] },
         });
 
-        for (const rel of relationships) {
+        for (const rel of rels) {
           const neighborId = rel.source_id === nodeId ? rel.target_id : rel.source_id;
           if (!visited.has(neighborId)) {
             visited.add(neighborId);
@@ -268,173 +192,165 @@ class GraphService {
     return components;
   }
 
-  /**
-   * Get node details with all relationships
-   * @param {number} nodeId - Asset ID
-   * @returns {Object} - Node details with relationships
-   */
   async getNodeDetails(nodeId) {
-    const asset = await Asset.findByPk(nodeId);
-    if (!asset) {
-      throw new Error(`Asset with ID ${nodeId} not found`);
+    const node = await GraphNode.findByPk(nodeId);
+    if (!node) {
+      throw new Error(`GraphNode with ID ${nodeId} not found`);
     }
 
-    const relationships = await AssetRelationship.findAll({
-      where: {
-        [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }],
-      },
-      include: [
-        { model: Asset, as: 'source' },
-        { model: Asset, as: 'target' },
-      ],
+    const edges = await GraphEdge.findAll({
+      where: { [Op.or]: [{ source_id: nodeId }, { target_id: nodeId }] },
     });
 
+    const hydrated = (await this.hydrateNodes([node]))[0];
+
     return {
-      node: this.assetToGraphNode(asset),
-      relationships: relationships.map((rel) => this.relationshipToGraphEdge(rel)),
+      node: hydrated,
+      relationships: edges.map((e) => this.edgeToGraphEdge(e)),
     };
   }
 
-  /**
-   * Convert Asset model to graph node format
-   * @private
-   */
-  assetToGraphNode(asset) {
-    return {
-      id: asset.id,
-      type: asset.asset_type,
-      label: this.getNodeLabel(asset),
-      data: {
-        filename: asset.filename,
-        path: asset.path,
-        score: asset.score,
-        description: asset.description,
-        metadata: asset.metadata,
-        created_at: asset.created_at,
-      },
-    };
+  async hydrateNodes(nodes) {
+    if (nodes.length === 0) return [];
+
+    const byType = { prompt: [], image: [], theme: [] };
+    for (const n of nodes) {
+      if (byType[n.entity_type]) {
+        byType[n.entity_type].push(n.entity_id);
+      }
+    }
+
+    const [prompts, images, themes] = await Promise.all([
+      byType.prompt.length > 0
+        ? Prompt.findAll({ where: { id: { [Op.in]: byType.prompt } }, raw: true })
+        : [],
+      byType.image.length > 0
+        ? Image.findAll({ where: { id: { [Op.in]: byType.image } }, raw: true })
+        : [],
+      byType.theme.length > 0
+        ? Theme.findAll({ where: { id: { [Op.in]: byType.theme } }, raw: true })
+        : [],
+    ]);
+
+    const promptMap = new Map(prompts.map((p) => [p.id, p]));
+    const imageMap = new Map(images.map((i) => [i.id, i]));
+    const themeMap = new Map(themes.map((t) => [t.id, t]));
+
+    return nodes.map((node) => {
+      const entity =
+        node.entity_type === 'prompt'
+          ? promptMap.get(node.entity_id)
+          : node.entity_type === 'image'
+            ? imageMap.get(node.entity_id)
+            : themeMap.get(node.entity_id);
+
+      return this.nodeToGraphNode(node, entity);
+    });
   }
 
-  /**
-   * Generate a human-readable label for a node
-   * @private
-   */
-  getNodeLabel(asset) {
-    switch (asset.asset_type) {
+  nodeToGraphNode(node, entity) {
+    const result = {
+      id: node.id,
+      entityType: node.entity_type,
+      entityId: node.entity_id,
+      label: this.computeLabel(node.entity_type, entity),
+      entity: entity || null,
+    };
+
+    if (node.entity_type === 'image' && entity) {
+      result.imageUrl = entity.is_reference
+        ? `/api/files/reference/${entity.filename}`
+        : `/api/files/${entity.user_id}/images/${entity.filename}`;
+    }
+
+    return result;
+  }
+
+  computeLabel(entityType, entity) {
+    if (!entity) return `Unknown #${entityType}`;
+    switch (entityType) {
       case 'prompt': {
-        const content = asset.content || '';
+        const content = entity.content || '';
         return content.length > 30 ? content.substring(0, 30) + '...' : content;
       }
       case 'image':
-      case 'derived_image':
-        return asset.filename || `Image #${asset.id}`;
+        return entity.filename || `Image #${entity.id}`;
+      case 'theme':
+        return entity.name || `Theme #${entity.id}`;
       default:
-        return `Asset #${asset.id}`;
+        return `Node #${entity.id}`;
     }
   }
 
-  /**
-   * Convert AssetRelationship model to graph edge format
-   * @private
-   */
-  relationshipToGraphEdge(relationship) {
+  edgeToGraphEdge(edge) {
     return {
-      id: relationship.id,
-      key: `${relationship.source_id}-${relationship.target_id}`,
-      source: relationship.source_id,
-      target: relationship.target_id,
-      type: relationship.relationship_type,
-      label: this.getEdgeLabel(relationship.relationship_type),
-      properties: relationship.properties,
+      id: edge.id,
+      key: `${edge.source_id}-${edge.target_id}`,
+      source: edge.source_id,
+      target: edge.target_id,
+      type: edge.relationship_type,
+      label: this.getEdgeLabel(edge.relationship_type),
+      properties: edge.properties,
     };
   }
 
-  /**
-   * Get human-readable label for edge type
-   * @private
-   */
   getEdgeLabel(relationship_type) {
     const labels = {
       generated: 'generated',
       derived_from: 'derived from',
       version_of: 'version of',
       inspired_by: 'inspired by',
+      contains: 'contains',
     };
     return labels[relationship_type] || relationship_type;
   }
 
-  /**
-   * Create a new relationship between assets
-   * @param {number} source_id - Source asset ID
-   * @param {number} target_id - Target asset ID
-   * @param {string} relationship_type - Type of relationship
-   * @param {Object} properties - Additional properties
-   * @returns {Object} - Created relationship
-   */
   async createRelationship(source_id, target_id, relationship_type, properties = {}) {
-    // Check if both assets exist
     const [source, target] = await Promise.all([
-      Asset.findByPk(source_id),
-      Asset.findByPk(target_id),
+      GraphNode.findByPk(source_id),
+      GraphNode.findByPk(target_id),
     ]);
 
-    if (!source) {
-      throw new Error(`Source asset with ID ${source_id} not found`);
-    }
-    if (!target) {
-      throw new Error(`Target asset with ID ${target_id} not found`);
-    }
+    if (!source) throw new Error(`Source node with ID ${source_id} not found`);
+    if (!target) throw new Error(`Target node with ID ${target_id} not found`);
 
-    // Check if relationship already exists
-    const existing = await AssetRelationship.findOne({
+    const existing = await GraphEdge.findOne({
       where: { source_id, target_id, relationship_type },
     });
-
     if (existing) {
       throw new Error(
         `Relationship already exists between ${source_id} and ${target_id} of type ${relationship_type}`
       );
     }
 
-    const relationship = await AssetRelationship.create({
+    const edge = await GraphEdge.create({
+      user_id: source.user_id,
       source_id,
       target_id,
       relationship_type,
       properties,
     });
 
-    return this.relationshipToGraphEdge(relationship);
+    return this.edgeToGraphEdge(edge);
   }
 
-  /**
-   * Delete a relationship
-   * @param {number} relationshipId - Relationship ID
-   * @returns {boolean} - True if deleted
-   */
   async deleteRelationship(relationshipId) {
-    const relationship = await AssetRelationship.findByPk(relationshipId);
-    if (!relationship) {
-      throw new Error(`Relationship with ID ${relationshipId} not found`);
-    }
-
-    await relationship.destroy();
+    const edge = await GraphEdge.findByPk(relationshipId);
+    if (!edge) throw new Error(`Relationship with ID ${relationshipId} not found`);
+    await edge.destroy();
     return true;
   }
 
-  /**
-   * Get statistics about the graph
-   * @returns {Object} - Graph statistics
-   */
   async getGraphStats() {
-    const [assetCount, relationshipCount, assetsByType, relationshipsByType] = await Promise.all([
-      Asset.count(),
-      AssetRelationship.count(),
-      Asset.findAll({
-        attributes: ['asset_type', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-        group: ['asset_type'],
+    const [nodeCount, edgeCount, nodesByType, edgesByType] = await Promise.all([
+      GraphNode.count(),
+      GraphEdge.count(),
+      GraphNode.findAll({
+        attributes: ['entity_type', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+        group: ['entity_type'],
         raw: true,
       }),
-      AssetRelationship.findAll({
+      GraphEdge.findAll({
         attributes: ['relationship_type', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
         group: ['relationship_type'],
         raw: true,
@@ -442,13 +358,13 @@ class GraphService {
     ]);
 
     return {
-      totalNodes: assetCount,
-      totalEdges: relationshipCount,
-      nodesByType: assetsByType.reduce((acc, item) => {
-        acc[item.asset_type] = parseInt(item.count);
+      totalNodes: nodeCount,
+      totalEdges: edgeCount,
+      nodesByType: nodesByType.reduce((acc, item) => {
+        acc[item.entity_type] = parseInt(item.count);
         return acc;
       }, {}),
-      edgesByType: relationshipsByType.reduce((acc, item) => {
+      edgesByType: edgesByType.reduce((acc, item) => {
         acc[item.relationship_type] = parseInt(item.count);
         return acc;
       }, {}),

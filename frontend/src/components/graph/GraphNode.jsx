@@ -3,20 +3,8 @@ import { Handle, Position } from 'reactflow';
 import { getAssetTypeConfig } from '../../utils/graphConfig';
 import './GraphNode.css';
 
-const GraphNode = memo(({ data, selected }) => {
+const GraphNode = memo(({ data = {}, selected }) => {
   const config = getAssetTypeConfig(data.type);
-
-  const handleClick = () => {
-    if (data.onNodeClick) {
-      data.onNodeClick(data);
-    }
-  };
-
-  const handleDoubleClick = () => {
-    if (data.onNodeDoubleClick) {
-      data.onNodeDoubleClick(data);
-    }
-  };
 
   return (
     <div
@@ -25,8 +13,6 @@ const GraphNode = memo(({ data, selected }) => {
         backgroundColor: config.bgColor,
         border: `2px solid ${selected ? config.color : config.borderColor}`,
       }}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
     >
       <Handle type="target" position={Position.Top} className="handle handle-target" />
 

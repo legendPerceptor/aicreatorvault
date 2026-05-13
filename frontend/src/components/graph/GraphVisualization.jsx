@@ -75,7 +75,7 @@ function GraphVisualization({
   const handleNodeClickHandler = useCallback(
     (event, node) => {
       if (onNodeClick) {
-        onNodeClick(node.data);
+        onNodeClick(node.data || {});
       }
     },
     [onNodeClick]
@@ -95,7 +95,7 @@ function GraphVisualization({
     return nodes.map((node) => ({
       ...node,
       data: {
-        ...node.data,
+        ...(node.data || {}),
         onNodeClick: handleNodeClickHandler,
         onNodeDoubleClick: handleNodeDoubleClickHandler,
       },

@@ -1,9 +1,94 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { execFile } = require('child_process');
 const imageServiceClient = require('./imageServiceClient');
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// Use undici ProxyAgent (built into Node 18+) for reliable proxy support
+const proxyUrl =
+  process.env.HTTPS_PROXY ||
+  process.env.HTTP_PROXY ||
+  process.env.https_proxy ||
+  process.env.http_proxy;
+
+let undiciProxy = null;
+if (proxyUrl) {
+  try {
+    const { ProxyAgent, fetch: undiciFetch } = require('undici');
+    undiciProxy = new ProxyAgent(proxyUrl);
+  } catch (_e) {
+    // undici not available
+  }
+}
+
+/**
+ * Fetch URL content via proxy-aware HTTP client.
+ * Uses undici (with ProxyAgent) in Docker, falls back to curl in WSL dev.
+ */
+async function fetchUrl(url, timeout = 15000) {
+  // Try undici with proxy first (works in Docker containers)
+  if (undiciProxy) {
+    try {
+      const { fetch: undiciFetch } = require('undici');
+      const resp = await undiciFetch(url, {
+        dispatcher: undiciProxy,
+        headers: { 'User-Agent': USER_AGENT },
+        signal: AbortSignal.timeout(timeout),
+      });
+      return await resp.text();
+    } catch (_e) {
+      // undici failed, try curl fallback
+    }
+  }
+
+  // Try axios without proxy (direct connection)
+  try {
+    const resp = await axios.get(url, {
+      timeout,
+      maxRedirects: 5,
+      headers: { 'User-Agent': USER_AGENT },
+    });
+    return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+  } catch (_axiosErr) {
+    // Fallback to curl (available in WSL dev environment)
+    return new Promise((resolve, reject) => {
+      const args = [
+        '-sL',
+        '--max-time',
+        String(Math.floor(timeout / 1000)),
+        '-H',
+        `User-Agent: ${USER_AGENT}`,
+        url,
+      ];
+      execFile('curl', args, { timeout, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
+        if (err) return reject(err);
+        if (!stdout) return reject(new Error('curl returned empty response'));
+        resolve(stdout);
+      });
+    });
+  }
+}
+
+// JSON fetch using undici proxy or axios
+async function fetchJson(url, timeout = 10000) {
+  if (undiciProxy) {
+    try {
+      const { fetch: undiciFetch } = require('undici');
+      const resp = await undiciFetch(url, {
+        dispatcher: undiciProxy,
+        headers: { 'User-Agent': USER_AGENT },
+        signal: AbortSignal.timeout(timeout),
+      });
+      return await resp.json();
+    } catch (_e) {
+      // undici failed
+    }
+  }
+  const resp = await axios.get(url, { timeout, headers: { 'User-Agent': USER_AGENT } });
+  return resp.data;
+}
 
 class ResourceService {
   /**
@@ -11,13 +96,9 @@ class ResourceService {
    */
   async extractWebLink(url) {
     try {
-      const response = await axios.get(url, {
-        headers: { 'User-Agent': USER_AGENT },
-        timeout: 15000,
-        maxRedirects: 5,
-      });
+      const html = await fetchUrl(url);
 
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(html);
 
       const title =
         $('meta[property="og:title"]').attr('content') ||
@@ -48,7 +129,6 @@ class ResourceService {
         metadata: {
           siteName,
           description,
-          contentType: response.headers['content-type'] || '',
         },
       };
     } catch (error) {
@@ -59,6 +139,7 @@ class ResourceService {
 
   /**
    * Extract metadata and subtitles from a YouTube URL
+   * Uses YouTube Data API v3 if YOUTUBE_API_KEY is configured, falls back to noembed
    */
   async extractYouTube(url) {
     const videoId = this.extractYouTubeId(url);
@@ -74,32 +155,68 @@ class ResourceService {
       return result;
     }
 
-    // Use noembed as a lightweight alternative for metadata
+    const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+
+    if (youtubeApiKey) {
+      // YouTube Data API v3 — full metadata + description
+      try {
+        const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet,contentDetails&key=${youtubeApiKey}`;
+        const data = await fetchJson(apiUrl, 10000);
+        const item = data?.items?.[0];
+        if (item) {
+          const snippet = item.snippet || {};
+          const contentDetails = item.contentDetails || {};
+          result.title = snippet.title || '';
+          result.content = snippet.description || '';
+          const thumbs = snippet.thumbnails || {};
+          result.thumbnail =
+            thumbs.maxres?.url ||
+            thumbs.standard?.url ||
+            thumbs.high?.url ||
+            thumbs.default?.url ||
+            '';
+          result.metadata = {
+            ...result.metadata,
+            channelTitle: snippet.channelTitle || '',
+            publishedAt: snippet.publishedAt || '',
+            tags: snippet.tags || [],
+            duration: contentDetails.duration || '',
+            definition: contentDetails.definition || '',
+            provider: 'YouTube',
+          };
+          return result;
+        }
+      } catch (error) {
+        console.error('[ResourceService] YouTube Data API failed:', error.message);
+      }
+    }
+
+    // Fallback: noembed for basic metadata
     try {
-      const metaResp = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {
-        timeout: 10000,
-      });
-      const data = metaResp.data;
+      const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(url)}`;
+      const data = await fetchJson(noembedUrl, 10000);
       result.title = data.title || '';
       result.thumbnail = data.thumbnail_url || '';
       result.metadata.authorName = data.author_name || '';
       result.metadata.provider = data.provider_name || 'YouTube';
     } catch (error) {
-      console.error('[ResourceService] YouTube metadata failed:', error.message);
+      console.error('[ResourceService] YouTube noembed fallback failed:', error.message);
     }
 
     // Try to fetch subtitles via YouTube's timedtext API
     try {
       const subtitles = await this.fetchYouTubeSubtitles(videoId);
       if (subtitles) {
-        result.content = subtitles;
+        // Use subtitles as content if no description was obtained
+        if (!result.content) {
+          result.content = subtitles;
+        }
         result.metadata.hasSubtitles = true;
       }
-    } catch (error) {
+    } catch (_error) {
       result.metadata.hasSubtitles = false;
     }
 
-    // Fallback title
     if (!result.title) {
       result.title = `YouTube Video ${videoId}`;
     }
@@ -131,7 +248,9 @@ class ResourceService {
 
     if (resource.resource_type === 'web_link' && resource.url) {
       const extracted = await this.extractWebLink(resource.url);
-      updates.title = resource.title || extracted.title;
+      // Use extracted title unless user provided a meaningful one (not the URL itself)
+      updates.title =
+        resource.title && resource.title !== resource.url ? resource.title : extracted.title;
       updates.content = resource.content || extracted.content;
       updates.thumbnail = extracted.thumbnail;
       updates.metadata = { ...resource.metadata, ...extracted.metadata };
@@ -140,7 +259,8 @@ class ResourceService {
 
     if (resource.resource_type === 'youtube' && resource.url) {
       const extracted = await this.extractYouTube(resource.url);
-      updates.title = resource.title || extracted.title;
+      updates.title =
+        resource.title && resource.title !== resource.url ? resource.title : extracted.title;
       updates.content = resource.content || extracted.content;
       updates.thumbnail = extracted.thumbnail;
       updates.metadata = { ...resource.metadata, ...extracted.metadata };
@@ -181,27 +301,21 @@ class ResourceService {
   }
 
   async fetchYouTubeSubtitles(videoId) {
-    // Fetch the watch page to get caption tracks
-    const resp = await axios.get(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: { 'User-Agent': USER_AGENT },
-      timeout: 10000,
-    });
+    const html = await fetchUrl(`https://www.youtube.com/watch?v=${videoId}`, 10000);
 
-    // Extract caption track URL from ytInitialPlayerResponse
-    const captionMatch = resp.data.match(/"captionTracks":\s*(\[.*?\])/);
+    const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
     if (!captionMatch) return null;
 
     try {
       const tracks = JSON.parse(captionMatch[1]);
-      // Prefer English, fall back to first available
       const track =
         tracks.find((t) => t.languageCode === 'en') ||
         tracks.find((t) => t.languageCode === 'zh') ||
         tracks[0];
       if (!track?.baseUrl) return null;
 
-      const captionResp = await axios.get(track.baseUrl, { timeout: 10000 });
-      const $ = cheerio.load(captionResp.data, { xmlMode: true });
+      const captionXml = await fetchUrl(track.baseUrl, 10000);
+      const $ = cheerio.load(captionXml, { xmlMode: true });
       const text = $('text')
         .map((_, el) => $(el).text())
         .get()

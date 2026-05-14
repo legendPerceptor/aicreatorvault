@@ -17,16 +17,20 @@ const Prompt = require('./Prompt');
 const Image = require('./Image');
 const Theme = require('./Theme');
 const ThemeImage = require('./ThemeImage');
+const Resource = require('./Resource');
 const GraphNode = require('./GraphNode');
 const GraphEdge = require('./GraphEdge');
+const CanvasState = require('./CanvasState');
 
 const UserModel = User(sequelize);
 const PromptModel = Prompt(sequelize);
 const ImageModel = Image(sequelize, DB_TYPE);
 const ThemeModel = Theme(sequelize);
 const ThemeImageModel = ThemeImage(sequelize);
+const ResourceModel = Resource(sequelize, DB_TYPE);
 const GraphNodeModel = GraphNode(sequelize);
 const GraphEdgeModel = GraphEdge(sequelize, DB_TYPE);
+const CanvasStateModel = CanvasState(sequelize);
 
 // User associations
 UserModel.hasMany(PromptModel, { foreignKey: 'userId' });
@@ -37,6 +41,9 @@ ImageModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
 UserModel.hasMany(ThemeModel, { foreignKey: 'userId' });
 ThemeModel.belongsTo(UserModel, { foreignKey: 'userId' });
+
+UserModel.hasMany(ResourceModel, { foreignKey: 'userId' });
+ResourceModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
 UserModel.hasMany(GraphNodeModel, { foreignKey: 'userId' });
 GraphNodeModel.belongsTo(UserModel, { foreignKey: 'userId' });
@@ -54,6 +61,10 @@ GraphNodeModel.hasMany(GraphEdgeModel, { foreignKey: 'sourceId', as: 'outgoingEd
 GraphNodeModel.hasMany(GraphEdgeModel, { foreignKey: 'targetId', as: 'incomingEdges' });
 GraphEdgeModel.belongsTo(GraphNodeModel, { foreignKey: 'sourceId', as: 'source' });
 GraphEdgeModel.belongsTo(GraphNodeModel, { foreignKey: 'targetId', as: 'target' });
+
+// Canvas state associations
+CanvasStateModel.belongsTo(GraphNodeModel, { foreignKey: 'graphNodeId', as: 'graphNode' });
+GraphNodeModel.hasOne(CanvasStateModel, { foreignKey: 'graphNodeId', as: 'canvasState' });
 
 async function initializeDatabase() {
   try {
@@ -91,8 +102,10 @@ module.exports = {
   Image: ImageModel,
   Theme: ThemeModel,
   ThemeImage: ThemeImageModel,
+  Resource: ResourceModel,
   GraphNode: GraphNodeModel,
   GraphEdge: GraphEdgeModel,
+  CanvasState: CanvasStateModel,
   DB_TYPE,
   supportsVector,
 };

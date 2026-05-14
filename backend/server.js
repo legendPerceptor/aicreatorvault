@@ -11,6 +11,8 @@ const imagesRouter = require('./routes/images');
 const themesRouter = require('./routes/themes');
 const graphRouter = require('./routes/graph');
 const relationshipsRouter = require('./routes/relationships');
+const resourcesRouter = require('./routes/resources');
+const canvasRouter = require('./routes/canvas');
 const referenceSearchRouter = require('./routes/referenceSearch');
 const authRouter = require('./routes/auth');
 const filesRouter = require('./routes/files');
@@ -42,6 +44,8 @@ app.use('/api/images', imagesRouter);
 app.use('/api/themes', themesRouter);
 app.use('/api/graph', graphRouter);
 app.use('/api/relationships', relationshipsRouter);
+app.use('/api/resources', resourcesRouter);
+app.use('/api/canvas', canvasRouter);
 app.use('/api/reference-search', referenceSearchRouter);
 app.use('/api/lightrag', lightragRouter);
 

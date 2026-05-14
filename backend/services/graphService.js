@@ -1,4 +1,4 @@
-const { GraphNode, GraphEdge, Image, Prompt, Theme, sequelize } = require('../models');
+const { GraphNode, GraphEdge, Image, Prompt, Theme, Resource, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 class GraphService {
@@ -213,14 +213,14 @@ class GraphService {
   async hydrateNodes(nodes) {
     if (nodes.length === 0) return [];
 
-    const byType = { prompt: [], image: [], theme: [] };
+    const byType = { prompt: [], image: [], theme: [], resource: [] };
     for (const n of nodes) {
       if (byType[n.entity_type]) {
         byType[n.entity_type].push(n.entity_id);
       }
     }
 
-    const [prompts, images, themes] = await Promise.all([
+    const [prompts, images, themes, resources] = await Promise.all([
       byType.prompt.length > 0
         ? Prompt.findAll({ where: { id: { [Op.in]: byType.prompt } }, raw: true })
         : [],
@@ -230,11 +230,15 @@ class GraphService {
       byType.theme.length > 0
         ? Theme.findAll({ where: { id: { [Op.in]: byType.theme } }, raw: true })
         : [],
+      byType.resource.length > 0
+        ? Resource.findAll({ where: { id: { [Op.in]: byType.resource } }, raw: true })
+        : [],
     ]);
 
     const promptMap = new Map(prompts.map((p) => [p.id, p]));
     const imageMap = new Map(images.map((i) => [i.id, i]));
     const themeMap = new Map(themes.map((t) => [t.id, t]));
+    const resourceMap = new Map(resources.map((r) => [r.id, r]));
 
     return nodes.map((node) => {
       const entity =
@@ -242,7 +246,9 @@ class GraphService {
           ? promptMap.get(node.entity_id)
           : node.entity_type === 'image'
             ? imageMap.get(node.entity_id)
-            : themeMap.get(node.entity_id);
+            : node.entity_type === 'theme'
+              ? themeMap.get(node.entity_id)
+              : resourceMap.get(node.entity_id);
 
       return this.nodeToGraphNode(node, entity);
     });
@@ -277,6 +283,8 @@ class GraphService {
         return entity.filename || `Image #${entity.id}`;
       case 'theme':
         return entity.name || `Theme #${entity.id}`;
+      case 'resource':
+        return entity.title || entity.url || `Resource #${entity.id}`;
       default:
         return `Node #${entity.id}`;
     }

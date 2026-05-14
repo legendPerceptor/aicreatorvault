@@ -14,7 +14,7 @@ const GraphNode = (sequelize) => {
       field: 'user_id',
     },
     entity_type: {
-      type: DataTypes.ENUM('prompt', 'image', 'theme'),
+      type: DataTypes.ENUM('prompt', 'image', 'theme', 'resource'),
       allowNull: false,
       field: 'entity_type',
     },

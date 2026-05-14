@@ -22,6 +22,50 @@ export const entityTypeConfig = {
     bgColor: '#ede9fe',
     borderColor: '#7c3aed',
   },
+  resource: {
+    label: 'Resource',
+    icon: '\u{1F4C1}',
+    color: '#f97316', // Orange
+    bgColor: '#fff7ed',
+    borderColor: '#ea580c',
+    subTypes: {
+      pdf: {
+        icon: '\u{1F4D1}',
+        label: 'PDF',
+        color: '#dc2626',
+        bgColor: '#fef2f2',
+        borderColor: '#b91c1c',
+      },
+      web_link: {
+        icon: '\u{1F310}',
+        label: 'Web Link',
+        color: '#0891b2',
+        bgColor: '#ecfeff',
+        borderColor: '#0e7490',
+      },
+      youtube: {
+        icon: '\u{25B6}\u{FE0F}',
+        label: 'YouTube',
+        color: '#dc2626',
+        bgColor: '#fef2f2',
+        borderColor: '#b91c1c',
+      },
+      note: {
+        icon: '\u{1F4DD}',
+        label: 'Note',
+        color: '#d97706',
+        bgColor: '#fffbeb',
+        borderColor: '#b45309',
+      },
+      file: {
+        icon: '\u{1F4C4}',
+        label: 'File',
+        color: '#6b7280',
+        bgColor: '#f9fafb',
+        borderColor: '#4b5563',
+      },
+    },
+  },
 };
 
 export const relationshipTypeConfig = {
@@ -136,6 +180,7 @@ export const filterOptions = {
     { value: 'prompt', label: 'Prompts' },
     { value: 'image', label: 'Images' },
     { value: 'theme', label: 'Themes' },
+    { value: 'resource', label: 'Resources' },
   ],
   // Backward compat alias
   get assetTypes() {

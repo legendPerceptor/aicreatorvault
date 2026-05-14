@@ -11,6 +11,17 @@ import './KnowledgeGraphPage.css';
 
 const API_BASE = '/api';
 
+function parseISODuration(iso) {
+  if (!iso) return '';
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return iso;
+  const parts = [];
+  if (m[1]) parts.push(m[1] + 'h');
+  if (m[2]) parts.push(m[2] + 'm');
+  if (m[3]) parts.push(m[3] + 's');
+  return parts.join(' ') || iso;
+}
+
 function KnowledgeGraphPage() {
   const { t } = useTranslation();
   const [entityTypes, setEntityTypes] = useState(filterOptions.entityTypes.map((opt) => opt.value));
@@ -503,6 +514,23 @@ function KnowledgeGraphPage() {
                   <span className="detail-value">{selectedNode.entity.metadata.authorName}</span>
                 </div>
               )}
+
+            {selectedNode.entityType === 'resource' &&
+              selectedNode.entity?.metadata?.channelTitle && (
+                <div className="detail-row">
+                  <span className="detail-label">Channel:</span>
+                  <span className="detail-value">{selectedNode.entity.metadata.channelTitle}</span>
+                </div>
+              )}
+
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.metadata?.duration && (
+              <div className="detail-row">
+                <span className="detail-label">Duration:</span>
+                <span className="detail-value">
+                  {parseISODuration(selectedNode.entity.metadata.duration)}
+                </span>
+              </div>
+            )}
 
             {selectedNode.entityType === 'resource' &&
               selectedNode.entity?.content &&

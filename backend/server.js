@@ -17,6 +17,7 @@ const referenceSearchRouter = require('./routes/referenceSearch');
 const authRouter = require('./routes/auth');
 const filesRouter = require('./routes/files');
 const lightragRouter = require('./routes/lightrag');
+const chatRouter = require('./routes/chat');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/resources', resourcesRouter);
 app.use('/api/canvas', canvasRouter);
 app.use('/api/reference-search', referenceSearchRouter);
 app.use('/api/lightrag', lightragRouter);
+app.use('/api/chat', chatRouter);
 
 // 启动服务器
 const PORT = process.env.PORT || 3001;

@@ -16,7 +16,7 @@ const Resource = (sequelize, dbType = 'sqlite') => {
       field: 'user_id',
     },
     resource_type: {
-      type: DataTypes.ENUM('pdf', 'web_link', 'youtube', 'note', 'file'),
+      type: DataTypes.ENUM('pdf', 'web_link', 'youtube', 'note', 'file', 'ai_assistant'),
       allowNull: false,
       field: 'resource_type',
     },

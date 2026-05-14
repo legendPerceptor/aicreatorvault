@@ -44,7 +44,7 @@ export function useGraph(filters = {}) {
         };
         return {
           id: String(node.id),
-          type: 'custom',
+          type: node.entity?.resource_type === 'ai_assistant' ? 'aiAssistant' : 'custom',
           position: pos,
           data: node,
         };
@@ -122,7 +122,7 @@ export function useGraphTraversal() {
         };
         return {
           id: String(node.id),
-          type: 'custom',
+          type: node.entity?.resource_type === 'ai_assistant' ? 'aiAssistant' : 'custom',
           position: pos,
           data: node,
         };

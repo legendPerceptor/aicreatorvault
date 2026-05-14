@@ -81,3 +81,22 @@
 .handle-source {
   bottom: -6px;
 }
+
+.model-selector {
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid #c084fc;
+  border-radius: 4px;
+  background: #faf5ff;
+  color: #7c3aed;
+  cursor: pointer;
+  max-width: 100%;
+  width: 100%;
+}
+
+.model-selector:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}

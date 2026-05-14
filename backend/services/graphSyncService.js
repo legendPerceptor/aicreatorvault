@@ -1,4 +1,4 @@
-const { GraphNode, GraphEdge, Image, Prompt, Theme, ThemeImage } = require('../models');
+const { GraphNode, GraphEdge, Image, Prompt, Theme, ThemeImage, Resource } = require('../models');
 const { Op } = require('sequelize');
 
 class GraphSyncService {
@@ -178,6 +178,18 @@ class GraphSyncService {
       }
     }
 
+    // Rebuild from resources
+    const resources = await Resource.findAll({
+      where: userId ? { user_id: userId } : {},
+    });
+    for (const r of resources) {
+      await GraphNode.create({
+        user_id: r.user_id || userId,
+        entity_type: 'resource',
+        entity_id: r.id,
+      });
+    }
+
     // Create contains edges from theme→image
     const allThemeImages = await ThemeImage.findAll();
     for (const ti of allThemeImages) {
@@ -185,7 +197,7 @@ class GraphSyncService {
     }
 
     return {
-      nodes: prompts.length + images.length + themes.length,
+      nodes: prompts.length + images.length + themes.length + resources.length,
       edges: images.filter((i) => i.prompt_id).length + allThemeImages.length,
     };
   }

@@ -95,6 +95,32 @@ function KnowledgeGraphPage() {
     }
   }, [selectedNode, nodes, findPath]);
 
+  // Delete selected node (any entity type)
+  const handleDeleteNode = useCallback(async () => {
+    if (!selectedNode) return;
+    const typeLabels = {
+      resource: 'resource',
+      image: 'image',
+      prompt: 'prompt',
+      theme: 'theme',
+    };
+    if (!window.confirm(`Delete this ${typeLabels[selectedNode.entityType] || 'node'}?`)) return;
+
+    const endpointMap = {
+      resource: `${API_BASE}/resources/${selectedNode.entityId}`,
+      image: `${API_BASE}/images/${selectedNode.entityId}`,
+      prompt: `${API_BASE}/prompts/${selectedNode.entityId}`,
+      theme: `${API_BASE}/themes/${selectedNode.entityId}`,
+    };
+    try {
+      await authFetch(endpointMap[selectedNode.entityType], { method: 'DELETE' });
+      setSelectedNode(null);
+      refetch();
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  }, [selectedNode, refetch]);
+
   // Resource import handlers
   const handleAddNote = useCallback(async () => {
     if (!noteTitle.trim() && !noteContent.trim()) return;
@@ -436,6 +462,19 @@ function KnowledgeGraphPage() {
             )}
 
             {/* Resource detail display */}
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.thumbnail && (
+              <div className="detail-row">
+                <a href={selectedNode.entity.url || '#'} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={selectedNode.entity.thumbnail}
+                    alt="thumbnail"
+                    className="detail-thumbnail"
+                    style={{ maxWidth: '100%', borderRadius: 6, cursor: 'pointer' }}
+                  />
+                </a>
+              </div>
+            )}
+
             {selectedNode.entityType === 'resource' && selectedNode.entity?.url && (
               <div className="detail-row">
                 <span className="detail-label">URL:</span>
@@ -450,12 +489,44 @@ function KnowledgeGraphPage() {
               </div>
             )}
 
-            {selectedNode.entityType === 'resource' && selectedNode.entity?.content && (
-              <div className="detail-row detail-description">
-                <span className="detail-label">Content:</span>
-                <span className="detail-value">{selectedNode.entity.content}</span>
+            {selectedNode.entityType === 'resource' && selectedNode.entity?.metadata?.siteName && (
+              <div className="detail-row">
+                <span className="detail-label">Site:</span>
+                <span className="detail-value">{selectedNode.entity.metadata.siteName}</span>
               </div>
             )}
+
+            {selectedNode.entityType === 'resource' &&
+              selectedNode.entity?.metadata?.authorName && (
+                <div className="detail-row">
+                  <span className="detail-label">Author:</span>
+                  <span className="detail-value">{selectedNode.entity.metadata.authorName}</span>
+                </div>
+              )}
+
+            {selectedNode.entityType === 'resource' &&
+              selectedNode.entity?.content &&
+              selectedNode.entity.content.length > 0 && (
+                <div className="detail-row detail-description">
+                  <span className="detail-label">Content:</span>
+                  <span className="detail-value">
+                    {selectedNode.entity.content.length > 500
+                      ? selectedNode.entity.content.slice(0, 500) + '...'
+                      : selectedNode.entity.content}
+                  </span>
+                </div>
+              )}
+
+            {selectedNode.entityType === 'resource' &&
+              !selectedNode.entity?.content &&
+              selectedNode.entity?.resource_type !== 'file' && (
+                <div className="detail-row">
+                  <span className="detail-label">Content:</span>
+                  <span className="detail-value" style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                    Not yet extracted
+                  </span>
+                </div>
+              )}
 
             {selectedNode.entityType === 'resource' && selectedNode.entity?.file_path && (
               <div className="detail-row">
@@ -468,6 +539,46 @@ function KnowledgeGraphPage() {
                 >
                   Download
                 </a>
+              </div>
+            )}
+
+            {selectedNode.entityType === 'resource' && (
+              <div className="detail-row" style={{ gap: 8, marginTop: 4 }}>
+                <button
+                  className="action-button"
+                  onClick={async () => {
+                    try {
+                      await authFetch(`${API_BASE}/resources/${selectedNode.entityId}/extract`, {
+                        method: 'POST',
+                      });
+                      refetch();
+                    } catch (err) {
+                      console.error('Re-extract failed:', err);
+                    }
+                  }}
+                >
+                  Re-extract
+                </button>
+                <button
+                  className="action-button"
+                  style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                  onClick={handleDeleteNode}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
+            {/* Universal delete button for non-resource types */}
+            {selectedNode.entityType !== 'resource' && (
+              <div className="detail-row" style={{ marginTop: 8 }}>
+                <button
+                  className="action-button"
+                  style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                  onClick={handleDeleteNode}
+                >
+                  Delete
+                </button>
               </div>
             )}
           </div>

@@ -6,6 +6,7 @@ const fs = require('fs');
 const { Resource, DB_TYPE } = require('../models');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const graphSyncService = require('../services/graphSyncService');
+const resourceService = require('../services/resourceService');
 
 const UPLOADS_DIR =
   process.env.NODE_ENV === 'production' || process.env.DOCKER_ENV
@@ -79,6 +80,33 @@ router.post('/', authenticate, async (req, res) => {
       metadata: metadata || {},
     });
 
+    // Auto-extract content for web_link and youtube (synchronous so response has data)
+    if (resource_type === 'web_link' || resource_type === 'youtube') {
+      try {
+        const updates = await resourceService.processResource(resource);
+        if (Object.keys(updates).length > 0) {
+          await resource.update(updates);
+        }
+      } catch (err) {
+        console.error('[Resource] Extraction failed:', err.message);
+      }
+    }
+
+    // Generate embedding in background for note/pdf types
+    if (resource_type === 'note' || resource_type === 'pdf') {
+      setImmediate(async () => {
+        try {
+          const textForEmbedding = [resource.title, resource.content].filter(Boolean).join('\n');
+          const embedding = await resourceService.generateEmbedding(textForEmbedding);
+          if (embedding) {
+            await resource.update({ embedding });
+          }
+        } catch (err) {
+          console.error('[Resource] Embedding generation failed:', err.message);
+        }
+      });
+    }
+
     // Sync to graph
     try {
       await graphSyncService.syncCreateEntity('resource', resource.id, req.user.id);
@@ -129,6 +157,21 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
       },
     });
 
+    // Generate embedding for extracted text (async)
+    if (content) {
+      setImmediate(async () => {
+        try {
+          const textForEmbedding = [title, content].filter(Boolean).join('\n');
+          const embedding = await resourceService.generateEmbedding(textForEmbedding);
+          if (embedding) {
+            await resource.update({ embedding });
+          }
+        } catch (err) {
+          console.error('[Resource] Embedding generation failed:', err.message);
+        }
+      });
+    }
+
     // Sync to graph
     try {
       await graphSyncService.syncCreateEntity('resource', resource.id, req.user.id);
@@ -137,6 +180,28 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
     }
 
     res.status(201).json(resource);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Re-extract content for a resource
+router.post('/:id/extract', authenticate, async (req, res) => {
+  try {
+    const resource = await Resource.findByPk(req.params.id);
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+    if (resource.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updates = await resourceService.processResource(resource);
+    if (Object.keys(updates).length > 0) {
+      await resource.update(updates);
+    }
+
+    res.json(await Resource.findByPk(resource.id));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -160,6 +225,22 @@ router.put('/:id', authenticate, async (req, res) => {
       ...(url !== undefined && { url }),
       ...(metadata !== undefined && { metadata }),
     });
+
+    // Re-generate embedding if text content changed
+    if (title !== undefined || content !== undefined) {
+      setImmediate(async () => {
+        try {
+          const updated = await Resource.findByPk(resource.id);
+          const textForEmbedding = [updated.title, updated.content].filter(Boolean).join('\n');
+          const embedding = await resourceService.generateEmbedding(textForEmbedding);
+          if (embedding) {
+            await updated.update({ embedding });
+          }
+        } catch (err) {
+          console.error('[Resource] Embedding regeneration failed:', err.message);
+        }
+      });
+    }
 
     res.json(resource);
   } catch (error) {

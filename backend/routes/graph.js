@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const graphService = require('../services/graphService');
 const graphSyncService = require('../services/graphSyncService');
+const { GraphEdge, GraphNode } = require('../models');
+const { Op } = require('sequelize');
 const { optionalAuth, authenticate } = require('../middleware/auth');
 
 // Get graph data (nodes and edges)
@@ -189,6 +191,46 @@ router.post('/rebuild', authenticate, async (req, res) => {
   try {
     const result = await graphSyncService.fullRebuild(req.user.id);
     res.json({ message: 'Graph rebuilt successfully', ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create an edge between two graph nodes
+router.post('/edges', authenticate, async (req, res) => {
+  try {
+    const { sourceId, targetId, type = 'context' } = req.body;
+    if (!sourceId || !targetId) {
+      return res.status(400).json({ error: 'sourceId and targetId are required' });
+    }
+    // Validate both nodes exist
+    const nodes = await GraphNode.findAll({ where: { id: { [Op.in]: [sourceId, targetId] } } });
+    if (nodes.length !== 2) {
+      return res.status(404).json({ error: 'One or both graph nodes not found' });
+    }
+    const [edge, created] = await GraphEdge.findOrCreate({
+      where: { source_id: sourceId, target_id: targetId, relationship_type: type },
+      defaults: {
+        user_id: req.user.id,
+        source_id: sourceId,
+        target_id: targetId,
+        relationship_type: type,
+      },
+    });
+    res.status(created ? 201 : 200).json(edge);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete an edge
+router.delete('/edges/:id', authenticate, async (req, res) => {
+  try {
+    const deleted = await GraphEdge.destroy({ where: { id: req.params.id } });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Edge not found' });
+    }
+    res.json({ message: 'Edge deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

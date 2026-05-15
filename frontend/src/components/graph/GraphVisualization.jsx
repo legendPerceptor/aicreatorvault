@@ -10,11 +10,13 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import GraphNode from './GraphNode';
+import AiAssistantNode from './AiAssistantNode';
 import { entityTypeConfig, relationshipTypeConfig } from '../../utils/graphConfig';
 import './GraphVisualization.css';
 
 const nodeTypes = {
   custom: GraphNode,
+  aiAssistant: AiAssistantNode,
 };
 
 function GraphVisualization({

@@ -34,7 +34,14 @@ const GraphEdge = (sequelize, dbType = 'sqlite') => {
       },
     },
     relationship_type: {
-      type: DataTypes.ENUM('generated', 'derived_from', 'version_of', 'inspired_by', 'contains'),
+      type: DataTypes.ENUM(
+        'generated',
+        'derived_from',
+        'version_of',
+        'inspired_by',
+        'contains',
+        'context'
+      ),
       allowNull: false,
       field: 'relationship_type',
     },

@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import GraphVisualization from '../components/graph/GraphVisualization';
 import GraphControls from '../components/graph/GraphControls';
 import GraphLegend from '../components/graph/GraphLegend';
 import ImagePreviewModal from '../components/ImagePreviewModal';
+import AgentChat from '../components/AgentChat/AgentChat';
 import { useGraph, useGraphTraversal, useGraphRebuild } from '../hooks/useGraph';
 import { filterOptions, getEntityTypeConfig, entityTypeConfig } from '../utils/graphConfig';
 import { useTranslation } from '../i18n/useTranslation';
@@ -34,9 +35,12 @@ function KnowledgeGraphPage() {
   const [layout, setLayout] = useState('dagre');
   const [showControls, setShowControls] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
+  const [showAgentChat, setShowAgentChat] = useState(false);
+  const [activeAiResourceId, setActiveAiResourceId] = useState(null);
+  const [providers, setProviders] = useState([]);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(null); // 'web_link' | 'youtube' | null
+  const [showUrlInput, setShowUrlInput] = useState(null);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [urlValue, setUrlValue] = useState('');
@@ -48,6 +52,61 @@ function KnowledgeGraphPage() {
     limit: 1000,
   });
 
+  // Fetch available LLM providers
+  useEffect(() => {
+    authFetch(`${API_BASE}/chat/providers`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setProviders(data);
+      })
+      .catch(() => setProviders([]));
+  }, []);
+
+  // Update model selection for an AI assistant (persisted in resource metadata)
+  const handleModelChange = useCallback(
+    async (resourceId, providerId, modelId) => {
+      try {
+        await authFetch(`${API_BASE}/resources/${resourceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            metadata: { provider: providerId, model: modelId },
+          }),
+        });
+        refetch();
+      } catch (err) {
+        console.error('Failed to update model:', err);
+      }
+    },
+    [refetch]
+  );
+
+  // Inject providers + onModelChange into AI assistant nodes
+  const enhancedNodes = nodes.map((n) => {
+    if (n.type !== 'aiAssistant') return n;
+    return {
+      ...n,
+      data: {
+        ...n.data,
+        providers,
+        onModelChange: handleModelChange,
+      },
+    };
+  });
+
+  // Collect nodes connected to a specific AI assistant via graph edges
+  const getConnectedNodes = useCallback(
+    (aiGraphId) => {
+      const connectedIds = new Set();
+      for (const e of edges) {
+        if (e.source === String(aiGraphId)) connectedIds.add(String(e.target));
+        if (e.target === String(aiGraphId)) connectedIds.add(String(e.source));
+      }
+      return nodes.filter((n) => connectedIds.has(n.id));
+    },
+    [nodes, edges]
+  );
+
   const { traverse, findPath } = useGraphTraversal();
   const { rebuild: rebuildGraph, loading: rebuildLoading } = useGraphRebuild();
 
@@ -56,8 +115,38 @@ function KnowledgeGraphPage() {
     setHighlightedPath([]);
   }, []);
 
+  // When user drags a connection between nodes, persist as graph edge
+  const handleConnect = useCallback(
+    async (connection) => {
+      const { source, target } = connection;
+      try {
+        await authFetch(`${API_BASE}/graph/edges`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceId: parseInt(source),
+            targetId: parseInt(target),
+            type: 'context',
+          }),
+        });
+        refetch();
+      } catch (err) {
+        console.error('Failed to create edge:', err);
+      }
+    },
+    [refetch]
+  );
+
+  // Double-click AI assistant → open chat; other nodes → expand neighbors
   const handleNodeDoubleClick = useCallback(
     async (nodeData) => {
+      const isAiAssistant =
+        nodeData.entityType === 'resource' && nodeData.entity?.resource_type === 'ai_assistant';
+      if (isAiAssistant) {
+        setActiveAiResourceId(String(nodeData.entityId));
+        setShowAgentChat(true);
+        return;
+      }
       const result = await traverse(nodeData.id, 1, relationshipTypes);
       if (result) {
         console.log('Expanded neighbors:', result);
@@ -156,6 +245,29 @@ function KnowledgeGraphPage() {
     }
   }, [noteTitle, noteContent, refetch]);
 
+  const handleAddAiAssistant = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/resources`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resource_type: 'ai_assistant',
+          title: 'AI Assistant',
+          metadata: {
+            provider: providers.length > 0 ? providers[0].id : 'minimax',
+            model: providers.length > 0 ? providers[0].defaultModel : 'MiniMax-M2.7',
+          },
+        }),
+      });
+      if (res.ok) {
+        setShowAddMenu(false);
+        refetch();
+      }
+    } catch (err) {
+      console.error('Failed to create AI Assistant:', err);
+    }
+  }, [providers, refetch]);
+
   const handleAddUrl = useCallback(async () => {
     if (!urlValue.trim()) return;
     try {
@@ -206,13 +318,23 @@ function KnowledgeGraphPage() {
     ? getEntityTypeConfig(selectedNode.entityType || selectedNode.type)
     : null;
 
-  // Resolve resource sub-type config for display
   const resolvedNodeConfig = (() => {
     if (!selectedNode || selectedNode.entityType !== 'resource') return selectedNodeConfig;
     const subType = selectedNode.entity?.resource_type;
     const subConfig = entityTypeConfig.resource?.subTypes?.[subType];
     return subConfig || selectedNodeConfig;
   })();
+
+  // Get the active AI assistant's graph node ID for chat context
+  const activeAiGraphNode = useMemo(() => {
+    if (!activeAiResourceId) return null;
+    return nodes.find(
+      (n) =>
+        n.data?.entityType === 'resource' && String(n.data?.entityId) === String(activeAiResourceId)
+    );
+  }, [nodes, activeAiResourceId]);
+
+  const activeAiMetadata = activeAiGraphNode?.data?.entity?.metadata || {};
 
   return (
     <div className="knowledge-graph-page">
@@ -241,6 +363,7 @@ function KnowledgeGraphPage() {
             </button>
             {showAddMenu && (
               <div className="add-resource-menu">
+                <button onClick={handleAddAiAssistant}>{'\u{1F916}'} AI Assistant</button>
                 <button
                   onClick={() => {
                     setShowNoteEditor(true);
@@ -388,10 +511,11 @@ function KnowledgeGraphPage() {
             </div>
           ) : (
             <GraphVisualization
-              nodes={nodes}
+              nodes={enhancedNodes}
               edges={edges}
               onNodeClick={handleNodeClick}
               onNodeDoubleClick={handleNodeDoubleClick}
+              onConnect={handleConnect}
               selectedNode={selectedNode}
               highlightedPath={highlightedPath}
             />
@@ -424,6 +548,21 @@ function KnowledgeGraphPage() {
               <span className="detail-label">Label:</span>
               <span className="detail-value">{selectedNode.label}</span>
             </div>
+
+            {/* AI Assistant detail panel — open chat button */}
+            {selectedNode.entity?.resource_type === 'ai_assistant' && (
+              <div className="detail-row" style={{ marginTop: 8 }}>
+                <button
+                  className="action-button primary"
+                  onClick={() => {
+                    setActiveAiResourceId(String(selectedNode.entityId));
+                    setShowAgentChat(true);
+                  }}
+                >
+                  Open Chat
+                </button>
+              </div>
+            )}
 
             {selectedNode.entityType === 'image' && selectedNode.imageUrl && (
               <div className="detail-row">
@@ -534,7 +673,8 @@ function KnowledgeGraphPage() {
 
             {selectedNode.entityType === 'resource' &&
               selectedNode.entity?.content &&
-              selectedNode.entity.content.length > 0 && (
+              selectedNode.entity.content.length > 0 &&
+              selectedNode.entity?.resource_type !== 'ai_assistant' && (
                 <div className="detail-row detail-description">
                   <span className="detail-label">Content:</span>
                   <span className="detail-value">
@@ -547,7 +687,8 @@ function KnowledgeGraphPage() {
 
             {selectedNode.entityType === 'resource' &&
               !selectedNode.entity?.content &&
-              selectedNode.entity?.resource_type !== 'file' && (
+              selectedNode.entity?.resource_type !== 'file' &&
+              selectedNode.entity?.resource_type !== 'ai_assistant' && (
                 <div className="detail-row">
                   <span className="detail-label">Content:</span>
                   <span className="detail-value" style={{ color: '#9ca3af', fontStyle: 'italic' }}>
@@ -570,35 +711,38 @@ function KnowledgeGraphPage() {
               </div>
             )}
 
-            {selectedNode.entityType === 'resource' && (
-              <div className="detail-row" style={{ gap: 8, marginTop: 4 }}>
-                <button
-                  className="action-button"
-                  onClick={async () => {
-                    try {
-                      await authFetch(`${API_BASE}/resources/${selectedNode.entityId}/extract`, {
-                        method: 'POST',
-                      });
-                      refetch();
-                    } catch (err) {
-                      console.error('Re-extract failed:', err);
-                    }
-                  }}
-                >
-                  Re-extract
-                </button>
-                <button
-                  className="action-button"
-                  style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-                  onClick={handleDeleteNode}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+            {/* Re-extract + Delete for resource (non-ai_assistant) */}
+            {selectedNode.entityType === 'resource' &&
+              selectedNode.entity?.resource_type !== 'ai_assistant' && (
+                <div className="detail-row" style={{ gap: 8, marginTop: 4 }}>
+                  <button
+                    className="action-button"
+                    onClick={async () => {
+                      try {
+                        await authFetch(`${API_BASE}/resources/${selectedNode.entityId}/extract`, {
+                          method: 'POST',
+                        });
+                        refetch();
+                      } catch (err) {
+                        console.error('Re-extract failed:', err);
+                      }
+                    }}
+                  >
+                    Re-extract
+                  </button>
+                  <button
+                    className="action-button"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                    onClick={handleDeleteNode}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
 
-            {/* Universal delete button for non-resource types */}
-            {selectedNode.entityType !== 'resource' && (
+            {/* Delete for ai_assistant and non-resource types */}
+            {(selectedNode.entityType !== 'resource' ||
+              selectedNode.entity?.resource_type === 'ai_assistant') && (
               <div className="detail-row" style={{ marginTop: 8 }}>
                 <button
                   className="action-button"
@@ -616,6 +760,17 @@ function KnowledgeGraphPage() {
       {previewImage && (
         <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
       )}
+
+      <AgentChat
+        nodes={activeAiGraphNode ? getConnectedNodes(activeAiGraphNode.id) : []}
+        resourceId={activeAiResourceId || 'default'}
+        isOpen={showAgentChat}
+        onClose={() => setShowAgentChat(false)}
+        provider={activeAiMetadata.provider || 'minimax'}
+        model={activeAiMetadata.model || 'MiniMax-M2.7'}
+        providers={providers}
+        onModelChange={handleModelChange}
+      />
     </div>
   );
 }

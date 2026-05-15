@@ -21,6 +21,7 @@ const Resource = require('./Resource');
 const GraphNode = require('./GraphNode');
 const GraphEdge = require('./GraphEdge');
 const CanvasState = require('./CanvasState');
+const ChatMessage = require('./ChatMessage');
 
 const UserModel = User(sequelize);
 const PromptModel = Prompt(sequelize);
@@ -31,6 +32,7 @@ const ResourceModel = Resource(sequelize, DB_TYPE);
 const GraphNodeModel = GraphNode(sequelize);
 const GraphEdgeModel = GraphEdge(sequelize, DB_TYPE);
 const CanvasStateModel = CanvasState(sequelize);
+const ChatMessageModel = ChatMessage(sequelize);
 
 // User associations
 UserModel.hasMany(PromptModel, { foreignKey: 'userId' });
@@ -65,6 +67,10 @@ GraphEdgeModel.belongsTo(GraphNodeModel, { foreignKey: 'targetId', as: 'target' 
 // Canvas state associations
 CanvasStateModel.belongsTo(GraphNodeModel, { foreignKey: 'graphNodeId', as: 'graphNode' });
 GraphNodeModel.hasOne(CanvasStateModel, { foreignKey: 'graphNodeId', as: 'canvasState' });
+
+// Chat message associations
+UserModel.hasMany(ChatMessageModel, { foreignKey: 'userId' });
+ChatMessageModel.belongsTo(UserModel, { foreignKey: 'userId' });
 
 async function initializeDatabase() {
   try {
@@ -106,6 +112,7 @@ module.exports = {
   GraphNode: GraphNodeModel,
   GraphEdge: GraphEdgeModel,
   CanvasState: CanvasStateModel,
+  ChatMessage: ChatMessageModel,
   DB_TYPE,
   supportsVector,
 };

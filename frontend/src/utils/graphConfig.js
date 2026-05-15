@@ -1,6 +1,13 @@
 // Graph configuration for styling and behavior
 
 export const entityTypeConfig = {
+  ai_assistant: {
+    label: 'AI Assistant',
+    icon: '\u{1F916}',
+    color: '#7c3aed',
+    bgColor: '#fdf4ff',
+    borderColor: '#a855f7',
+  },
   prompt: {
     label: 'Prompt',
     icon: '\u{1F4DD}',
@@ -64,6 +71,13 @@ export const entityTypeConfig = {
         bgColor: '#f9fafb',
         borderColor: '#4b5563',
       },
+      ai_assistant: {
+        icon: '\u{1F916}',
+        label: 'AI Assistant',
+        color: '#7c3aed',
+        bgColor: '#fdf4ff',
+        borderColor: '#a855f7',
+      },
     },
   },
 };
@@ -98,6 +112,12 @@ export const relationshipTypeConfig = {
     color: '#8b5cf6', // Purple
     animated: false,
     style: 'solid',
+  },
+  context: {
+    label: 'Context',
+    color: '#a855f7',
+    animated: false,
+    style: 'dashed',
   },
 };
 
@@ -192,5 +212,6 @@ export const filterOptions = {
     { value: 'version_of', label: 'Version Of' },
     { value: 'inspired_by', label: 'Inspired By' },
     { value: 'contains', label: 'Theme Contains' },
+    { value: 'context', label: 'AI Context' },
   ],
 };

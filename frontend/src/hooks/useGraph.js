@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { computeClusterLayout } from '../utils/clusterLayout';
 
 const API_BASE = '/api';
@@ -8,6 +8,7 @@ export function useGraph(filters = {}) {
   const [edges, setEdges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const prevPositions = useRef({});
 
   const fetchGraphData = useCallback(async () => {
     setLoading(true);
@@ -34,21 +35,32 @@ export function useGraph(filters = {}) {
 
       const data = await response.json();
 
-      // Compute relationship-aware cluster layout
+      // Compute layout for new nodes, preserve existing positions
       const layoutPositions = computeClusterLayout(data.nodes, data.edges);
+      const prev = prevPositions.current;
 
       const flowNodes = data.nodes.map((node) => {
-        const pos = layoutPositions.get(String(node.id)) || {
-          x: Math.random() * 500,
-          y: Math.random() * 500,
-        };
+        const id = String(node.id);
+        // Keep existing position if user has been seeing this node
+        const pos = prev[id] ||
+          layoutPositions.get(id) || {
+            x: Math.random() * 500,
+            y: Math.random() * 500,
+          };
         return {
-          id: String(node.id),
+          id,
           type: node.entity?.resource_type === 'ai_assistant' ? 'aiAssistant' : 'custom',
           position: pos,
           data: node,
         };
       });
+
+      // Remember positions for next refetch
+      const newPos = {};
+      for (const n of flowNodes) {
+        newPos[n.id] = n.position;
+      }
+      prevPositions.current = newPos;
 
       const flowEdges = data.edges.map((edge) => ({
         id: String(edge.id),

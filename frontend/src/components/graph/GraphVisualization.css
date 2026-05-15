@@ -63,3 +63,37 @@
   font-weight: 600;
   margin-right: 4px;
 }
+
+.edge-action-panel {
+  background: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edge-action-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edge-action-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.edge-delete-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edge-delete-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}

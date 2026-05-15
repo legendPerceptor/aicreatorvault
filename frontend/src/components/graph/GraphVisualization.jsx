@@ -1,10 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   addEdge,
   Panel,
 } from 'reactflow';
@@ -19,7 +21,7 @@ const nodeTypes = {
   aiAssistant: AiAssistantNode,
 };
 
-function GraphVisualization({
+function GraphFlowInner({
   nodes: initialNodes = [],
   edges: initialEdges = [],
   onNodesChange,
@@ -27,15 +29,27 @@ function GraphVisualization({
   onNodeClick,
   onNodeDoubleClick,
   onConnect,
-  onSelectionChange,
+  onEdgeDelete,
   selectedNode,
   highlightedPath = [],
 }) {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
+  const [selectedEdge, setSelectedEdge] = useState(null);
 
+  // Merge: keep existing positions, add new nodes, update data for changed nodes
   React.useEffect(() => {
-    setNodes(initialNodes);
+    setNodes((prev) => {
+      if (prev.length === 0) return initialNodes;
+      const prevMap = new Map(prev.map((n) => [n.id, n]));
+      return initialNodes.map((n) => {
+        const existing = prevMap.get(n.id);
+        if (existing) {
+          return { ...n, position: existing.position };
+        }
+        return n;
+      });
+    });
   }, [initialNodes, setNodes]);
 
   React.useEffect(() => {
@@ -52,19 +66,30 @@ function GraphVisualization({
     [onNodesChangeInternal, onNodesChange]
   );
 
+  // Handle edge changes including removal via React Flow's built-in edge delete (Backspace key)
   const handleEdgesChange = useCallback(
     (changes) => {
+      // Detect edge removal (user pressed Backspace/Delete on selected edge)
+      const removedIds = changes.filter((c) => c.type === 'remove').map((c) => c.id);
+      if (removedIds.length > 0 && onEdgeDelete) {
+        onEdgeDelete(removedIds);
+      }
       onEdgesChangeInternal(changes);
       if (onEdgesChange) {
         onEdgesChange(changes);
       }
     },
-    [onEdgesChangeInternal, onEdgesChange]
+    [onEdgesChangeInternal, onEdgesChange, onEdgeDelete]
   );
 
   const handleConnect = useCallback(
     (connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      const newEdge = {
+        ...connection,
+        type: 'custom',
+        data: { type: 'context', label: 'context' },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
       if (onConnect) {
         onConnect(connection);
       }
@@ -74,6 +99,7 @@ function GraphVisualization({
 
   const handleNodeClickHandler = useCallback(
     (event, node) => {
+      setSelectedEdge(null);
       if (onNodeClick) {
         onNodeClick(node.data || {});
       }
@@ -89,6 +115,23 @@ function GraphVisualization({
     },
     [onNodeDoubleClick]
   );
+
+  const handleEdgeClick = useCallback((event, edge) => {
+    setSelectedEdge(edge);
+  }, []);
+
+  const handlePaneClick = useCallback(() => {
+    setSelectedEdge(null);
+  }, []);
+
+  const handleDeleteSelectedEdge = useCallback(() => {
+    if (!selectedEdge) return;
+    if (onEdgeDelete) {
+      onEdgeDelete([selectedEdge.id]);
+    }
+    setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+    setSelectedEdge(null);
+  }, [selectedEdge, onEdgeDelete, setEdges]);
 
   const enhancedNodes = useMemo(() => {
     return nodes.map((node) => ({
@@ -107,29 +150,21 @@ function GraphVisualization({
       const isHighlighted = highlightedPath.some(
         (p) => p.source === edge.source && p.target === edge.target
       );
+      const isSelected = selectedEdge?.id === edge.id;
 
       return {
         ...edge,
         animated: config?.animated || false,
         style: {
-          stroke: isHighlighted ? '#ef4444' : config?.color || '#6b7280',
-          strokeWidth: isHighlighted ? 3 : 2,
+          stroke: isSelected ? '#ef4444' : isHighlighted ? '#ef4444' : config?.color || '#6b7280',
+          strokeWidth: isSelected || isHighlighted ? 3 : 2,
           strokeDasharray:
             config?.style === 'dashed' ? '5,5' : config?.style === 'dotted' ? '2,2' : 'none',
         },
-        zIndex: isHighlighted ? 1000 : 1,
+        zIndex: isSelected || isHighlighted ? 1000 : 1,
       };
     });
-  }, [edges, highlightedPath]);
-
-  const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes, edges: selectedEdges }) => {
-      if (onSelectionChange) {
-        onSelectionChange({ nodes: selectedNodes, edges: selectedEdges });
-      }
-    },
-    [onSelectionChange]
-  );
+  }, [edges, highlightedPath, selectedEdge]);
 
   return (
     <div className="graph-visualization">
@@ -141,8 +176,11 @@ function GraphVisualization({
         onConnect={handleConnect}
         onNodeClick={handleNodeClickHandler}
         onNodeDoubleClick={handleNodeDoubleClickHandler}
-        onSelectionChange={handleSelectionChange}
+        onEdgeClick={handleEdgeClick}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
+        connectionMode="loose"
+        deleteKeyCode={['Backspace', 'Delete']}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
@@ -166,8 +204,31 @@ function GraphVisualization({
             </div>
           </Panel>
         )}
+
+        {selectedEdge && (
+          <Panel position="top-right" className="edge-action-panel" style={{ marginTop: 48 }}>
+            <div className="edge-action-content">
+              <span className="edge-action-label">Edge selected</span>
+              <button
+                className="edge-delete-btn"
+                onClick={handleDeleteSelectedEdge}
+                title="Delete this connection"
+              >
+                Delete Connection
+              </button>
+            </div>
+          </Panel>
+        )}
       </ReactFlow>
     </div>
+  );
+}
+
+function GraphVisualization(props) {
+  return (
+    <ReactFlowProvider>
+      <GraphFlowInner {...props} />
+    </ReactFlowProvider>
   );
 }
 

@@ -1,9 +1,9 @@
 const { ChatMessage } = require('../models');
 const { Op } = require('sequelize');
-const { getProvider } = require('./llmProviders');
+const { getProvider, getModelInfo } = require('./llmProviders');
 
-const MAX_CONTEXT_CHARS = 12000;
-const HISTORY_LIMIT = 50;
+const OUTPUT_TOKENS = 4096;
+const SAFETY_BUFFER = 512;
 
 const SYSTEM_PROMPT_TEMPLATE = `You are a creative assistant for the AI Creator Vault. The user has a knowledge graph canvas with the following assets. Answer questions about these assets, suggest connections, help organize ideas, and provide creative insights. Respond in the same language the user writes in.
 
@@ -27,8 +27,13 @@ if (proxyUrl) {
   }
 }
 
+function estimateTokens(text) {
+  if (!text) return 0;
+  return Math.ceil(text.length / 3);
+}
+
 class ChatService {
-  buildContext(nodesData) {
+  buildContext(nodesData, maxTokens = 4000) {
     const parts = [];
     for (const node of nodesData) {
       const { entityType, entity } = node;
@@ -63,17 +68,50 @@ class ChatService {
       }
     }
 
-    const full = parts.join('\n');
-    return full.length > MAX_CONTEXT_CHARS
-      ? full.slice(0, MAX_CONTEXT_CHARS) + '\n...(truncated)'
-      : full;
+    let full = parts.join('\n');
+    const charLimit = maxTokens * 3;
+    if (full.length > charLimit) {
+      full = full.slice(0, charLimit) + '\n...(truncated)';
+    }
+    return full;
   }
 
   buildSystemPrompt(context) {
     return SYSTEM_PROMPT_TEMPLATE.replace('{context}', context || '(empty canvas)');
   }
 
-  async getHistory(userId, resourceId = 'default', limit = HISTORY_LIMIT) {
+  // Build messages array within token budget
+  buildMessageStack(systemPrompt, history, contextWindow) {
+    const budget = contextWindow - OUTPUT_TOKENS - SAFETY_BUFFER;
+    let usedTokens = estimateTokens(systemPrompt);
+    const messages = [{ role: 'system', content: systemPrompt }];
+
+    // Walk history from newest to oldest
+    const included = [];
+    let historyTokens = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const msgTokens = estimateTokens(history[i].content);
+      if (usedTokens + historyTokens + msgTokens > budget) break;
+      historyTokens += msgTokens;
+      included.unshift(history[i]);
+    }
+
+    const omitted = history.length - included.length;
+    if (omitted > 0) {
+      messages.push({
+        role: 'user',
+        content: `[System: ${omitted} earlier message${omitted > 1 ? 's' : ''} omitted to fit context window]`,
+      });
+    }
+
+    for (const msg of included) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+
+    return messages;
+  }
+
+  async getHistory(userId, resourceId = 'default', limit = 200) {
     return ChatMessage.findAll({
       where: { user_id: userId, resource_id: resourceId, role: { [Op.ne]: 'system' } },
       order: [['created_at', 'ASC']],
@@ -95,6 +133,7 @@ class ChatService {
   ) {
     const provider = getProvider(providerId);
     const model = modelId || provider.defaultModel;
+    const { contextWindow } = getModelInfo(providerId, model);
 
     // Persist user message
     await ChatMessage.create({
@@ -104,16 +143,18 @@ class ChatService {
       content: userMessage,
     });
 
-    // Build context and system prompt
-    const context = this.buildContext(nodesData);
+    // Build context and system prompt (reserve 1/3 of window for context)
+    const contextBudget = Math.floor(contextWindow * 0.25);
+    const context = this.buildContext(nodesData, contextBudget);
     const systemPrompt = this.buildSystemPrompt(context);
 
-    // Load history
+    // Load history and build budget-aware message stack
     const history = await this.getHistory(userId, resourceId);
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...history.map((m) => ({ role: m.role, content: m.content })),
-    ];
+    const messages = this.buildMessageStack(systemPrompt, history, contextWindow);
+
+    console.log(
+      `[Chat] ${provider.name}/${model} context=${contextWindow}t messages=${messages.length}/${history.length} estimated=${estimateTokens(messages.map((m) => m.content).join(''))}t`
+    );
 
     // Build provider-specific request
     const { fetch: undiciFetch } = require('undici');

@@ -7,8 +7,8 @@ const PROVIDERS = {
     defaultModel: process.env.MINIMAX_CHAT_MODEL || 'MiniMax-M2.7',
     useProxy: true,
     models: [
-      { id: 'MiniMax-M2.7', name: 'MiniMax-M2.7' },
-      { id: 'MiniMax-Text-01', name: 'MiniMax-Text-01' },
+      { id: 'MiniMax-M2.7', name: 'MiniMax-M2.7', contextWindow: 245000 },
+      { id: 'MiniMax-Text-01', name: 'MiniMax-Text-01', contextWindow: 1000000 },
     ],
     buildHeaders(apiKey) {
       return {
@@ -32,10 +32,10 @@ const PROVIDERS = {
     defaultModel: process.env.OPENAI_CHAT_MODEL || 'gpt-4o',
     useProxy: true,
     models: [
-      { id: 'gpt-4o', name: 'GPT-4o' },
-      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-      { id: 'gpt-4.1', name: 'GPT-4.1' },
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
+      { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000 },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini', contextWindow: 128000 },
+      { id: 'gpt-4.1', name: 'GPT-4.1', contextWindow: 1047576 },
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', contextWindow: 1047576 },
     ],
     buildHeaders(apiKey) {
       return {
@@ -59,8 +59,8 @@ const PROVIDERS = {
     defaultModel: process.env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-4-20250514',
     useProxy: true,
     models: [
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
-      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5' },
+      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', contextWindow: 200000 },
+      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', contextWindow: 200000 },
     ],
     buildHeaders(apiKey) {
       return {
@@ -98,10 +98,10 @@ const PROVIDERS = {
     defaultModel: process.env.OLLAMA_CHAT_MODEL || 'llama3',
     useProxy: false,
     models: [
-      { id: 'llama3', name: 'Llama 3' },
-      { id: 'qwen2.5', name: 'Qwen 2.5' },
-      { id: 'gemma3', name: 'Gemma 3' },
-      { id: 'deepseek-r1', name: 'DeepSeek R1' },
+      { id: 'llama3', name: 'Llama 3', contextWindow: 8192 },
+      { id: 'qwen2.5', name: 'Qwen 2.5', contextWindow: 131072 },
+      { id: 'gemma3', name: 'Gemma 3', contextWindow: 131072 },
+      { id: 'deepseek-r1', name: 'DeepSeek R1', contextWindow: 131072 },
     ],
     buildHeaders() {
       return { 'Content-Type': 'application/json' };
@@ -121,6 +121,16 @@ function getProvider(providerId) {
   return provider;
 }
 
+function getModelInfo(providerId, modelId) {
+  const provider = getProvider(providerId);
+  const model = provider.models.find((m) => m.id === modelId) || provider.models[0];
+  return {
+    contextWindow: model.contextWindow || 128000,
+    modelId: model.id,
+    providerId,
+  };
+}
+
 function getAvailableProviders() {
   return Object.values(PROVIDERS)
     .filter((p) => {
@@ -137,4 +147,4 @@ function getAvailableProviders() {
     }));
 }
 
-module.exports = { PROVIDERS, getProvider, getAvailableProviders };
+module.exports = { PROVIDERS, getProvider, getAvailableProviders, getModelInfo };

@@ -46,7 +46,14 @@ function KnowledgeGraphPage() {
   const [urlValue, setUrlValue] = useState('');
   const fileInputRef = useRef(null);
 
-  const { nodes, edges, loading, error, refetch } = useGraph({
+  const {
+    nodes,
+    edges,
+    setEdges: setGraphEdges,
+    loading,
+    error,
+    refetch,
+  } = useGraph({
     entityTypes,
     relationshipTypes,
     limit: 1000,
@@ -63,23 +70,20 @@ function KnowledgeGraphPage() {
   }, []);
 
   // Update model selection for an AI assistant (persisted in resource metadata)
-  const handleModelChange = useCallback(
-    async (resourceId, providerId, modelId) => {
-      try {
-        await authFetch(`${API_BASE}/resources/${resourceId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            metadata: { provider: providerId, model: modelId },
-          }),
-        });
-        refetch();
-      } catch (err) {
-        console.error('Failed to update model:', err);
-      }
-    },
-    [refetch]
-  );
+  const handleModelChange = useCallback(async (resourceId, providerId, modelId) => {
+    try {
+      await authFetch(`${API_BASE}/resources/${resourceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: { provider: providerId, model: modelId },
+        }),
+      });
+      // Update local node data without refetch
+    } catch (err) {
+      console.error('Failed to update model:', err);
+    }
+  }, []);
 
   // Inject providers + onModelChange into AI assistant nodes
   const enhancedNodes = nodes.map((n) => {
@@ -120,7 +124,7 @@ function KnowledgeGraphPage() {
     async (connection) => {
       const { source, target } = connection;
       try {
-        await authFetch(`${API_BASE}/graph/edges`, {
+        const res = await authFetch(`${API_BASE}/graph/edges`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -129,15 +133,42 @@ function KnowledgeGraphPage() {
             type: 'context',
           }),
         });
-        refetch();
+        if (res.ok) {
+          const edgeData = await res.json();
+          // Update hook's edges so getConnectedNodes can see the new edge
+          setGraphEdges((prev) => [
+            ...prev,
+            {
+              id: String(edgeData.id),
+              source: String(source),
+              target: String(target),
+              data: edgeData,
+            },
+          ]);
+        }
       } catch (err) {
         console.error('Failed to create edge:', err);
       }
     },
-    [refetch]
+    [setGraphEdges]
   );
 
   // Double-click AI assistant → open chat; other nodes → expand neighbors
+  const handleEdgeDelete = useCallback(
+    async (edgeIds) => {
+      for (const id of edgeIds) {
+        try {
+          await authFetch(`${API_BASE}/graph/edges/${id}`, { method: 'DELETE' });
+        } catch (err) {
+          console.error('Failed to delete edge:', err);
+        }
+      }
+      // Update hook's edges so getConnectedNodes stays in sync
+      setGraphEdges((prev) => prev.filter((e) => !edgeIds.includes(e.id)));
+    },
+    [setGraphEdges]
+  );
+
   const handleNodeDoubleClick = useCallback(
     async (nodeData) => {
       const isAiAssistant =
@@ -516,6 +547,7 @@ function KnowledgeGraphPage() {
               onNodeClick={handleNodeClick}
               onNodeDoubleClick={handleNodeDoubleClick}
               onConnect={handleConnect}
+              onEdgeDelete={handleEdgeDelete}
               selectedNode={selectedNode}
               highlightedPath={highlightedPath}
             />

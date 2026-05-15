@@ -51,14 +51,9 @@ function AgentChat({
     }));
 
     try {
-      const token = sessionStorage.getItem('accessToken');
-      const res = await fetch(API_BASE, {
+      const res = await authFetch(API_BASE, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resourceId,
           message: text,

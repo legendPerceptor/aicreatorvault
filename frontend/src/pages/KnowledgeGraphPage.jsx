@@ -62,6 +62,25 @@ function KnowledgeGraphPage() {
       .catch(() => setProviders([]));
   }, []);
 
+  // Update model selection for an AI assistant (persisted in resource metadata)
+  const handleModelChange = useCallback(
+    async (resourceId, providerId, modelId) => {
+      try {
+        await authFetch(`${API_BASE}/resources/${resourceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            metadata: { provider: providerId, model: modelId },
+          }),
+        });
+        refetch();
+      } catch (err) {
+        console.error('Failed to update model:', err);
+      }
+    },
+    [refetch]
+  );
+
   // Inject providers + onModelChange into AI assistant nodes
   const enhancedNodes = nodes.map((n) => {
     if (n.type !== 'aiAssistant') return n;
@@ -134,25 +153,6 @@ function KnowledgeGraphPage() {
       }
     },
     [traverse, relationshipTypes]
-  );
-
-  // Update model selection for an AI assistant (persisted in resource metadata)
-  const handleModelChange = useCallback(
-    async (resourceId, providerId, modelId) => {
-      try {
-        await authFetch(`${API_BASE}/resources/${resourceId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            metadata: { provider: providerId, model: modelId },
-          }),
-        });
-        refetch();
-      } catch (err) {
-        console.error('Failed to update model:', err);
-      }
-    },
-    [refetch]
   );
 
   const handleImagePreview = useCallback(() => {
